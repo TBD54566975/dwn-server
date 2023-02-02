@@ -1,0 +1,35 @@
+{
+  "protocol": "yeeter",
+  "definition": {
+    "labels": {
+      "post": {
+        "schema": "yeeter/post"
+      },
+      "reply": {
+        "schema": "yeeter/reply"
+      }
+    },
+    "records": {
+      "post": {
+        "allow": {
+          "anyone": {
+            "to": [
+              "write"
+            ]
+          }
+        },
+        "records": {
+          "reply": {
+            "allow": {
+              "anyone": {
+                "to": [
+                  "write"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
