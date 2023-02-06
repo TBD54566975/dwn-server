@@ -9,7 +9,8 @@ import { didState } from '../../did/did-loader.js';
  * @returns {import('../../lib/json-rpc-router.js').JsonRpcResponse}
  */
 export async function handleDwnProcessMessage(request) {
-  const { message, target = didState.did } = request.params;
+  let { message, target } = request.params;
+  target ??= didState.did;
   
   const result = await dwn.processMessage(target, message);
 
