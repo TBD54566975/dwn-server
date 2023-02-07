@@ -21,7 +21,7 @@ export async function initializeProtocols() {
       filter: {
         protocol
       },
-      signatureInput: aggregatorSignatureMaterial
+      authorizationSignatureInput: aggregatorSignatureMaterial
     });
 
     let result = await dwn.processMessage(didState.did, query.toJSON());
@@ -39,7 +39,7 @@ export async function initializeProtocols() {
     const createProtocolMessage = await ProtocolsConfigure.create({
       protocol,
       definition,
-      signatureInput: aggregatorSignatureMaterial
+      authorizationSignatureInput: aggregatorSignatureMaterial
     });
 
     result = await dwn.processMessage(didState.did, createProtocolMessage.toJSON());
