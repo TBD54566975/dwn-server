@@ -1,4 +1,8 @@
-# DWN Aggregator <!-- omit in toc -->
+# DWN Server <!-- omit in toc -->
+
+This is a server wrapped around a decentralized web node you can run anywhere that you can run a container (or run it from node.js). 
+
+# API stuff
 
 - [JSON RPC Methods](#json-rpc-methods)
   - [`dwn.processMessage`](#dwnprocessmessage)
