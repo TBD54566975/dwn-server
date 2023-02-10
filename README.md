@@ -1,4 +1,5 @@
-# DWN Aggregator <!-- omit in toc -->
+# DWN Server <!-- omit in toc -->
+
 
 - [JSON RPC Methods](#json-rpc-methods)
   - [`dwn.processMessage`](#dwnprocessmessage)
@@ -20,6 +21,7 @@
     - [Params](#params-3)
     - [Response](#response-2)
     - [Available Transports](#available-transports-3)
+- [Running Locally for Development](#running-locally-for-development)
 
 
 
@@ -87,3 +89,12 @@ N/A
 ### Available Transports
 * http
 * ws
+
+
+# Running Locally for Development
+```bash
+git clone https://github.com/TBD54566975/dwn-server.git
+cd dwn-server
+npm install
+node src/index.js
+```
