@@ -1,6 +1,10 @@
 # DWN Server <!-- omit in toc -->
 
+This is a server wrapped around a decentralized web node you can run anywhere that you can run a container (or run it from node.js). 
 
+- [Running](#running)
+  - [Running Locally for Development](#running-locally-for-development)
+- [Hosted examples you can use:](#hosted-examples-you-can-use)
 - [JSON RPC Methods](#json-rpc-methods)
   - [`dwn.processMessage`](#dwnprocessmessage)
     - [Description](#description)
@@ -21,10 +25,26 @@
     - [Params](#params-3)
     - [Response](#response-2)
     - [Available Transports](#available-transports-3)
-- [Running Locally for Development](#running-locally-for-development)
 
+# Running
 
+`docker run -p 3000:3000 ghcr.io/tbd54566975/dwn-server:main`
 
+This can run on services like AWS lightsail, a VPS, desktop.
+
+## Running Locally for Development
+```bash
+git clone https://github.com/TBD54566975/dwn-server.git
+cd dwn-server
+npm install
+node src/index.js
+```
+
+# Hosted examples you can use:
+
+* USA: `dwn-usa-1.ue8cktdq71va0.us-east-2.cs.amazonlightsail.com`
+* Australia: `dwn-aggregator.faktj7f1fndve.ap-southeast-2.cs.amazonlightsail.com `
+* India: `dwn-india.vtv94qck5sjvq.ap-south-1.cs.amazonlightsail.com`
 # JSON RPC Methods
 
 ## `dwn.processMessage`
@@ -89,12 +109,3 @@ N/A
 ### Available Transports
 * http
 * ws
-
-
-# Running Locally for Development
-```bash
-git clone https://github.com/TBD54566975/dwn-server.git
-cd dwn-server
-npm install
-node src/index.js
-```
