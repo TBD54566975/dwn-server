@@ -5,11 +5,23 @@
       "post": {
         "schema": "yeeter/post"
       },
+      "profile": {
+        "schema": "yeeter/profile"
+      },
       "reply": {
         "schema": "yeeter/reply"
       }
     },
     "records": {
+      "profile": {
+        "allow": {
+          "anyone": {
+            "to": [
+              "write"
+            ]
+          }
+        }
+      },
       "post": {
         "allow": {
           "anyone": {
