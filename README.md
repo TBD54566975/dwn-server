@@ -8,6 +8,11 @@ This is a server wrapped around a decentralized web node you can run anywhere th
 
 This can run on services like AWS lightsail, a VPS, desktop.
 
+## Hosted examples you can use:
+
+* USA: dwn-usa-1.ue8cktdq71va0.us-east-2.cs.amazonlightsail.com
+* Australia: dwn-aggregator.faktj7f1fndve.ap-southeast-2.cs.amazonlightsail.com 
+* India: dwn-india.vtv94qck5sjvq.ap-south-1.cs.amazonlightsail.com
 
 # API stuff
 
