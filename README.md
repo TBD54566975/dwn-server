@@ -1,4 +1,4 @@
-# DWN Server <!-- omit in toc -->
+# DWN Aggregator (Server) <!-- omit in toc -->
 
 This is a server wrapped around a decentralized web node you can run anywhere that you can run a container (or run it from node.js). 
 
@@ -28,7 +28,7 @@ This is a server wrapped around a decentralized web node you can run anywhere th
 
 # Running
 
-`docker run -p 3000:3000 ghcr.io/tbd54566975/dwn-server:main`
+`docker run -p 3000:3000 ghcr.io/tbd54566975/dwn-aggregator:main`
 
 This can run on services like AWS lightsail, a VPS, desktop.
 
