@@ -1,7 +1,9 @@
 import { DwnAggregatorClient } from '../src/client/index.js';
 import { DIDIon } from '../src/did/did-ion.js';
 import { RecordsWrite } from '@tbd54566975/dwn-sdk-js';
-import { randomBytes, randomInt } from '../tmp/utils.js';
+
+const randomInt = (min, max) => { return Math.floor(Math.random() * (max - min + 1) + min); };
+const randomBytes = (length) => { return Buffer.from(Array.from({ length }, () => Math.floor(Math.random() * 256))); };
 
 const client = await DwnAggregatorClient.create(['ws://localhost:3000']);
 
