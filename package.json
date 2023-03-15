@@ -4,7 +4,7 @@
     "version": "0.0.1",
     "dependencies": {
         "@decentralized-identity/ion-tools": "1.0.3",
-        "@scure/base": "1.1.1",
+        "multiformats": "11.0.2",
         "@tbd54566975/dwn-sdk-js": "0.0.26",
         "cors": "2.8.5",
         "express": "4.18.2",

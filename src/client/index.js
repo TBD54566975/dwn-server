@@ -1,7 +1,7 @@
 import url from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
 import { resolve } from '@decentralized-identity/ion-tools';
-import { base64url } from '@scure/base';
+import { base64url } from 'multiformats/bases/base64';
 
 import { WebSocketClient } from './ws.js';
 import { HttpClient } from './http.js';
@@ -52,7 +52,7 @@ export class DwnAggregatorClient {
     // it sort of constrains us to explicitly defining how to communicate with a DWN for
     // for each individual transport
     if (data) {
-      data = base64url.encode(data);
+      data = base64url.baseEncode(data);
     }
 
     const jsonRpcRequest = DwnAggregatorClient.createJsonRpcRequest('dwn.processMessage',

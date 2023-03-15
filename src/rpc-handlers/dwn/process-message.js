@@ -1,4 +1,4 @@
-import { base64url } from '@scure/base';
+import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { dwn } from '../../dwn.js';
 import { subscriptionManager } from '../../subscription-manager.js';
@@ -16,7 +16,7 @@ export async function handleDwnProcessMessage(request) {
   target ??= didState.did;
 
   // if data is provided, jam it into a ReadableStream. monkeypatch 
-  let dataStream = encodedData ? DataStream.fromBytes(base64url.decode(encodedData)) : undefined;
+  let dataStream = encodedData ? DataStream.fromBytes(base64url.baseDecode(encodedData)) : undefined;
   
   const result = await dwn.processMessage(target, message, dataStream);
 
