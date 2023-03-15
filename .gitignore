@@ -1,5 +1,6 @@
 BLOCKSTORE
 browser-test
+DATASTORE
 etc
 INDEX
 node_modules

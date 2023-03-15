@@ -1,5 +1,12 @@
 import { DID, generateKeyPair } from '@decentralized-identity/ion-tools';
 
+/**
+ * @typedef {object} GenerateDIDResult
+ * @property {string} did
+ * @property {object} keys
+ * @property {object} keys.privateJwk
+ * @property {Array<object>} ops
+ */
 
 export class DIDIon {
   /**

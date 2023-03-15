@@ -20,8 +20,10 @@ const subscriptionReciept = await client.subscribe({ protocol: 'yeeter' }, (mess
 
 console.log('subscribed?', subscriptionReciept);
 
+const data = randomBytes(randomInt(50, 500));
+
 const yeet = await RecordsWrite.create({
-  data                        : randomBytes(randomInt(50, 500)),
+  data                        : data,
   dataFormat                  : 'application/json',
   published                   : true,
   protocol                    : 'yeeter',
@@ -29,12 +31,13 @@ const yeet = await RecordsWrite.create({
   authorizationSignatureInput : signatureMaterial
 });
 
-const result = await client.sendDWebMessage(yeet.toJSON());
+const result = await client.sendDWebMessage(yeet.toJSON(), { data });
 console.log(result);
 
 setTimeout(async () => {
+  const data = randomBytes(randomInt(50, 500));
   const yeet = await RecordsWrite.create({
-    data                        : randomBytes(randomInt(50, 500)),
+    data,
     dataFormat                  : 'application/json',
     published                   : true,
     protocol                    : 'yeeter',
@@ -42,6 +45,6 @@ setTimeout(async () => {
     authorizationSignatureInput : signatureMaterial
   });
 
-  const result = await client.sendDWebMessage(yeet.toJSON());
+  const result = await client.sendDWebMessage(yeet.toJSON(), { data });
   console.log(result);
 }, 5000);
