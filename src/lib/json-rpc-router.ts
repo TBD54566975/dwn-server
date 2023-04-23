@@ -2,10 +2,14 @@ import type { Request } from 'express';
 import type { Readable } from 'readable-stream';
 import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
 
+type HttpRequest = {
+  contentType: 'application/octet-stream' | 'multipart/form-data';
+  request: Request;
+};
+
 export type RequestContext = {
   transport?: 'http' | 'ws';
-  multipartRequest?: Request
-}
+} & (HttpRequest | { [K in keyof HttpRequest]?: never; });
 
 export type HandlerResponse = {
   jsonRpcResponse: JsonRpcResponse,

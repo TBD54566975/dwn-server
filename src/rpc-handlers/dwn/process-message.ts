@@ -14,14 +14,17 @@ const emitter = new EventEmitter();
 
 export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, context) => {
   const requestId = dwnRequest.id ?? uuidv4();
+  const { target, message } = dwnRequest.params;
 
-  if (context.multipartRequest) {
+  if (context.contentType === 'application/octet-stream') {
+    return await _processDwnMessage(requestId, target, message, context.request as any);
+  } else if (context.contentType === 'multipart/form-data') {
     // there's no choice other than to return a promise here because we have to wait until the multipart
     // request body is fully consumed.
     // eslint-disable-next-line no-async-promise-executor
     return new Promise(resolve => {
       const bb = busboy({
-        headers : context.multipartRequest.headers,
+        headers : context.request.headers,
         limits  : {
           fields : 0,
           files  : 1
@@ -52,7 +55,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
       // TODO: might make more sense to send the reply from here. is 'close' called when an error occurs?
       // bb.on('close', () => {});
 
-      context.multipartRequest.pipe(bb);
+      context.request.pipe(bb);
     });
   } else {
     const { message, target, encodedData } = dwnRequest.params;

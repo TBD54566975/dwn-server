@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { app } from '../src/app.js';
 import { dataStore, eventLog, messageStore } from '../src/dwn.js';
 import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
-import { createProfile, createRecordsWriteMessage, getFileAsReadStream } from './utils.js';
+import { createProfile, createRecordsWriteMessage, getFileAsReadStream, streamHttpRequest } from './utils.js';
 import { Cid, DataStream, RecordsRead } from '@tbd54566975/dwn-sdk-js';
 
 describe('http requests', function() {
@@ -69,7 +69,7 @@ describe('http requests', function() {
       expect(reply.status.code).to.equal(202);
     });
 
-    it('handles RecordsWrite with message in header and data in body', async function() {
+    it('handles RecordsWrite with message in header and data in body as multipart/form-data', async function() {
       const filePath = './fixtures/test.jpeg';
       const { cid, size, stream } = await getFileAsReadStream(filePath);
 
@@ -124,6 +124,37 @@ describe('http requests', function() {
 
       const { reply } = body.result;
       expect(reply.status.code).to.equal(202);
+    });
+
+    it('handles RecordsWrite with message in header and data in body as application/octet-stream', async function() {
+      const server = app.listen(3000);
+
+      const filePath = './fixtures/test.jpeg';
+      const { cid, size, stream } = await getFileAsReadStream(filePath);
+
+      const alice = await createProfile();
+      const { recordsWrite } = await createRecordsWriteMessage(alice, { dataCid: cid, dataSize: size });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message : recordsWrite.toJSON(),
+        target  : alice.did,
+      });
+
+      const resp = await streamHttpRequest('http://localhost:3000', {
+        method  : 'POST',
+        headers : {
+          'content-type' : 'application/octet-stream',
+          'dwn-request'  : JSON.stringify(dwnRequest),
+        }
+      }, stream);
+
+      console.log(resp);
+
+      // TODO: add assertions
+
+      server.close();
+      server.closeAllConnections();
     });
   });
 

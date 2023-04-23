@@ -46,12 +46,15 @@ app.post('/', async (req, res) => {
     return res.status(400).json(reply);
   }
 
-  const requestContext: RequestContext = {};
+  let requestContext: RequestContext;
   if ('content-type' in req.headers) {
     const contentType = ContentType.parse(req);
 
-    if (contentType['type'] === 'multipart/form-data') {
-      requestContext.multipartRequest = req;
+    if (contentType['type'] === 'application/octet-stream' || contentType['type'] === 'multipart/form-data') {
+      requestContext = {
+        contentType : contentType['type'],
+        request     : req
+      };
     }
   }
 

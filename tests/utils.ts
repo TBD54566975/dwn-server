@@ -1,6 +1,7 @@
 import type { SignatureInput, PublicJwk, PrivateJwk } from '@tbd54566975/dwn-sdk-js';
 
 import fs, { ReadStream } from 'node:fs';
+import http from 'node:http';
 import path from 'path';
 
 import { fileURLToPath } from 'url';
@@ -23,7 +24,7 @@ export async function createProfile(): Promise<Profile> {
   const { did, keyPair, keyId } = await DidKeyResolver.generate();
 
   // signatureInput is required by all dwn message classes. it's used to sign messages
-  const signatureInput = { 
+  const signatureInput = {
     privateJwk      : keyPair.privateJwk,
     protectedHeader : { alg: keyPair.privateJwk.alg, kid: `${did}#${keyId}` }
   };
@@ -48,15 +49,15 @@ export async function createRecordsWriteMessage(signer: Profile, overrides: Crea
     authorizationSignatureInput : signer.signatureInput,
   });
 
-  
+
   let dataStream;
   if (overrides.data) {
     dataStream = DataStream.fromBytes(overrides.data);
   }
 
-  return { 
-    recordsWrite, 
-    dataStream 
+  return {
+    recordsWrite,
+    dataStream
   };
 }
 
@@ -72,7 +73,7 @@ export function randomBytes(length: number): Uint8Array {
 
 export async function getFileAsReadStream(filePath: string): Promise<{ stream: fs.ReadStream, cid: string, size: number }> {
   const absoluteFilePath = `${__dirname}/${filePath}`;
-  
+
   let readStream = fs.createReadStream(absoluteFilePath);
   const cid = await Cid.computeDagPbCidFromStream(readStream as any);
 
@@ -90,5 +91,49 @@ export async function getFileAsReadStream(filePath: string): Promise<{ stream: f
         size
       });
     });
+  });
+}
+
+type HttpResponse = {
+  status: number,
+  headers: http.IncomingHttpHeaders,
+  body?: any
+};
+
+export function streamHttpRequest(url: string, opts: http.RequestOptions, bodyStream: ReadStream):
+  Promise<HttpResponse> {
+
+  return new Promise((resolve, reject) => {
+    const request = http.request(url, opts, rawResponse => {
+      rawResponse.setEncoding('utf8');
+
+      const response: HttpResponse = {
+        status  : rawResponse.statusCode,
+        headers : rawResponse.headers
+      };
+
+      let body = '';
+      rawResponse.on('data', chunk => {
+        body += chunk;
+      });
+
+      rawResponse.on('end', () => {
+        if (body) {
+          response.body = body;
+        }
+
+        return resolve(response);
+      });
+    });
+
+    request.on('error', (e) => {
+      return reject(e);
+    });
+
+    bodyStream.on('end', () => {
+      request.end();
+    });
+
+    bodyStream.pipe(request);
   });
 }
