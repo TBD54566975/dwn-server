@@ -1,10 +1,11 @@
 module.exports = {
-  extends       : ['eslint:recommended',  'plugin:mocha/recommended'],
+  extends       : ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:mocha/recommended'],
+  parser        : '@typescript-eslint/parser',
   parserOptions : {
     ecmaVersion : 2022,
     sourceType  : 'module'
   },
-  plugins : ['mocha'],
+  plugins : ['@typescript-eslint', 'mocha'],
   env     : {
     node   : true,
     es2022 : true
@@ -25,9 +26,11 @@ module.exports = {
       'single',
       { 'allowTemplateLiterals': true }
     ],
-    'semi'           : ['error', 'always'],
-    'indent'         : ['error', 2],
-    'no-unused-vars' : [
+    'semi'                              : ['error', 'always'],
+    'indent'                            : ['error', 2],
+    'no-unused-vars'                    : 'off',
+    'prefer-const'                      : 'off',
+    '@typescript-eslint/no-unused-vars' : [
       'error',
       {
         'vars'               : 'all',
@@ -36,6 +39,7 @@ module.exports = {
         'argsIgnorePattern'  : '^_',
         'varsIgnorePattern'  : '^_'
       }
-    ]
+    ],
+    'no-trailing-spaces': ['error'],
   }
 };

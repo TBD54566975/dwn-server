@@ -1,10 +1,9 @@
 import { app } from './app.js';
 import { config } from './config/index.js';
-import { initializeProtocols } from './dwn.js';
 import { HttpServer } from './http-server.js';
 import { wsServer } from './ws-server.js';
 
-await initializeProtocols();
+import './dwn.js';
 
 const httpServer = new HttpServer(app);
 

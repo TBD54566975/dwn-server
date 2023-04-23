@@ -1,6 +1,8 @@
+types.d.ts
 BLOCKSTORE
 browser-test
 etc
 INDEX
 node_modules
 tmp
+dist

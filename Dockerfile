@@ -1,6 +1,6 @@
 FROM node:18-buster
 
-WORKDIR /dwn-aggregator
+WORKDIR /dwn-server
 
 COPY package.json entrypoint.sh ./
 COPY src ./src
@@ -11,5 +11,5 @@ COPY resources ./resources
 # RUN apk add --update python3 make g++
 RUN npm install
 
-ENTRYPOINT [ "/dwn-aggregator/entrypoint.sh" ]
+ENTRYPOINT [ "/dwn-server/entrypoint.sh" ]
 EXPOSE 3000

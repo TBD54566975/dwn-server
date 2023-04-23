@@ -1,5 +1,17 @@
+import type { Express } from 'express';
+import { Server } from 'http';
+import { Socket } from 'net';
+
 export class HttpServer {
-  constructor(app, keepAliveTimeoutMillis, headersTimeoutMillis) {
+  private app: Express;
+  private tcpSockets: { [socketId: number]: Socket };
+  private tcpSocketId: number;
+  private http: Server;
+  private stopping: boolean;
+  private keepAliveTimeoutMillis: number;
+  private headersTimeoutMillis: number;
+  
+  constructor(app: Express, keepAliveTimeoutMillis?: number, headersTimeoutMillis?: number) {
     this.app = app;
     this.tcpSockets = {};
     this.tcpSocketId = 1;
@@ -25,7 +37,7 @@ export class HttpServer {
       
       // set socket to idle. this same socket will be accessible within the `http.on('request', (req, res))` event listener
       // as `request.connection`
-      socket.__idle = true;
+      socket['__idle'] = true;
       const tcpSocketId = this.tcpSocketId++;
       this.tcpSockets[tcpSocketId] = socket;
       
@@ -38,10 +50,10 @@ export class HttpServer {
     // Emitted each time there is a request. There may be multiple requests
     // per connection (in the case of HTTP Keep-Alive connections).
     this.http.on('request', (request, response) => {
-      const { connection: socket } = request;
+      const { socket } = request;
       
       // set __idle to false because this socket is being used for an incoming request
-      socket.__idle = false;
+      socket['__idle'] = false;
       
       // Emitted when the response has been sent. More specifically, this event is emitted
       // when the last segment of the response headers and body have been handed off to the
@@ -51,7 +63,7 @@ export class HttpServer {
         
         // set __idle back to true because the socket has finished facilitating a request. This socket may be used again without being
         // destroyed if keep-alive is being leveraged
-        socket.__idle = true;
+        socket['__idle'] = true;
         
         if (this.stopping) {
           socket.destroy();
@@ -81,10 +93,10 @@ export class HttpServer {
     
     // close all idle sockets. the remaining sockets facilitating active requests
     // will be closed after they've served responses back.
-    for (let tcpSocketId in this.tcpSockets) {
+    for (const tcpSocketId in this.tcpSockets) {
       const socket = this.tcpSockets[tcpSocketId];
       
-      if (socket.__idle) {
+      if (socket['__idle']) {
         socket.destroy();
       }
     }

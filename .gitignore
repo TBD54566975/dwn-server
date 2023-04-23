@@ -1,7 +1,10 @@
 BLOCKSTORE
-browser-test
+MESSAGESTORE
+EVENTLOG
 DATASTORE
-etc
 INDEX
+browser-test
+etc
 node_modules
 tmp
+dist
