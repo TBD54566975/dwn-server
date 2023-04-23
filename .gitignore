@@ -1,8 +1,4 @@
-BLOCKSTORE
-MESSAGESTORE
-EVENTLOG
-DATASTORE
-INDEX
+data
 browser-test
 etc
 node_modules

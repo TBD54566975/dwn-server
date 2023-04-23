@@ -13,7 +13,7 @@ export class DwnAggregatorClient {
 
   static async create(aggregatorURIs) {
     const aggregators = [];
-    
+
     for (let uri of aggregatorURIs) {
       const { protocol } = url.parse(uri);
 
@@ -61,20 +61,20 @@ export class DwnAggregatorClient {
 
     //! : only sending to 1 aggregator for now
     const aggregator = this.aggregators[0];
-    
+
     return await aggregator.transportClient.send(jsonRpcRequest);
   }
 
   async subscribe(filter, callback) {
-    
+
     //! : only subscribing to 1 aggregator for now
     const aggregator = this.aggregators[0];
     const { transportClient } = aggregator;
-    
+
     if (!transportClient.subscribe) {
       throw new Error('transport does not support subscribing');
     }
-    
+
     const jsonRpcRequest = DwnAggregatorClient.createJsonRpcRequest('dwn.subscribe', { filter });
     return await transportClient.subscribe(jsonRpcRequest, callback);
   }

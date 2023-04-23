@@ -10,7 +10,7 @@ wsServer.on('connection', function(socket, request, client) {
   socket.id = uuidv4();
   socket.isAlive = true;
 
-  // Pong messages are automatically sent in response to ping messages as required by 
+  // Pong messages are automatically sent in response to ping messages as required by
   // the websocket spec. So, no need to send explicit pongs from browser
   socket.on('pong', function() {
     this.isAlive = true;
@@ -43,7 +43,7 @@ wsServer.on('connection', function(socket, request, client) {
 });
 
 // Sometimes connections between client <-> server can get borked in such a way that
-// leaves both unaware of the borkage. ping messages can be used as a means to verify 
+// leaves both unaware of the borkage. ping messages can be used as a means to verify
 // that the remote endpoint is still responsive. Server will ping each socket every 30s
 // if a pong hasn't received from a socket by the next ping, the server will terminate
 // the socket connection
