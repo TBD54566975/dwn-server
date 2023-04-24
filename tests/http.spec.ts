@@ -29,7 +29,7 @@ describe('http requests', function() {
     expect(body.error.message).to.equal('request payload required.');
   });
 
-  it('responds with a 400 if json parsing dwn request fails', async function() {
+  it('responds with a 400 if parsing dwn request fails', async function() {
     const response = await request(app)
       .post('/')
       .send(';;;;@!#@!$$#!@%');

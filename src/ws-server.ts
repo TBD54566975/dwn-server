@@ -1,43 +1,50 @@
-import { WebSocketServer } from 'ws';
+import { WebSocket } from 'ws';
+
 import { v4 as uuidv4 } from 'uuid';
+import { WebSocketServer } from 'ws';
 
 import { rpcRouter } from './rpc-router.js';
+import { createJsonRpcErrorResponse, JsonRpcErrorCodes, JsonRpcResponse } from './lib/json-rpc.js';
 
 export const wsServer = new WebSocketServer({ noServer: true });
 
-wsServer.on('connection', function(socket, _request, _client) {
-  socket.id = uuidv4();
-  socket.isAlive = true;
+wsServer.on('connection', function(socket: WebSocket, _request, _client) {
+  socket['id'] = uuidv4();
+  socket['isAlive'] = true;
 
   // Pong messages are automatically sent in response to ping messages as required by
   // the websocket spec. So, no need to send explicit pongs from browser
   socket.on('pong', function() {
-    this.isAlive = true;
+    this['isAlive'] = true;
   });
 
-  const textDecoder = new TextDecoder();
-  const textEncoder = new TextEncoder();
-
-  socket.on('message', async function(dataBytes) {
-    // deserialize bytes into JSON object
-    let rpcRequest;
+  socket.on('message', async function(dataBuffer) {
+    let dwnRequest;
 
     try {
-      const rpcRequestString = textDecoder.decode(dataBytes);
-      rpcRequest = JSON.parse(rpcRequestString);
-    } catch(e) {
-      console.log(e);
-      const response = { error: e.message };
-      const responseString = JSON.stringify(response);
+      // deserialize bytes into JSON object
+      dwnRequest = dataBuffer.toString();
+      if (!dwnRequest) {
+        const jsonRpcResponse = createJsonRpcErrorResponse(uuidv4(),
+          JsonRpcErrorCodes.BadRequest, 'request payload required.');
 
-      const responseBytes = textEncoder.encode(responseString);
-      return socket.send(responseBytes);
+        const responseBuffer = jsonRpcResponseToBuffer(jsonRpcResponse);
+        return socket.send(responseBuffer);
+      }
+
+      dwnRequest = JSON.parse(dwnRequest);
+    } catch(e) {
+      const jsonRpcResponse = createJsonRpcErrorResponse(
+        uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
+
+      const responseBuffer = jsonRpcResponseToBuffer(jsonRpcResponse);
+      return socket.send(responseBuffer);
     }
 
-    const result = await rpcRouter.handle(rpcRequest, { transport: 'ws' });
-    const resultString = JSON.stringify(result);
+    const { jsonRpcResponse } = await rpcRouter.handle(dwnRequest, { transport: 'ws' });
 
-    socket.send(resultString);
+    const responseBuffer = jsonRpcResponseToBuffer(jsonRpcResponse);
+    return socket.send(responseBuffer);
   });
 });
 
@@ -56,6 +63,11 @@ const heartbeatInterval = setInterval(function () {
     socket.ping();
   });
 }, 30_000);
+
+function jsonRpcResponseToBuffer(jsonRpcResponse: JsonRpcResponse) {
+  const str = JSON.stringify(jsonRpcResponse);
+  return Buffer.from(str);
+}
 
 wsServer.on('close', function close() {
   clearInterval(heartbeatInterval);

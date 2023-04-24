@@ -7,8 +7,8 @@ import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { v4 as uuidv4 } from 'uuid';
 
 import { wsServer } from '../src/ws-server.js';
-import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { dataStore, eventLog, messageStore } from '../src/dwn.js';
+import { JsonRpcErrorCodes, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage } from './utils.js';
 
 let server: http.Server;
@@ -34,8 +34,43 @@ describe('websocket messages', function() {
   });
 
   after(function() {
+    wsServer.close();
     server.close();
     server.closeAllConnections();
+  });
+
+  it('returns an error response if no request payload is provided', async function() {
+    const socket = new WebSocket('ws://127.0.0.1:9001');
+
+    socket.onmessage = event => {
+      const resp = JSON.parse(event.data.toString());
+
+      expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
+      expect(resp.error.message).to.equal('request payload required.');
+
+      socket.terminate();
+    };
+
+    socket.onopen = (_event) => {
+      socket.send(Buffer.from(''));
+    };
+  });
+
+  it('returns an error response if parsing dwn request fails', function () {
+    const socket = new WebSocket('ws://127.0.0.1:9001');
+
+    socket.onmessage = event => {
+      const resp = JSON.parse(event.data.toString());
+
+      expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
+      expect(resp.error.message).to.include('not valid JSON');
+
+      socket.terminate();
+    };
+
+    socket.onopen = (_event) => {
+      socket.send(Buffer.from('@#$%^&*&%$#'));
+    };
   });
 
   it('handles RecordsWrite messages', async function() {
@@ -54,7 +89,13 @@ describe('websocket messages', function() {
     const socket = new WebSocket('ws://127.0.0.1:9001');
 
     socket.onmessage = event => {
-      // TODO: add assertions
+      const resp = JSON.parse(event.data.toString());
+      expect(resp.id).to.equal(requestId);
+      expect(resp.error).to.not.exist;
+
+      const { reply } = resp.result;
+      expect(reply.status.code).to.equal(202);
+
       socket.terminate();
     };
 
