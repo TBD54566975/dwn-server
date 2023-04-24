@@ -150,6 +150,7 @@ describe('http requests', function() {
       }, stream);
 
       expect(resp.status).to.equal(200);
+
       const body = JSON.parse(resp.body) as JsonRpcResponse;
       expect(body.id).to.equal(requestId);
       expect(body.error).to.not.exist;

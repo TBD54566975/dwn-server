@@ -12,8 +12,8 @@ describe('Filter tests', function() {
     const index = new JankyIndex(['protocol', 'schema', 'author', 'contextId']);
 
     const subscriptions = [
-      { subscriptionId : generateRandomString(10), 
-        filter         : { protocol: 'yeeter' } 
+      { subscriptionId : generateRandomString(10),
+        filter         : { protocol: 'yeeter' }
       },
       {
         subscriptionId : generateRandomString(10),
@@ -57,10 +57,10 @@ describe('Filter tests', function() {
 
     const result = index.query(filter, (result) => {
       const numFilterKeys = Object.keys(result.document.filter).length;
-      
+
       return numFilterKeys === result.score;
     });
-    
+
     console.log(JSON.stringify(result, null, 4));
   });
 });

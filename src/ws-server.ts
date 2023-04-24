@@ -2,11 +2,10 @@ import { WebSocketServer } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 
 import { rpcRouter } from './rpc-router.js';
-import { subscriptionManager } from './subscription-manager.js';
 
 export const wsServer = new WebSocketServer({ noServer: true });
 
-wsServer.on('connection', function(socket, request, client) {
+wsServer.on('connection', function(socket, _request, _client) {
   socket.id = uuidv4();
   socket.isAlive = true;
 
@@ -35,7 +34,7 @@ wsServer.on('connection', function(socket, request, client) {
       return socket.send(responseBytes);
     }
 
-    const result = await rpcRouter.handle(rpcRequest, { socket, transport: 'ws' });
+    const result = await rpcRouter.handle(rpcRequest, { transport: 'ws' });
     const resultString = JSON.stringify(result);
 
     socket.send(resultString);
@@ -49,12 +48,11 @@ wsServer.on('connection', function(socket, request, client) {
 // the socket connection
 const heartbeatInterval = setInterval(function () {
   wsServer.clients.forEach(function (socket) {
-    if (socket.isAlive === false) {
-      subscriptionManager.remove(socket.id);
+    if (socket['isAlive'] === false) {
       return socket.terminate();
     }
 
-    socket.isAlive = false;
+    socket['isAlive'] = false;
     socket.ping();
   });
 }, 30_000);
