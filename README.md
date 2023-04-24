@@ -55,6 +55,8 @@ Examples can be found in the `examples` directory.
 #### Receiving large amounts of data
 Data in `RecordsWrite` messages can be of any size, allowing for large amounts of data to be included. `RecordsWrite` messages returned as the result of a `RecordsQuery` will include `encodedData` _if_ the data associated to a given `RecordsWrite` is under `9.77KB`. Data larger than this will need to be fetched using `RecordsRead` which can be done over http. The response includes the json-rpc response message in a `dwn-response` header and the associated data as binary in the response body.
 
+Examples can be found in the `examples` directory. 
+> 💡 **TODO**: Add examples in `examples` directory
 
 # Running The Server
 > 💡 **TODO**: Fill out
