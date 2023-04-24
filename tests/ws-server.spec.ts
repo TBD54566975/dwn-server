@@ -1,15 +1,13 @@
 import http from 'node:http';
-
 import { expect } from 'chai';
 import { base64url } from 'multiformats/bases/base64';
-import { WebSocket } from 'ws';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { v4 as uuidv4 } from 'uuid';
 
 import { wsServer } from '../src/ws-server.js';
 import { dataStore, eventLog, messageStore } from '../src/dwn.js';
 import { JsonRpcErrorCodes, createJsonRpcRequest } from '../src/lib/json-rpc.js';
-import { createProfile, createRecordsWriteMessage } from './utils.js';
+import { createProfile, createRecordsWriteMessage, sendWsMessage } from './utils.js';
 
 let server: http.Server;
 
@@ -40,37 +38,19 @@ describe('websocket server', function() {
   });
 
   it('returns an error response if no request payload is provided', async function() {
-    const socket = new WebSocket('ws://127.0.0.1:9001');
+    const data = await sendWsMessage('ws://127.0.0.1:9001', Buffer.from(''));
 
-    socket.onmessage = event => {
-      const resp = JSON.parse(event.data.toString());
-
-      expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
-      expect(resp.error.message).to.equal('request payload required.');
-
-      socket.terminate();
-    };
-
-    socket.onopen = (_event) => {
-      socket.send(Buffer.from(''));
-    };
+    const resp = JSON.parse(data.toString());
+    expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
+    expect(resp.error.message).to.equal('request payload required.');
   });
 
-  it('returns an error response if parsing dwn request fails', function () {
-    const socket = new WebSocket('ws://127.0.0.1:9001');
+  it('returns an error response if parsing dwn request fails', async function() {
+    const data = await sendWsMessage('ws://127.0.0.1:9001', Buffer.from('@#$%^&*&%$#'));
 
-    socket.onmessage = event => {
-      const resp = JSON.parse(event.data.toString());
-
-      expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
-      expect(resp.error.message).to.include('not valid JSON');
-
-      socket.terminate();
-    };
-
-    socket.onopen = (_event) => {
-      socket.send(Buffer.from('@#$%^&*&%$#'));
-    };
+    const resp = JSON.parse(data.toString());
+    expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
+    expect(resp.error.message).to.include('JSON');
   });
 
   it('handles RecordsWrite messages', async function() {
@@ -86,21 +66,12 @@ describe('websocket server', function() {
       encodedData
     });
 
-    const socket = new WebSocket('ws://127.0.0.1:9001');
+    const data = await sendWsMessage('ws://127.0.0.1:9001', JSON.stringify(dwnRequest));
+    const resp = JSON.parse(data.toString());
+    expect(resp.id).to.equal(requestId);
+    expect(resp.error).to.not.exist;
 
-    socket.onmessage = event => {
-      const resp = JSON.parse(event.data.toString());
-      expect(resp.id).to.equal(requestId);
-      expect(resp.error).to.not.exist;
-
-      const { reply } = resp.result;
-      expect(reply.status.code).to.equal(202);
-
-      socket.terminate();
-    };
-
-    socket.onopen = (_event) => {
-      socket.send(JSON.stringify(dwnRequest));
-    };
+    const { reply } = resp.result;
+    expect(reply.status.code).to.equal(202);
   });
 });

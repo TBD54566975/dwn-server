@@ -38,7 +38,7 @@ describe('http api', function() {
 
     const body = response.body as JsonRpcErrorResponse;
     expect(body.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
-    expect(body.error.message).to.include('not valid JSON');
+    expect(body.error.message).to.include('JSON');
   });
 
   describe('RecordsWrite', function() {

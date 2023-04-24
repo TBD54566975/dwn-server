@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'node:fs';
 import http from 'node:http';
 
+import { WebSocket } from 'ws';
 import { ReadStream } from 'node:fs';
 import { fileURLToPath } from 'url';
 import { DidKeyResolver, RecordsWrite, DataStream, Cid } from '@tbd54566975/dwn-sdk-js';
@@ -136,5 +137,20 @@ export function streamHttpRequest(url: string, opts: http.RequestOptions, bodySt
     });
 
     bodyStream.pipe(request);
+  });
+}
+
+export async function sendWsMessage(address: string, message: any): Promise<Buffer> {
+  return new Promise((resolve) => {
+    const socket = new WebSocket(address);
+
+    socket.onopen = (_event) => {
+      socket.onmessage = event => {
+        socket.terminate();
+        return resolve(<Buffer>event.data);
+      };
+
+      socket.send(message);
+    };
   });
 }
