@@ -1,6 +1,7 @@
-data
+.DS_STORE
 browser-test
+dist
+data
 etc
 node_modules
 tmp
-dist

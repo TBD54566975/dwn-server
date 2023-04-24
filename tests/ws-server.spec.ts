@@ -13,7 +13,7 @@ import { createProfile, createRecordsWriteMessage } from './utils.js';
 
 let server: http.Server;
 
-describe('websocket messages', function() {
+describe('websocket server', function() {
   before(async function () {
     server = http.createServer();
 

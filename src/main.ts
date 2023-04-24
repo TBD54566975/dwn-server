@@ -1,14 +1,12 @@
-import { app } from './app.js';
-import { config } from './config/index.js';
-import { HttpServer } from './http-server.js';
+import { httpApi } from './http-api.js';
+import { config } from './config.js';
 import { wsServer } from './ws-server.js';
+import { HttpServer } from './http-server.js';
 
-import './dwn.js';
+const httpServer = new HttpServer(httpApi);
 
-const httpServer = new HttpServer(app);
-
-httpServer.listen(config.aggregator.port, () => {
-  console.log(`server listening on ${config.aggregator.port}`);
+httpServer.listen(config.port, () => {
+  console.log(`server listening on ${config.port}`);
 });
 
 // handle connection upgrade to ws:

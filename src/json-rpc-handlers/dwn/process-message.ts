@@ -6,8 +6,9 @@ import EventEmitter from 'events';
 
 import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
-import { dwn } from '../../dwn.js';
 import { v4 as uuidv4 } from 'uuid';
+
+import { dwn } from '../../dwn.js';
 import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResponse } from '../../lib/json-rpc.js';
 
 const emitter = new EventEmitter();

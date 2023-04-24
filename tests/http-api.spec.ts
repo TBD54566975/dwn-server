@@ -1,16 +1,16 @@
 import request from 'supertest';
 
-import { base64url } from 'multiformats/bases/base64';
 import { expect } from 'chai';
 import { v4 as uuidv4 } from 'uuid';
+import { base64url } from 'multiformats/bases/base64';
 
-import { app } from '../src/app.js';
+import { httpApi } from '../src/http-api.js';
+import { Cid, DataStream, RecordsRead } from '@tbd54566975/dwn-sdk-js';
 import { dataStore, eventLog, messageStore } from '../src/dwn.js';
 import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage, getFileAsReadStream, streamHttpRequest } from './utils.js';
-import { Cid, DataStream, RecordsRead } from '@tbd54566975/dwn-sdk-js';
 
-describe('http requests', function() {
+describe('http api', function() {
   afterEach(async function() {
     await dataStore.clear();
     await eventLog.clear();
@@ -18,7 +18,7 @@ describe('http requests', function() {
   });
 
   it('responds with a 400 if no dwn request is provided in header or body', async function() {
-    const response = await request(app)
+    const response = await request(httpApi)
       .post('/')
       .send();
 
@@ -30,7 +30,7 @@ describe('http requests', function() {
   });
 
   it('responds with a 400 if parsing dwn request fails', async function() {
-    const response = await request(app)
+    const response = await request(httpApi)
       .post('/')
       .send(';;;;@!#@!$$#!@%');
 
@@ -55,7 +55,7 @@ describe('http requests', function() {
         encodedData
       });
 
-      const response = await request(app)
+      const response = await request(httpApi)
         .post('/')
         .send(dwnRequest);
 
@@ -82,7 +82,7 @@ describe('http requests', function() {
         target  : alice.did,
       });
 
-      const response = await request(app)
+      const response = await request(httpApi)
         .post('/')
         .set('dwn-request', JSON.stringify(dwnRequest))
         .attach('file', stream, { filename: 'toto.jpeg', contentType: 'image/jpeg' })
@@ -111,7 +111,7 @@ describe('http requests', function() {
         encodedData
       });
 
-      const response = await request(app)
+      const response = await request(httpApi)
         .post('/')
         .set('dwn-request', JSON.stringify(dwnRequest))
         .send();
@@ -127,7 +127,7 @@ describe('http requests', function() {
     });
 
     it('handles RecordsWrite with message in header and data in body as application/octet-stream', async function() {
-      const server = app.listen(3000);
+      const server = httpApi.listen(3000);
 
       const filePath = './fixtures/test.jpeg';
       const { cid, size, stream } = await getFileAsReadStream(filePath);
@@ -177,7 +177,7 @@ describe('http requests', function() {
         target  : alice.did,
       });
 
-      let response = await request(app)
+      let response = await request(httpApi)
         .post('/')
         .set('dwn-request', JSON.stringify(dwnRequest))
         .attach('file', stream, { filename: 'toto.jpeg', contentType: 'image/jpeg' })
@@ -203,7 +203,7 @@ describe('http requests', function() {
         message : recordsRead.toJSON()
       });
 
-      response = await request(app)
+      response = await request(httpApi)
         .post('/')
         .send(JSON.stringify(dwnRequest));
 

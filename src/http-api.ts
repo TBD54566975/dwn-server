@@ -1,23 +1,25 @@
 import type { RequestContext } from './lib/json-rpc-router.js';
 
 import cors from 'cors';
-import ContentType from 'content-type';
 import express from 'express';
 import getRawBody from 'raw-body';
+import ContentType from 'content-type';
 
-import { rpcRouter } from './rpc-router.js';
 import { v4 as uuidv4 } from 'uuid';
+
+import { jsonRpcApi } from './json-rpc-api.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
 
-export const app = express();
-app.use(cors());
+export const httpApi = express();
 
-app.get('/health', (req, res) => {
+httpApi.use(cors());
+
+httpApi.get('/health', (req, res) => {
   // return 200 ok
   return res.json({ ok: true });
 });
 
-app.post('/', async (req, res) => {
+httpApi.post('/', async (req, res) => {
   let dwnRequest;
 
   try {
@@ -58,7 +60,7 @@ app.post('/', async (req, res) => {
     }
   }
 
-  const { jsonRpcResponse, dataStream } = await rpcRouter.handle(dwnRequest, requestContext);
+  const { jsonRpcResponse, dataStream } = await jsonRpcApi.handle(dwnRequest, requestContext);
   if (dataStream) {
     res.setHeader('content-type', 'application/octet-stream');
     res.setHeader('dwn-response', JSON.stringify(jsonRpcResponse));

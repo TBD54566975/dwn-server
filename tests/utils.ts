@@ -1,9 +1,10 @@
 import type { SignatureInput, PublicJwk, PrivateJwk } from '@tbd54566975/dwn-sdk-js';
 
-import fs, { ReadStream } from 'node:fs';
-import http from 'node:http';
 import path from 'path';
+import fs from 'node:fs';
+import http from 'node:http';
 
+import { ReadStream } from 'node:fs';
 import { fileURLToPath } from 'url';
 import { DidKeyResolver, RecordsWrite, DataStream, Cid } from '@tbd54566975/dwn-sdk-js';
 

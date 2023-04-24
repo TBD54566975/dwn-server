@@ -1,9 +1,8 @@
 import { WebSocket } from 'ws';
-
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from 'ws';
 
-import { rpcRouter } from './rpc-router.js';
+import { jsonRpcApi } from './json-rpc-api.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes, JsonRpcResponse } from './lib/json-rpc.js';
 
 export const wsServer = new WebSocketServer({ noServer: true });
@@ -41,7 +40,7 @@ wsServer.on('connection', function(socket: WebSocket, _request, _client) {
       return socket.send(responseBuffer);
     }
 
-    const { jsonRpcResponse } = await rpcRouter.handle(dwnRequest, { transport: 'ws' });
+    const { jsonRpcResponse } = await jsonRpcApi.handle(dwnRequest, { transport: 'ws' });
 
     const responseBuffer = jsonRpcResponseToBuffer(jsonRpcResponse);
     return socket.send(responseBuffer);

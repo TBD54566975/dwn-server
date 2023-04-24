@@ -1,6 +1,6 @@
-import type { Express } from 'express';
 import { Server } from 'http';
 import { Socket } from 'net';
+import type { Express } from 'express';
 
 export class HttpServer {
   private app: Express;
