@@ -149,9 +149,13 @@ describe('http requests', function() {
         }
       }, stream);
 
-      console.log(resp);
+      expect(resp.status).to.equal(200);
+      const body = JSON.parse(resp.body) as JsonRpcResponse;
+      expect(body.id).to.equal(requestId);
+      expect(body.error).to.not.exist;
 
-      // TODO: add assertions
+      const { reply } = body.result;
+      expect(reply.status.code).to.equal(202);
 
       server.close();
       server.closeAllConnections();
