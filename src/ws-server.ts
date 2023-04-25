@@ -8,7 +8,6 @@ import { createJsonRpcErrorResponse, JsonRpcErrorCodes, JsonRpcResponse } from '
 export const wsServer = new WebSocketServer({ noServer: true });
 
 wsServer.on('connection', function(socket: WebSocket, _request, _client) {
-  socket['id'] = uuidv4();
   socket['isAlive'] = true;
 
   // Pong messages are automatically sent in response to ping messages as required by
