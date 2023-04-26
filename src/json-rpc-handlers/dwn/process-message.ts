@@ -84,7 +84,7 @@ async function _processDwnMessage(requestId: string, target: string, dwnMessage,
     if ('record' in reply) {
       // TODO: export `RecordsReadReply` from dwn-sdk-js
       recordDataStream = reply.record['data'];
-      reply.record['data'] = null;
+      delete reply.record['data'];
     }
 
     const jsonRpcResponse = createJsonRpcSuccessResponse(requestId, { reply });
