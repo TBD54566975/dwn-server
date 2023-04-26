@@ -15,7 +15,7 @@ wsServer.on('connection', function(socket: WebSocket, _request, _client) {
   // Pong messages are automatically sent in response to ping messages as required by
   // the websocket spec. So, no need to send explicit pongs from browser
   socket.on('pong', function() {
-    this['isAlive'] = true;
+    this[SOCKET_ISALIVE_SYMBOL] = true;
   });
 
   socket.on('message', async function(dataBuffer) {
