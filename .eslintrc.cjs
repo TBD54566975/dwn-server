@@ -40,6 +40,7 @@ module.exports = {
         'varsIgnorePattern'  : '^_'
       }
     ],
-    'no-trailing-spaces': ['error'],
+    '@typescript-eslint/no-explicit-any' : 'off',
+    'no-trailing-spaces'                 : ['error'],
   }
 };

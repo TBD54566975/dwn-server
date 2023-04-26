@@ -41,7 +41,7 @@ export interface JsonRpcSuccessResponse {
 export interface JsonRpcErrorResponse {
   jsonrpc: JsonRpcVersion;
   id: JsonRpcId;
-  result?: undefined;
+  result?: never;
   error: JsonRpcError;
 }
 
