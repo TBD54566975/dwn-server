@@ -2,6 +2,7 @@ import { Server } from 'http';
 import { Socket } from 'net';
 import type { Express } from 'express';
 
+const SOCKET_IDLE_SYMBOL = Symbol('idle');
 export class HttpServer {
   private app: Express;
   private tcpSockets: { [socketId: number]: Socket };
@@ -37,7 +38,7 @@ export class HttpServer {
 
       // set socket to idle. this same socket will be accessible within the `http.on('request', (req, res))` event listener
       // as `request.connection`
-      socket['__idle'] = true;
+      socket[SOCKET_IDLE_SYMBOL] = true;
       const tcpSocketId = this.tcpSocketId++;
       this.tcpSockets[tcpSocketId] = socket;
 
@@ -53,7 +54,7 @@ export class HttpServer {
       const { socket } = request;
 
       // set __idle to false because this socket is being used for an incoming request
-      socket['__idle'] = false;
+      socket[SOCKET_IDLE_SYMBOL] = false;
 
       // Emitted when the response has been sent. More specifically, this event is emitted
       // when the last segment of the response headers and body have been handed off to the
@@ -96,7 +97,7 @@ export class HttpServer {
     for (const tcpSocketId in this.tcpSockets) {
       const socket = this.tcpSockets[tcpSocketId];
 
-      if (socket['__idle']) {
+      if (socket[SOCKET_IDLE_SYMBOL]) {
         socket.destroy();
       }
     }

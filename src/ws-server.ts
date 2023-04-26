@@ -7,8 +7,10 @@ import { createJsonRpcErrorResponse, JsonRpcErrorCodes, JsonRpcResponse } from '
 
 export const wsServer = new WebSocketServer({ noServer: true });
 
+const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
+
 wsServer.on('connection', function(socket: WebSocket, _request, _client) {
-  socket['isAlive'] = true;
+  socket[SOCKET_ISALIVE_SYMBOL] = true;
 
   // Pong messages are automatically sent in response to ping messages as required by
   // the websocket spec. So, no need to send explicit pongs from browser
@@ -53,11 +55,11 @@ wsServer.on('connection', function(socket: WebSocket, _request, _client) {
 // the socket connection
 const heartbeatInterval = setInterval(function () {
   wsServer.clients.forEach(function (socket) {
-    if (socket['isAlive'] === false) {
+    if (socket[SOCKET_ISALIVE_SYMBOL] === false) {
       return socket.terminate();
     }
 
-    socket['isAlive'] = false;
+    socket[SOCKET_ISALIVE_SYMBOL] = false;
     socket.ping();
   });
 }, 30_000);
