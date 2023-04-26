@@ -9,8 +9,9 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
       - [Transporting large amounts of data](#transporting-large-amounts-of-data)
       - [Receiving large amounts of data](#receiving-large-amounts-of-data)
 - [Running The Server](#running-the-server)
+  - [Running Locally for Development](#running-locally-for-development)
+- [Hosted examples you can use:](#hosted-examples-you-can-use)
 - [Configuration](#configuration)
-- [Contributing](#contributing)
 
 
 # JSON-RPC API
@@ -59,11 +60,31 @@ Examples can be found in the `examples` directory.
 > 💡 **TODO**: Add examples in `examples` directory
 
 # Running The Server
-> 💡 **TODO**: Fill out
+`docker run -p 3000:3000 ghcr.io/tbd54566975/dwn-server:main`
+
+This can run on services like AWS lightsail, a VPS, desktop.
+
+## Running Locally for Development
+```bash
+git clone https://github.com/TBD54566975/dwn-server.git
+cd dwn-server
+npm install && npm run compile
+node dist/src/main.js
+```
+
+# Hosted examples you can use:
+| Location  | URL                                                                  |
+| --------- | -------------------------------------------------------------------- |
+| Australia | `dwn-aggregator.faktj7f1fndve.ap-southeast-2.cs.amazonlightsail.com` |
+| India     | `dwn-india.vtv94qck5sjvq.ap-south-1.cs.amazonlightsail.com`          |
+| USA       | `dwn-usa-1.ue8cktdq71va0.us-east-2.cs.amazonlightsail.com`           |
+
 
 # Configuration
-> 💡 **TODO**: Fill out
+Configuration can be set using environment variables
 
-
-# Contributing
-> 💡 **TODO**: Fill out
+| Env Var                   | Description                                                               | Default |
+| ------------------------- | ------------------------------------------------------------------------- | ------- |
+| `DS_PORT`                 | Port that the server listens on                                           | 3000    |
+| `DS_MAX_RECORD_DATA_SIZE` | maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value | 1gb     |
+| `DS_WEBSOCKET_SERVER`     | whether to enable listening over `ws:`. values: `on`,`off`                | `on`    |
