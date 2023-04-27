@@ -4,25 +4,21 @@ import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { v4 as uuidv4 } from 'uuid';
 
-import { wsServer } from '../src/ws-server.js';
+import { WsServer } from '../src/ws-server.js';
 import { dataStore, eventLog, messageStore } from '../src/dwn.js';
 import { JsonRpcErrorCodes, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage, sendWsMessage } from './utils.js';
 
 let server: http.Server;
+let wsServer: WsServer;
 
 describe('websocket server', function() {
   before(async function () {
     server = http.createServer();
-
-    // pass control to wsServer whenever an http connection is upgraded
-    server.on('upgrade', (req, socket, firstPacket) => {
-      wsServer.handleUpgrade(req, socket, firstPacket, (socket) => {
-        wsServer.emit('connection', socket, req);
-      });
-    });
-
     server.listen(9001, '127.0.0.1');
+
+    wsServer = new WsServer(server);
+    wsServer.listen();
   });
 
   afterEach(async function() {

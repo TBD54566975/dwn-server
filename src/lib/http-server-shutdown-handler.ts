@@ -1,40 +1,22 @@
 import { Server } from 'http';
 import { Socket } from 'net';
-import type { Express } from 'express';
 
 const SOCKET_IDLE_SYMBOL = Symbol('idle');
-export class HttpServer {
-  private app: Express;
+
+export class HttpServerShutdownHandler {
   private tcpSockets: { [socketId: number]: Socket };
   private tcpSocketId: number;
-  private http: Server;
+  private server: Server;
   private stopping: boolean;
-  private keepAliveTimeoutMillis: number;
-  private headersTimeoutMillis: number;
 
-  constructor(app: Express, keepAliveTimeoutMillis?: number, headersTimeoutMillis?: number) {
-    this.app = app;
+  constructor(server: Server) {
     this.tcpSockets = {};
     this.tcpSocketId = 1;
-    this.http = undefined;
+    this.server = server;
     this.stopping = false;
-    this.keepAliveTimeoutMillis = keepAliveTimeoutMillis;
-    this.headersTimeoutMillis = headersTimeoutMillis;
-  }
-
-  listen(port, callback) {
-    this.http = this.app.listen(port, callback);
-
-    if (this.keepAliveTimeoutMillis) {
-      this.http.keepAliveTimeout = this.keepAliveTimeoutMillis;
-    }
-
-    if (this.headersTimeoutMillis) {
-      this.http.headersTimeout = this.headersTimeoutMillis;
-    }
 
     // This event is emitted when a new TCP stream is established
-    this.http.on('connection', socket => {
+    this.server.on('connection', socket => {
 
       // set socket to idle. this same socket will be accessible within the `http.on('request', (req, res))` event listener
       // as `request.connection`
@@ -50,7 +32,7 @@ export class HttpServer {
 
     // Emitted each time there is a request. There may be multiple requests
     // per connection (in the case of HTTP Keep-Alive connections).
-    this.http.on('request', (request, response) => {
+    this.server.on('request', (request, response) => {
       const { socket } = request;
 
       // set __idle to false because this socket is being used for an incoming request
@@ -64,18 +46,12 @@ export class HttpServer {
 
         // set __idle back to true because the socket has finished facilitating a request. This socket may be used again without being
         // destroyed if keep-alive is being leveraged
-        socket['__idle'] = true;
+        socket[SOCKET_IDLE_SYMBOL] = true;
 
         if (this.stopping) {
           socket.destroy();
         }
       });
-    });
-  }
-
-  onUpgrade(callback) {
-    this.http.on('upgrade', (request, socket, firstPacket) => {
-      callback(request, socket, firstPacket);
     });
   }
 
@@ -86,7 +62,7 @@ export class HttpServer {
     // the server is finally closed when all connections are ended and the server emits a 'close' event.
     // The optional callback will be called once the 'close' event occurs. Unlike that event, it will be
     // called with an Error as its only argument if the server was not open when it was closed.
-    this.http.close(() => {
+    this.server.close(() => {
       this.tcpSocketId = 0;
       this.stopping = false;
       callback();

@@ -14,7 +14,7 @@ export const httpApi = express();
 
 httpApi.use(cors());
 
-httpApi.get('/health', (req, res) => {
+httpApi.get('/health', (_req, res) => {
   // return 200 ok
   return res.json({ ok: true });
 });

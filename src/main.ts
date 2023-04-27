@@ -1,20 +1,19 @@
 import { httpApi } from './http-api.js';
 import { config } from './config.js';
-import { wsServer } from './ws-server.js';
-import { HttpServer } from './http-server.js';
+import { WsServer } from './ws-server.js';
+import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
 
-const httpServer = new HttpServer(httpApi);
 
-httpServer.listen(config.port, () => {
-  console.log(`server listening on ${config.port}`);
+const httpServer = httpApi.listen(config.port, () => {
+  console.log(`server listening on port ${config.port}`);
 });
 
-// handle connection upgrade to ws:
-httpServer.onUpgrade((request, socket, firstPacket) => {
-  wsServer.handleUpgrade(request, socket, firstPacket, (socket) => {
-    wsServer.emit('connection', socket, request);
-  });
-});
+const httpServerShutdownHandler = new HttpServerShutdownHandler(httpServer);
+
+if (config.webSocketServerEnabled) {
+  const wsServer = new WsServer(httpServer);
+  wsServer.listen();
+}
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error(`Unhandled promise rejection. Reason: ${reason}. Promise: ${JSON.stringify(promise)}`);
@@ -39,11 +38,8 @@ process.on('SIGTERM', async () => {
 });
 
 function gracefulShutdown() {
-  // TODO: add moar graceful shutdown logic here (Moe - 02/01/2023).
-  httpServer.stop(() => {
-    console.log('http server stopped');
-
-    console.log('exiting...');
+  httpServerShutdownHandler.stop(() => {
+    console.log('http server stopped.. exiting');
     process.exit(0);
   });
 }
