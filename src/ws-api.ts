@@ -1,3 +1,5 @@
+import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+
 import { Server } from 'http';
 
 import { WebSocket } from 'ws';
@@ -9,10 +11,12 @@ import { createJsonRpcErrorResponse, JsonRpcErrorCodes, JsonRpcResponse } from '
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 
-export class WsServer {
-  private wsServer: WebSocketServer;
+export class WsApi {
+  wsServer: WebSocketServer;
+  dwn: Dwn;
 
-  constructor(server: Server) {
+  constructor(server: Server, dwn: Dwn) {
+    this.dwn = dwn;
     this.wsServer = new WebSocketServer({ server: server });
   }
 
@@ -21,7 +25,8 @@ export class WsServer {
   }
 
   listen() {
-    this.wsServer.on('connection', function(socket: WebSocket, _request, _client) {
+    const dwn = this.dwn;
+    this.wsServer.on('connection', function (socket: WebSocket, _request, _client) {
       socket[SOCKET_ISALIVE_SYMBOL] = true;
 
       // Pong messages are automatically sent in response to ping messages as required by
@@ -40,7 +45,7 @@ export class WsServer {
             const jsonRpcResponse = createJsonRpcErrorResponse(uuidv4(),
               JsonRpcErrorCodes.BadRequest, 'request payload required.');
 
-            const responseBuffer = WsServer.jsonRpcResponseToBuffer(jsonRpcResponse);
+            const responseBuffer = WsApi.jsonRpcResponseToBuffer(jsonRpcResponse);
             return socket.send(responseBuffer);
           }
 
@@ -49,13 +54,13 @@ export class WsServer {
           const jsonRpcResponse = createJsonRpcErrorResponse(
             uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
 
-          const responseBuffer = WsServer.jsonRpcResponseToBuffer(jsonRpcResponse);
+          const responseBuffer = WsApi.jsonRpcResponseToBuffer(jsonRpcResponse);
           return socket.send(responseBuffer);
         }
 
-        const { jsonRpcResponse } = await jsonRpcApi.handle(dwnRequest, { transport: 'ws' });
+        const { jsonRpcResponse } = await jsonRpcApi.handle(dwnRequest, { transport: 'ws', dwn });
 
-        const responseBuffer = WsServer.jsonRpcResponseToBuffer(jsonRpcResponse);
+        const responseBuffer = WsApi.jsonRpcResponseToBuffer(jsonRpcResponse);
         return socket.send(responseBuffer);
       });
     });

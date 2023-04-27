@@ -1,5 +1,7 @@
 import bytes from 'bytes';
 
+export type Config = typeof config;
+
 export const config = {
   // max size of data that can be provided with a RecordsWrite
   maxRecordDataSize      : bytes(process.env.MAX_RECORD_DATA_SIZE || '1gb'),

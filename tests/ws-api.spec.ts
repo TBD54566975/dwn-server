@@ -4,27 +4,25 @@ import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { v4 as uuidv4 } from 'uuid';
 
-import { WsServer } from '../src/ws-server.js';
-import { dataStore, eventLog, messageStore } from '../src/dwn.js';
+import { dwn, clear as clearDwn } from './test-dwn.js';
+import { WsApi } from '../src/ws-api.js';
 import { JsonRpcErrorCodes, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage, sendWsMessage } from './utils.js';
 
 let server: http.Server;
-let wsServer: WsServer;
+let wsServer: WsApi;
 
-describe('websocket server', function() {
+describe('websocket api', function() {
   before(async function () {
     server = http.createServer();
     server.listen(9001, '127.0.0.1');
 
-    wsServer = new WsServer(server);
+    wsServer = new WsApi(server, dwn);
     wsServer.listen();
   });
 
   afterEach(async function() {
-    await dataStore.clear();
-    await eventLog.clear();
-    await messageStore.clear();
+    await clearDwn();
   });
 
   after(function() {

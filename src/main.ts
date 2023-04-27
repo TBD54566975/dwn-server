@@ -1,19 +1,7 @@
-import { httpApi } from './http-api.js';
-import { config } from './config.js';
-import { WsServer } from './ws-server.js';
-import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
+import { DwnServer } from './dwn-server.js';
 
-
-const httpServer = httpApi.listen(config.port, () => {
-  console.log(`server listening on port ${config.port}`);
-});
-
-const httpServerShutdownHandler = new HttpServerShutdownHandler(httpServer);
-
-if (config.webSocketServerEnabled) {
-  const wsServer = new WsServer(httpServer);
-  wsServer.listen();
-}
+const dwnServer = new DwnServer();
+await dwnServer.listen();
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error(`Unhandled promise rejection. Reason: ${reason}. Promise: ${JSON.stringify(promise)}`);
@@ -38,7 +26,7 @@ process.on('SIGTERM', async () => {
 });
 
 function gracefulShutdown() {
-  httpServerShutdownHandler.stop(() => {
+  dwnServer.stop(() => {
     console.log('http server stopped.. exiting');
     process.exit(0);
   });

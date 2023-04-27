@@ -4,21 +4,22 @@ import type { JsonRpcHandler, HandlerResponse } from '../../lib/json-rpc-router.
 import busboy from 'busboy';
 import EventEmitter from 'events';
 
+import { Dwn } from '@tbd54566975/dwn-sdk-js';
 import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { v4 as uuidv4 } from 'uuid';
 
-import { dwn } from '../../dwn.js';
 import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResponse } from '../../lib/json-rpc.js';
 
 const emitter = new EventEmitter();
 
 export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, context) => {
+  const { dwn } = context;
   const requestId = dwnRequest.id ?? uuidv4();
   const { target, message } = dwnRequest.params;
 
   if (context.contentType === 'application/octet-stream') {
-    return await _processDwnMessage(requestId, target, message, context.request as any);
+    return await _processDwnMessage(dwn, requestId, target, message, context.request as any);
   } else if (context.contentType === 'multipart/form-data') {
     // there's no choice other than to return a promise here because we have to wait until the multipart
     // request body is fully consumed.
@@ -49,7 +50,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
         // TODO: figure out whether we need to listen for errors on this stream
         // stream.on('error', error => {});
 
-        const responsePayload = await _processDwnMessage(requestId, params.target, params.message, <any>stream);
+        const responsePayload = await _processDwnMessage(dwn, requestId, params.target, params.message, <any>stream);
         emitter.emit(requestId, responsePayload);
       });
 
@@ -62,11 +63,11 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
     const { message, target, encodedData } = dwnRequest.params;
     const dataStream = encodedData ? DataStream.fromBytes(base64url.baseDecode(encodedData)) : undefined;
 
-    return await _processDwnMessage(requestId, target, message, dataStream);
+    return await _processDwnMessage(dwn, requestId, target, message, dataStream);
   }
 };
 
-async function _processDwnMessage(requestId: string, target: string, dwnMessage, dataStream?: Readable) {
+async function _processDwnMessage(dwn: Dwn, requestId: string, target: string, dwnMessage, dataStream?: Readable) {
   try {
     const reply = await dwn.processMessage(target, dwnMessage, dataStream);
     const { status } = reply;

@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { Dwn } from '@tbd54566975/dwn-sdk-js';
 import type { Readable } from 'readable-stream';
 import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
 
@@ -8,6 +9,7 @@ type HttpRequest = {
 };
 
 export type RequestContext = {
+  dwn: Dwn;
   transport?: 'http' | 'ws';
 } & (HttpRequest | { [K in keyof HttpRequest]?: never; });
 
@@ -29,7 +31,7 @@ export class JsonRpcRouter {
     this.methodHandlers[methodName] = handler;
   }
 
-  async handle(rpcRequest: JsonRpcRequest, context: RequestContext = {}) {
+  async handle(rpcRequest: JsonRpcRequest, context: RequestContext) {
     const handler = this.methodHandlers[rpcRequest.method];
 
     return await handler(rpcRequest, context);
