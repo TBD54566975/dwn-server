@@ -1,84 +1,33 @@
-import type { Readable } from 'readable-stream';
+import type { Readable as IsomorphicReadable } from 'readable-stream';
 import type { JsonRpcHandler, HandlerResponse } from '../../lib/json-rpc-router.js';
 
-import busboy from 'busboy';
-import EventEmitter from 'events';
-
-import { Dwn } from '@tbd54566975/dwn-sdk-js';
 import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { v4 as uuidv4 } from 'uuid';
 
 import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResponse } from '../../lib/json-rpc.js';
 
-const emitter = new EventEmitter();
-
 export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, context) => {
-  const { dwn } = context;
-  const requestId = dwnRequest.id ?? uuidv4();
+  let { dwn, dataStream } = context;
   const { target, message } = dwnRequest.params;
 
-  if (context.contentType === 'application/octet-stream') {
-    return await _processDwnMessage(dwn, requestId, target, message, context.request as any);
-  } else if (context.contentType === 'multipart/form-data') {
-    // there's no choice other than to return a promise here because we have to wait until the multipart
-    // request body is fully consumed.
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise(resolve => {
-      const bb = busboy({
-        headers : context.request.headers,
-        limits  : {
-          fields : 0,
-          files  : 1
-        }
-      });
+  const requestId = dwnRequest.id ?? uuidv4();
 
-      let { params } = dwnRequest;
-
-      emitter.once(requestId, responsePayload => {
-        return resolve(responsePayload);
-      });
-
-      // TODO: figure out whether we need to listen for errors on multipartRequest. not sure if
-      //       the error bubbles all the way up to topmost stream
-      // context.multipartRequest.on('error', error => {});
-
-      // TODO: figure out whether we need to listen for errors on busboy
-      // bb.once('error', error => {});
-
-      bb.on('file', async (_name, stream, _info) => {
-        // TODO: figure out whether we need to listen for errors on this stream
-        // stream.on('error', error => {});
-
-        const responsePayload = await _processDwnMessage(dwn, requestId, params.target, params.message, <any>stream);
-        emitter.emit(requestId, responsePayload);
-      });
-
-      // TODO: might make more sense to send the reply from here. is 'close' called when an error occurs?
-      // bb.on('close', () => {});
-
-      context.request.pipe(bb);
-    });
-  } else {
-    const { message, target, encodedData } = dwnRequest.params;
-    const dataStream = encodedData ? DataStream.fromBytes(base64url.baseDecode(encodedData)) : undefined;
-
-    return await _processDwnMessage(dwn, requestId, target, message, dataStream);
+  // data can either be provided in the dwnRequest itself or as a stream
+  if (!dataStream) {
+    const { encodedData } = dwnRequest.params;
+    dataStream = encodedData ? DataStream.fromBytes(base64url.baseDecode(encodedData)) : undefined;
   }
-};
 
-async function _processDwnMessage(dwn: Dwn, requestId: string, target: string, dwnMessage, dataStream?: Readable) {
   try {
-    const reply = await dwn.processMessage(target, dwnMessage, dataStream);
-    const { status } = reply;
+    const reply = await dwn.processMessage(target, message, dataStream as IsomorphicReadable);
 
-    if (status.code >= 400) {
+    if (reply.status.code >= 400) {
       const jsonRpcResponse = createJsonRpcErrorResponse(requestId,
-        JsonRpcErrorCodes.BadRequest, status.detail);
+        JsonRpcErrorCodes.BadRequest, reply.status.detail);
 
       return { jsonRpcResponse } as HandlerResponse;
     }
-
 
     // RecordsRead messages return record data as a stream to for accommodate large amounts of data
     let recordDataStream;
@@ -101,4 +50,4 @@ async function _processDwnMessage(dwn: Dwn, requestId: string, target: string, d
 
     return { jsonRpcResponse } as HandlerResponse;
   }
-}
+};

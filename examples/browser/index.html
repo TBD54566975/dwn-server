@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Upload Chonker Example</title>
 </head>
 
 <body>
@@ -43,16 +43,15 @@
       protectedHeader: { alg: 'ES256K', kid: `${did}#key-1` }
     };
 
-    chonker_btn.addEventListener('click', async event => {
-      //! NOTE: "normalizing" readable stream so that ipfs-unixfs-importer will accept it
-      async function* iterableReader(reader) {
-        let chunk;
-        do {
-          chunk = await reader.read()
-          yield chunk.value ?? new Uint8Array();
-        } while (!chunk.done);
-      }
+    async function* iterableReader(reader) {
+      let chunk;
+      do {
+        chunk = await reader.read()
+        yield chunk.value ?? new Uint8Array();
+      } while (!chunk.done);
+    }
 
+    chonker_btn.addEventListener('click', async event => {
       const file = chonker.files[0];
       const streamReader = file.stream().getReader();
       const iterableStreamReader = iterableReader(streamReader);
@@ -64,9 +63,6 @@
         dataFormat: 'application/json',
         authorizationSignatureInput: authorizationSignatureInput
       });
-
-      const formData = new FormData();
-      formData.append('file', chonker.files[0]);
 
       const jsonRpcPayload = {
         jsonrpc: '2.0',
@@ -80,8 +76,9 @@
 
       const options = {
         method: 'POST',
-        body: formData,
+        body: file,
         headers: {
+          'content-type': 'application/json',
           'dwn-request': JSON.stringify(jsonRpcPayload)
         }
       };
@@ -91,8 +88,6 @@
 
       console.log(result);
     });
-
-
   </script>
 </body>
 

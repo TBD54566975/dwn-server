@@ -1,17 +1,12 @@
-import type { Request } from 'express';
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
-import type { Readable } from 'readable-stream';
+import type { Readable } from 'node:stream';
 import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
-
-type HttpRequest = {
-  contentType: 'application/octet-stream' | 'multipart/form-data';
-  request: Request;
-};
 
 export type RequestContext = {
   dwn: Dwn;
-  transport?: 'http' | 'ws';
-} & (HttpRequest | { [K in keyof HttpRequest]?: never; });
+  transport: 'http' | 'ws';
+  dataStream?: Readable;
+};
 
 export type HandlerResponse = {
   jsonRpcResponse: JsonRpcResponse,
