@@ -1,12 +1,9 @@
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
 import type { RequestContext } from './lib/json-rpc-router.js';
-import type { ParsedMediaType } from 'content-type';
 import type { Express, Request } from 'express';
 
 import cors from 'cors';
 import express from 'express';
-import getRawBody from 'raw-body';
-import ContentType from 'content-type';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -29,43 +26,11 @@ export class HttpApi {
     });
 
     this.api.post('/', async (req: Request, res) => {
-      let contentType: ParsedMediaType;
+      let dwnRequest = req.headers['dwn-request'] as any;
 
-      if ('content-type' in req.headers) {
-        contentType = ContentType.parse(req);
-      } else {
-        const reply = createJsonRpcErrorResponse(
-          uuidv4(), JsonRpcErrorCodes.BadRequest, 'content-type is required.');
-
-        return res.status(400).json(reply);
-      }
-
-      let requestContext: RequestContext = { dwn: this.dwn, transport: 'http' };
-      let dwnRequest;
-
-      if (contentType.type === 'application/json') {
-        dwnRequest = await getRawBody(req, { encoding: true });
-
-        if (!dwnRequest) {
-          const reply = createJsonRpcErrorResponse(uuidv4(),
-            JsonRpcErrorCodes.BadRequest, 'request payload required.');
-
-          return res.status(400).json(reply);
-        }
-      } else if (contentType.type === 'application/octet-stream') {
-        dwnRequest = req.headers['dwn-request'];
-
-        if (!dwnRequest) {
-          const reply = createJsonRpcErrorResponse(uuidv4(),
-            JsonRpcErrorCodes.BadRequest, 'request payload required.');
-
-          return res.status(400).json(reply);
-        }
-
-        requestContext.dataStream = req;
-      } else {
-        const reply = createJsonRpcErrorResponse(
-          uuidv4(), JsonRpcErrorCodes.BadRequest, 'content-type not supported');
+      if (!dwnRequest) {
+        const reply = createJsonRpcErrorResponse(uuidv4(),
+          JsonRpcErrorCodes.BadRequest, 'request payload required.');
 
         return res.status(400).json(reply);
       }
@@ -78,6 +43,7 @@ export class HttpApi {
         return res.status(400).json(reply);
       }
 
+      const requestContext: RequestContext = { dwn: this.dwn, transport: 'http', dataStream: req };
       const { jsonRpcResponse, dataStream } = await jsonRpcApi.handle(dwnRequest, requestContext as RequestContext);
 
       if (dataStream) {

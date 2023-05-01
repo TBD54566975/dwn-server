@@ -3,11 +3,10 @@ import request from 'supertest';
 
 import { expect } from 'chai';
 import { v4 as uuidv4 } from 'uuid';
-import { base64url } from 'multiformats/bases/base64';
 
 import { HttpApi } from '../src/http-api.js';
 import { dwn, clear as clearDwn } from './test-dwn.js';
-import { Cid, DataStream, RecordsRead } from '@tbd54566975/dwn-sdk-js';
+import { Cid, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
 import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage, getFileAsReadStream, streamHttpRequest } from './utils.js';
 
@@ -21,35 +20,9 @@ describe('http api', function() {
     await clearDwn();
   });
 
-  it('responds with a 400 if content-type request header is missing', async function() {
+  it('responds with a 400 if no dwn-request header is provided', async function() {
     const response = await request(httpApi.api)
       .post('/')
-      .send();
-
-    expect(response.statusCode).to.equal(400);
-
-    const body = response.body as JsonRpcErrorResponse;
-    expect(body.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
-    expect(body.error.message).to.equal('content-type is required.');
-  });
-
-  it('responds with a 400 if no dwn request is provided in body when content type is application/json', async function() {
-    const response = await request(httpApi.api)
-      .post('/')
-      .set('content-type', 'application/json')
-      .send();
-
-    expect(response.statusCode).to.equal(400);
-
-    const body = response.body as JsonRpcErrorResponse;
-    expect(body.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
-    expect(body.error.message).to.equal('request payload required.');
-  });
-
-  it('responds with a 400 if no dwn-request header is provided when content type is application/octet-stream', async function() {
-    const response = await request(httpApi.api)
-      .post('/')
-      .set('content-type', 'application/octet-stream')
       .send();
 
     expect(response.statusCode).to.equal(400);
@@ -62,8 +35,8 @@ describe('http api', function() {
   it('responds with a 400 if parsing dwn request fails', async function() {
     const response = await request(httpApi.api)
       .post('/')
-      .set('content-type', 'application/json')
-      .send(';;;;@!#@!$$#!@%');
+      .set('dwn-request', ';;;;@!#@!$$#!@%')
+      .send();
 
     expect(response.statusCode).to.equal(400);
 
@@ -72,36 +45,34 @@ describe('http api', function() {
     expect(body.error.message).to.include('JSON');
   });
 
-  describe('RecordsWrite', function() {
-    it('handles RecordsWrite with message in body', async function() {
-      const alice = await createProfile();
-      const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
-      const dataBytes = await DataStream.toBytes(dataStream);
-      const encodedData = base64url.baseEncode(dataBytes);
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message : recordsWrite.toJSON(),
-        target  : alice.did,
-        encodedData
-      });
-
-      const response = await request(httpApi.api)
-        .post('/')
-        .set('content-type', 'application/json')
-        .send(dwnRequest);
-
-      expect(response.statusCode).to.equal(200);
-
-      const body = response.body as JsonRpcResponse;
-      expect(body.id).to.equal(requestId);
-      expect(body.error).to.not.exist;
-
-      const { reply } = body.result;
-      expect(reply.status.code).to.equal(202);
+  it('works fine when no request body is provided', async function() {
+    const alice = await createProfile();
+    const recordsQuery = await RecordsQuery.create({
+      filter: {
+        schema: 'woosa'
+      },
+      authorizationSignatureInput: alice.signatureInput
     });
 
-    it('handles RecordsWrite with message in header and data in body as application/octet-stream', async function() {
+    const requestId = uuidv4();
+    const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+      message : recordsQuery.toJSON(),
+      target  : alice.did,
+    });
+
+    const response = await request(httpApi.api)
+      .post('/')
+      .set('dwn-request', JSON.stringify(dwnRequest))
+      .send();
+
+    expect(response.statusCode).to.equal(200);
+    expect(response.body.id).to.equal(requestId);
+    expect(response.body.error).to.not.exist;
+    expect(response.body.result.reply.status.code).to.equal(200);
+  });
+
+  describe('RecordsWrite', function () {
+    it('handles RecordsWrite', async function() {
       const server = httpApi.listen(3000);
 
       const filePath = './fixtures/test.jpeg';
@@ -138,6 +109,7 @@ describe('http api', function() {
     });
   });
 
+
   describe('RecordsRead', function() {
     it('returns message in response header and data in body', async function() {
       const server = httpApi.listen(3000);
@@ -157,8 +129,7 @@ describe('http api', function() {
       let response = await fetch('http://localhost:3000', {
         method  : 'POST',
         headers : {
-          'content-type' : 'application/octet-stream',
-          'dwn-request'  : JSON.stringify(dwnRequest)
+          'dwn-request': JSON.stringify(dwnRequest)
         },
         body: stream
       });
@@ -186,9 +157,8 @@ describe('http api', function() {
       response = await fetch('http://localhost:3000', {
         method  : 'POST',
         headers : {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(dwnRequest)
+          'dwn-request': JSON.stringify(dwnRequest)
+        }
       });
 
       expect(response.status).to.equal(200);

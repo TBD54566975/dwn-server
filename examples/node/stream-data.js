@@ -37,8 +37,10 @@ rpcRequest = await createJsonRpcRequest(uuidv4(), 'dwn.processMessage', {
 });
 
 resp = await fetch('http://localhost:3000', {
-  method : 'POST',
-  body   : JSON.stringify(rpcRequest)
+  method  : 'POST',
+  headers : {
+    'dwn-request': JSON.stringify(rpcRequest)
+  }
 });
 
 resp.body.on('data', chunk => {
