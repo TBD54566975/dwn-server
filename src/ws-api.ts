@@ -70,7 +70,7 @@ export class WsApi {
     // that the remote endpoint is still responsive. Server will ping each socket every 30s
     // if a pong hasn't received from a socket by the next ping, the server will terminate
     // the socket connection
-    const heartbeatInterval = setInterval(function () {
+    const heartbeatInterval = setInterval(() => {
       this.wsServer.clients.forEach(function (socket) {
         if (socket[SOCKET_ISALIVE_SYMBOL] === false) {
           return socket.terminate();
