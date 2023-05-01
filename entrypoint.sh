@@ -1,5 +1,5 @@
 #! /bin/bash
 
-cd /dwn-aggregator
+cd /dwn-server
 
-exec node /dwn-aggregator/src/index.js
+exec node /dwn-server/dist/src/main.js

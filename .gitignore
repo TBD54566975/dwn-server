@@ -1,7 +1,7 @@
-BLOCKSTORE
+.DS_STORE
 browser-test
-DATASTORE
+dist
+data
 etc
-INDEX
 node_modules
 tmp
