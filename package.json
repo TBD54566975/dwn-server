@@ -1,7 +1,7 @@
 {
     "name": "dwn-server",
     "type": "module",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "dependencies": {
         "@tbd54566975/dwn-sdk-js": "0.0.30",
         "bytes": "3.1.2",
