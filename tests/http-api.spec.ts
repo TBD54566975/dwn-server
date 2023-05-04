@@ -46,6 +46,14 @@ describe('http api', function() {
   });
 
   it('exposes dwn-response header', async function() {
+    // This test verifies that the Express web server includes `dwn-response` in the list of
+    // `access-control-expose-headers` returned in each HTTP response. This is necessary to enable applications
+    // that have CORS enabled to read and parse DWeb Messages that are returned as Response headers, particularly
+    // in the case of RecordsRead messages.
+
+    // TODO: Consider replacing this test with a more robust method of testing, such as writing Playwright tests
+    // that run in a browser to verify that the `dwn-response` header can be read from the `fetch()` response
+    // when CORS mode is enabled.
     const response = await request(httpApi.api)
       .post('/')
       .send();
