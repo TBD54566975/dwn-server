@@ -18,7 +18,7 @@ export class HttpApi {
     this.api = express();
     this.dwn = dwn;
 
-    this.api.use(cors());
+    this.api.use(cors({ exposedHeaders: 'dwn-response' }));
 
     this.api.get('/health', (_req, res) => {
       // return 200 ok

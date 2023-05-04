@@ -45,6 +45,19 @@ describe('http api', function() {
     expect(body.error.message).to.include('JSON');
   });
 
+  it('exposes dwn-response header', async function() {
+    const response = await request(httpApi.api)
+      .post('/')
+      .send();
+
+    // Check if the 'access-control-expose-headers' header is present
+    expect(response.headers).to.have.property('access-control-expose-headers');
+
+    // Check if the 'dwn-response' header is listed in 'access-control-expose-headers'
+    const exposedHeaders = response.headers['access-control-expose-headers'];
+    expect(exposedHeaders).to.include('dwn-response');
+  });
+
   it('works fine when no request body is provided', async function() {
     const alice = await createProfile();
     const recordsQuery = await RecordsQuery.create({
