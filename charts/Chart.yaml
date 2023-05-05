@@ -1,0 +1,6 @@
+apiVersion: v2
+name: dwn-server
+description: A Helm chart for deploying dwn-server as a StatefulSet
+type: application
+version: 0.1.0
+appVersion: main

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dwn-server
+spec:
+  serviceName: dwn-server
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: dwn-server
+  template:
+    metadata:
+      labels:
+        app: dwn-server
+    spec:
+      containers:
+      - name: dwn-server
+        image: ghcr.io/tbd54566975/dwn-server:main
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - name: dwn-data
+          mountPath: /data/dwn
+  volumeClaimTemplates:
+  - metadata:
+      name: dwn-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
