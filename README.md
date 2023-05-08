@@ -17,6 +17,26 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
 - [Configuration](#configuration)
 
 
+# Running the server via docker
+`docker run -p 3000:3000 -v myvolume:/dwn-server/data ghcr.io/tbd54566975/dwn-server:main`
+
+This can run on services like AWS, GCP a VPS, desktop, fly.io, etc.
+Ideally the volume is persistent so that data is kept (or has to be synced back from another DWN instance).
+
+## Running Locally for Development
+```bash
+git clone https://github.com/TBD54566975/dwn-server.git
+cd dwn-server
+npm run server
+```
+
+## Building a docker image locally
+
+A docker image is continuously published from this repository, but if you want to build it locally run: 
+`docker build -t dwn-server .`
+
+
+
 # JSON-RPC API
 
 [JSON-RPC](https://www.jsonrpc.org/specification) is a lightweight remote procedure call (RPC) protocol that uses JSON as a data format for exchanging information between a client and a server over a network. JSON-RPC is language-independent and transport-agnostic which makes it usable in a variety of contexts (e.g. browser, server-side)
@@ -124,18 +144,6 @@ Used to send DWeb Messages to the server.
 Examples can be found in the `examples` directory. 
 > 💡 **TODO**: Add examples in `examples` directory
 
-# Running The Server
-`docker run -p 3000:3000 ghcr.io/tbd54566975/dwn-server:main`
-
-This can run on services like AWS lightsail, a VPS, desktop.
-
-## Running Locally for Development
-```bash
-git clone https://github.com/TBD54566975/dwn-server.git
-cd dwn-server
-npm install && npm run compile
-node dist/src/main.js
-```
 
 # Hosted examples you can use:
 | Location  | URL                                                                  |
