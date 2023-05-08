@@ -20,7 +20,7 @@ spec:
         - containerPort: 3000
         volumeMounts:
         - name: dwn-data
-          mountPath: /data/dwn
+          mountPath: /dwn-server/data
   volumeClaimTemplates:
   - metadata:
       name: dwn-data
