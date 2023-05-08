@@ -1,10 +1,13 @@
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+import type { RequestContext } from './lib/json-rpc-router.js';
 
 import { Server } from 'http';
 
 import { WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from 'ws';
+import { DataStream } from '@tbd54566975/dwn-sdk-js';
+import { base64url } from 'multiformats/bases/base64';
 
 import { jsonRpcApi } from './json-rpc-api.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes, JsonRpcResponse } from './lib/json-rpc.js';
@@ -58,7 +61,12 @@ export class WsApi {
           return socket.send(responseBuffer);
         }
 
-        const { jsonRpcResponse } = await jsonRpcApi.handle(dwnRequest, { transport: 'ws', dwn });
+        // Check whether data was provided in the request
+        const { encodedData } = dwnRequest.params;
+        const requestDataStream = encodedData ? DataStream.fromBytes(base64url.baseDecode(encodedData)) : undefined;
+
+        const requestContext: RequestContext = { dwn, transport: 'ws', dataStream: requestDataStream };
+        const { jsonRpcResponse } = await jsonRpcApi.handle(dwnRequest, requestContext);
 
         const responseBuffer = WsApi.jsonRpcResponseToBuffer(jsonRpcResponse);
         return socket.send(responseBuffer);
