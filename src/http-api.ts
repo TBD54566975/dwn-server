@@ -25,6 +25,12 @@ export class HttpApi {
       return res.json({ ok: true });
     });
 
+    this.api.get('/', (_req, res) => {
+      // return a plain text string
+      res.setHeader('content-type', 'text/plain');
+      return res.send('please use a web5 client, for example: https://github.com/TBD54566975/web5-js ');
+    });
+
     this.api.post('/', async (req: Request, res) => {
       let dwnRequest = req.headers['dwn-request'] as any;
 
