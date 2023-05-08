@@ -1,8 +1,6 @@
 import type { Readable as IsomorphicReadable } from 'readable-stream';
 import type { JsonRpcHandler, HandlerResponse } from '../../lib/json-rpc-router.js';
 
-import { base64url } from 'multiformats/bases/base64';
-import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { v4 as uuidv4 } from 'uuid';
 
 import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResponse } from '../../lib/json-rpc.js';
@@ -12,12 +10,6 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
   const { target, message } = dwnRequest.params;
 
   const requestId = dwnRequest.id ?? uuidv4();
-
-  // data can either be provided in the dwnRequest itself or as a stream
-  if (!dataStream) {
-    const { encodedData } = dwnRequest.params;
-    dataStream = encodedData ? DataStream.fromBytes(base64url.baseDecode(encodedData)) : undefined;
-  }
 
   try {
     const reply = await dwn.processMessage(target, message, dataStream as IsomorphicReadable);

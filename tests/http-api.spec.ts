@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { HttpApi } from '../src/http-api.js';
 import { dwn, clear as clearDwn } from './test-dwn.js';
-import { Cid, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
+import { Cid, DataStream, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
 import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage, getFileAsReadStream, streamHttpRequest } from './utils.js';
 
@@ -93,7 +93,7 @@ describe('http api', function() {
   });
 
   describe('RecordsWrite', function () {
-    it('handles RecordsWrite', async function() {
+    it('handles RecordsWrite with request body', async function() {
       const server = httpApi.listen(3000);
 
       const filePath = './fixtures/test.jpeg';
@@ -119,6 +119,65 @@ describe('http api', function() {
       expect(resp.status).to.equal(200);
 
       const body = JSON.parse(resp.body) as JsonRpcResponse;
+      expect(body.id).to.equal(requestId);
+      expect(body.error).to.not.exist;
+
+      const { reply } = body.result;
+      expect(reply.status.code).to.equal(202);
+
+      server.close();
+      server.closeAllConnections();
+    });
+
+    it('handles RecordsWrite overwrite that does not mutate data', async function() {
+      const server = httpApi.listen(3000);
+
+      const alice = await createProfile();
+
+      // First RecordsWrite that creates the record.
+      const { recordsWrite: initialWrite, dataStream } = await createRecordsWriteMessage(alice);
+      const dataBytes = await DataStream.toBytes(dataStream);
+      let requestId = uuidv4();
+      let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message : initialWrite.toJSON(),
+        target  : alice.did
+      });
+
+      let responseInitialWrite = await fetch('http://localhost:3000', {
+        method  : 'POST',
+        headers : {
+          'dwn-request': JSON.stringify(dwnRequest)
+        },
+        body: new Blob([dataBytes])
+      });
+
+      expect(responseInitialWrite.status).to.equal(200);
+
+      // Subsequent RecordsWrite that mutates the published property of the record.
+      const { recordsWrite: overWrite } = await createRecordsWriteMessage(alice, {
+        recordId    : initialWrite.message.recordId,
+        dataCid     : initialWrite.message.descriptor.dataCid,
+        dataSize    : initialWrite.message.descriptor.dataSize,
+        dateCreated : initialWrite.message.descriptor.dateCreated,
+        published   : true
+      });
+
+      requestId = uuidv4();
+      dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message : overWrite.toJSON(),
+        target  : alice.did
+      });
+      let responseOverwrite = await fetch('http://localhost:3000', {
+        method  : 'POST',
+        headers : {
+          'dwn-request': JSON.stringify(dwnRequest)
+        }
+      });
+
+      expect(responseOverwrite.status).to.equal(200);
+
+      const body = await responseOverwrite.json() as JsonRpcResponse;
+      expect(body.error).to.not.exist;
       expect(body.id).to.equal(requestId);
       expect(body.error).to.not.exist;
 

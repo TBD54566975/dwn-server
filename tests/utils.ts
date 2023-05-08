@@ -38,7 +38,23 @@ export async function createProfile(): Promise<Profile> {
   };
 }
 
-export type CreateRecordsWriteOverrides = ({ dataSize?: number; dataCid?: string } & { data?: never }) | ({ dataSize?: never; dataCid?: never } & { data?: Uint8Array });
+export type CreateRecordsWriteOverrides = (
+  {
+    dataCid?: string;
+    dataSize?: number;
+    dateCreated?: string;
+    published?: boolean;
+    recordId?: string
+  } & { data?: never })
+  |
+  ({
+    dataCid?: never;
+    dataSize?: never;
+    dateCreated?: string;
+    published?: boolean;
+    recordId?: string
+  } & { data?: Uint8Array }
+);
 
 export async function createRecordsWriteMessage(signer: Profile, overrides: CreateRecordsWriteOverrides = {}) {
   if (!overrides.dataCid && !overrides.data) {
