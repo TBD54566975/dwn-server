@@ -189,6 +189,33 @@ describe('http api', function() {
     });
   });
 
+  describe('health check', function() {
+    it('returns a health check', async function() {
+      const server = httpApi.listen(3000);
+      let response = await fetch('http://localhost:3000/health', {
+        method: 'GET',
+      });
+      expect(response.status).to.equal(200);
+      server.close();
+      server.closeAllConnections();
+
+    });
+  });
+
+  describe('default http get response', function() {
+    it('returns returns a default message', async function() {
+      const server = httpApi.listen(3000);
+      let response = await fetch('http://localhost:3000/', {
+        method: 'GET',
+      });
+      expect(response.status).to.equal(200);
+      server.close();
+      server.closeAllConnections();
+
+    });
+  });
+
+
 
   describe('RecordsRead', function() {
     it('returns message in response header and data in body', async function() {
