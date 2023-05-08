@@ -15,5 +15,7 @@ COPY src ./src
 RUN npm install
 RUN npm run compile
 
+VOLUME /dwn-server/data
+
 ENTRYPOINT [ "/dwn-server/entrypoint.sh" ]
 EXPOSE ${DS_PORT}
