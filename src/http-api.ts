@@ -10,6 +10,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { jsonRpcApi } from './json-rpc-api.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
 
+const jsonRpcErrorToHttpStatusCode: { [key: number]: number } = {
+  [JsonRpcErrorCodes.BadRequest]   : 400,
+  [JsonRpcErrorCodes.Unauthorized] : 401,
+  [JsonRpcErrorCodes.Forbidden]    : 403,
+};
+
 export class HttpApi {
   api: Express;
   dwn: Dwn;
@@ -56,6 +62,12 @@ export class HttpApi {
 
       const requestContext: RequestContext = { dwn: this.dwn, transport: 'http', dataStream: requestDataStream };
       const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcApi.handle(dwnRequest, requestContext as RequestContext);
+
+      // If the handler returns an error response, return the equivalent HTTP status code with the response
+      if (jsonRpcResponse.error) {
+        const statusCode = jsonRpcErrorToHttpStatusCode[jsonRpcResponse.error.code] || 500;
+        return res.status(statusCode).json(jsonRpcResponse);
+      }
 
       if (responseDataStream) {
         res.setHeader('content-type', 'application/octet-stream');
