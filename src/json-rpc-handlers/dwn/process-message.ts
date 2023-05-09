@@ -16,7 +16,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
 
     if (reply.status.code >= 400) {
       const jsonRpcResponse = createJsonRpcErrorResponse(requestId,
-        JsonRpcErrorCodes.BadRequest, reply.status.detail);
+        JsonRpcErrorCodes.BadRequest, reply.status.detail, { status: { code: reply.status.code }});
 
       return { jsonRpcResponse } as HandlerResponse;
     }
@@ -24,7 +24,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
     // RecordsRead messages return record data as a stream to for accommodate large amounts of data
     let recordDataStream;
     if ('record' in reply) {
-      // TODO: export `RecordsReadReply` from dwn-sdk-js
+      // TODO: Import `RecordsReadReply` from dwn-sdk-js once release with https://github.com/TBD54566975/dwn-sdk-js/pull/346 is available
       recordDataStream = reply.record['data'];
       delete reply.record['data'];
     }
