@@ -45,6 +45,37 @@ describe('http api', function() {
     expect(body.error.message).to.include('JSON');
   });
 
+  it('responds with a 4XX-5XX status code if JSON RPC handler returns error', async function() {
+    const server = httpApi.listen(3000);
+
+    const alice = await createProfile();
+
+    const requestId = uuidv4();
+    const { recordsWrite } = await createRecordsWriteMessage(alice);
+    const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+      message : recordsWrite.toJSON(),
+      target  : alice.did,
+    });
+
+    // Attempt an initial RecordsWrite without any data to ensure the DWN returns an error.
+    let responseInitialWrite = await fetch('http://localhost:3000', {
+      method  : 'POST',
+      headers : {
+        'dwn-request': JSON.stringify(dwnRequest)
+      }
+    });
+
+    expect(responseInitialWrite.status).to.equal(400);
+
+    const body = await responseInitialWrite.json() as JsonRpcResponse;
+    expect(body.error).to.exist;
+    expect(body.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
+    expect(body.error.data.status.code).to.be.within(400, 599);
+
+    server.close();
+    server.closeAllConnections();
+  });
+
   it('exposes dwn-response header', async function() {
     // This test verifies that the Express web server includes `dwn-response` in the list of
     // `access-control-expose-headers` returned in each HTTP response. This is necessary to enable applications

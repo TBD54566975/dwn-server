@@ -51,6 +51,17 @@ export class HttpApi {
       const requestContext: RequestContext = { dwn: this.dwn, transport: 'http', dataStream: requestDataStream };
       const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcApi.handle(dwnRequest, requestContext as RequestContext);
 
+      // If the handler returns an error response, return the equivalent HTTP status code with the response
+      if (jsonRpcResponse.error) {
+        const jsonRpcErrorToHttpStatusCode: { [key: number]: number } = {
+          [JsonRpcErrorCodes.BadRequest]   : 400,
+          [JsonRpcErrorCodes.Unauthorized] : 401,
+          [JsonRpcErrorCodes.Forbidden]    : 403,
+        };
+        const statusCode = jsonRpcErrorToHttpStatusCode[jsonRpcResponse.error.code] || 500;
+        return res.status(statusCode).json(jsonRpcResponse);
+      }
+
       if (responseDataStream) {
         res.setHeader('content-type', 'application/octet-stream');
         res.setHeader('dwn-response', JSON.stringify(jsonRpcResponse));
