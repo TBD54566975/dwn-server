@@ -2,6 +2,8 @@
 
 Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API over `http:` and `ws:`
 
+- [Running The Server](#running-the-server)
+- [Hosted examples you can use:](#hosted-examples-you-can-use)
 - [JSON-RPC API](#json-rpc-api)
   - [Available Methods](#available-methods)
     - [`dwn.processMessage`](#dwnprocessmessage)
@@ -11,9 +13,6 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
       - [Example Error Response](#example-error-response)
       - [Transporting large amounts of data](#transporting-large-amounts-of-data)
       - [Receiving large amounts of data](#receiving-large-amounts-of-data)
-- [Running The Server](#running-the-server)
-  - [Running Locally for Development](#running-locally-for-development)
-- [Hosted examples you can use:](#hosted-examples-you-can-use)
 - [Configuration](#configuration)
 
 
@@ -21,13 +20,14 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
 
 `docker run -p 3000:3000 -v myvolume:/dwn-server/data ghcr.io/tbd54566975/dwn-server:main`
 
-This can run on services like AWS, GCP, VPS, home server (with ngrok), fly.io, render.com etc.
+This can run on services like AWS, GCP, VPS, home server (with ngrok or cloudflare), fly.io, render.com etc.
 Ideally the volume is persistent so that data is kept (or has to be synced back from another DWN instance).
 
 ## Running Locally for Development
 ```bash
 git clone https://github.com/TBD54566975/dwn-server.git
 cd dwn-server
+npm install
 npm run server
 ```
 
@@ -35,7 +35,6 @@ npm run server
 
 A docker image is continuously published from this repository, but if you want to build it locally run: 
 `docker build -t dwn-server .`
-
 
 
 # JSON-RPC API
@@ -158,9 +157,12 @@ Examples can be found in the `examples` directory.
 You may want to run a DWN server just for you, or as a public service for you and your friends and family.
 DWNs can be as simple as a docker image or a node process running somewhere.
 
+DWN-servers can run anywhere you can run node.js or docker. http and websocket need to be available to the DWN server.
+See below for some suggestions.
+
 ## Running on render.com
 
-For $7 a month you can run an instance on the render.com service: 
+You can run an instance on the render.com service: 
 * Create a render.com account 
 * Fork this repo
 * Upgrade your render.com account to a paid account
@@ -171,16 +173,35 @@ For $7 a month you can run an instance on the render.com service:
 
 ## Running with ngrok
 
-You can run a DWN-server on your local machine and expose it to the internet using ngrok.
+You can run a DWN-server on your local machine or home server and expose it to the internet using ngrok.
 
 First, install ngrok: https://ngrok.com/download
 
-Start the server using instructions above (using docker or running the DWN directly) then run: 
+Then run: 
   
   ```bash
+  docker run -p 3000:3000 -v myvolume:/dwn-server/data ghcr.io/tbd54566975/dwn-server:main
+
+  ## in another terminal: 
   ngrok http 3000
   ```
 Note the resulting publicly addressable https url for your DWN instance.
+
+## Running with cloudflared
+
+Cloudflare has a tunnel service that you can use to expose your DWN server to the internet, if you run it on a server at home. 
+With https://github.com/cloudflare/cloudflared installed, run the following commands:
+
+```bash
+git clone https://github.com/TBD54566975/dwn-server.git
+cd dwn-server
+npm install
+npm run server
+
+## in another terminal:
+
+cloudflared tunnel --url http://localhost:3000
+```
 
 ## Running on GCP
 
