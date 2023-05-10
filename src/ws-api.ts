@@ -38,6 +38,18 @@ export class WsApi {
         this[SOCKET_ISALIVE_SYMBOL] = true;
       });
 
+      socket.on('close', function () {
+        // Clean up event listeners
+        socket.removeAllListeners();
+      });
+
+      socket.on('error', function (error) {
+        console.error('WebSocket error:', error);
+        // Close the socket and remove all event listeners
+        socket.terminate();
+        socket.removeAllListeners();
+      });
+
       socket.on('message', async function(dataBuffer) {
         let dwnRequest;
 
