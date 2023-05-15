@@ -14,13 +14,6 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
   try {
     const reply = await dwn.processMessage(target, message, dataStream as IsomorphicReadable);
 
-    if (reply.status.code >= 400) {
-      const jsonRpcResponse = createJsonRpcErrorResponse(requestId,
-        JsonRpcErrorCodes.BadRequest, reply.status.detail, { status: { code: reply.status.code }});
-
-      return { jsonRpcResponse } as HandlerResponse;
-    }
-
     // RecordsRead messages return record data as a stream to for accommodate large amounts of data
     let recordDataStream;
     if ('record' in reply) {
