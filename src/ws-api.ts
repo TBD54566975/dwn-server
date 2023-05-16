@@ -65,7 +65,7 @@ export class WsApi {
           }
 
           dwnRequest = JSON.parse(dwnRequest);
-        } catch(e) {
+        } catch (e) {
           const jsonRpcResponse = createJsonRpcErrorResponse(
             uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
 

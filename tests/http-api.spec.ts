@@ -81,7 +81,7 @@ describe('http api', function() {
 
     const { reply } = body.result;
     expect(reply.status.code).to.equal(400);
-    expect(reply.status.detail).to.include('MessageStoreDataNotFound');
+    expect(reply.status.detail).to.include('RecordsWriteMissingDataStream');
   });
 
   it('exposes dwn-response header', async function() {

@@ -29,7 +29,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
     }
 
     return responsePayload;
-  } catch(e) {
+  } catch (e) {
     const jsonRpcResponse = createJsonRpcErrorResponse(
       requestId, JsonRpcErrorCodes.InternalError, e.message);
 

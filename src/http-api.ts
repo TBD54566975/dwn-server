@@ -1,9 +1,11 @@
-import type { Express, Request } from 'express';
+import type { Express, Request, Response } from 'express';
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
 import type { RequestContext } from './lib/json-rpc-router.js';
+import responseTime from 'response-time';
 
 import cors from 'cors';
 import express from 'express';
+import { register, Histogram } from 'prom-client';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -18,11 +20,36 @@ export class HttpApi {
     this.api = express();
     this.dwn = dwn;
 
+    const responseHistogram = new Histogram({
+      name       : 'http_response',
+      help       : 'response histogram',
+      buckets    : [50, 250, 500, 750, 1000],
+      labelNames : ['route', 'code'],
+    });
+
     this.api.use(cors({ exposedHeaders: 'dwn-response' }));
+    this.api.use(responseTime((req: Request, res: Response, time) => {
+      const url = req.url === '/' ? '/jsonrpc' : req.url;
+      const route = (req.method + url).toLowerCase()
+        .replace(/[:.]/g, '')
+        .replace(/\//g, '_');
+
+      const statusCode = res.statusCode.toString();
+      responseHistogram.labels(route, statusCode).observe(time);
+    }));
 
     this.api.get('/health', (_req, res) => {
       // return 200 ok
       return res.json({ ok: true });
+    });
+
+    this.api.get('/metrics', async (req, res) => {
+      try {
+        res.set('Content-Type', register.contentType);
+        res.end(await register.metrics());
+      } catch (e) {
+        res.status(500).end(e);
+      }
     });
 
     this.api.get('/', (_req, res) => {
@@ -43,7 +70,7 @@ export class HttpApi {
 
       try {
         dwnRequest = JSON.parse(dwnRequest);
-      } catch(e) {
+      } catch (e) {
         const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
 
         return res.status(400).json(reply);
