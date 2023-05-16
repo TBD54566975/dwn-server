@@ -47,8 +47,8 @@ export class HttpApi {
       try {
         res.set('Content-Type', register.contentType);
         res.end(await register.metrics());
-      } catch (ex) {
-        res.status(500).end(ex);
+      } catch (e) {
+        res.status(500).end(e);
       }
     });
 
@@ -70,7 +70,7 @@ export class HttpApi {
 
       try {
         dwnRequest = JSON.parse(dwnRequest);
-      } catch(e) {
+      } catch (e) {
         const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
 
         return res.status(400).json(reply);
