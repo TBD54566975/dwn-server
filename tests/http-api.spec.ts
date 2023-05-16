@@ -1,3 +1,5 @@
+import type { Server } from 'http';
+
 import fetch from 'node-fetch';
 import request from 'supertest';
 
@@ -7,16 +9,24 @@ import { v4 as uuidv4 } from 'uuid';
 import { HttpApi } from '../src/http-api.js';
 import { dwn, clear as clearDwn } from './test-dwn.js';
 import { Cid, DataStream, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
-import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage, getFileAsReadStream, streamHttpRequest } from './utils.js';
+import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 
-let httpApi: HttpApi;
 describe('http api', function() {
+  let httpApi: HttpApi;
+  let server: Server;
+
   before(async function() {
     httpApi = new HttpApi(dwn);
   });
 
+  beforeEach(async function() {
+    server = httpApi.listen(3000);
+  });
+
   afterEach(async function() {
+    server.close();
+    server.closeAllConnections();
     await clearDwn();
   });
 
@@ -45,9 +55,7 @@ describe('http api', function() {
     expect(body.error.message).to.include('JSON');
   });
 
-  it('responds with a 4XX-5XX status code if JSON RPC handler returns error', async function() {
-    const server = httpApi.listen(3000);
-
+  it('responds with a 2XX HTTP status if JSON RPC handler returns 4XX/5XX DWN status code', async function() {
     const alice = await createProfile();
 
     const requestId = uuidv4();
@@ -65,15 +73,15 @@ describe('http api', function() {
       }
     });
 
-    expect(responseInitialWrite.status).to.equal(400);
+    expect(responseInitialWrite.status).to.equal(200);
 
     const body = await responseInitialWrite.json() as JsonRpcResponse;
-    expect(body.error).to.exist;
-    expect(body.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
-    expect(body.error.data.status.code).to.be.within(400, 599);
+    expect(body.id).to.equal(requestId);
+    expect(body.error).to.not.exist;
 
-    server.close();
-    server.closeAllConnections();
+    const { reply } = body.result;
+    expect(reply.status.code).to.equal(400);
+    expect(reply.status.detail).to.include('MessageStoreDataNotFound');
   });
 
   it('exposes dwn-response header', async function() {
@@ -125,8 +133,6 @@ describe('http api', function() {
 
   describe('RecordsWrite', function () {
     it('handles RecordsWrite with request body', async function() {
-      const server = httpApi.listen(3000);
-
       const filePath = './fixtures/test.jpeg';
       const { cid, size, stream } = await getFileAsReadStream(filePath);
 
@@ -155,14 +161,9 @@ describe('http api', function() {
 
       const { reply } = body.result;
       expect(reply.status.code).to.equal(202);
-
-      server.close();
-      server.closeAllConnections();
     });
 
     it('handles RecordsWrite overwrite that does not mutate data', async function() {
-      const server = httpApi.listen(3000);
-
       const alice = await createProfile();
 
       // First RecordsWrite that creates the record.
@@ -214,44 +215,29 @@ describe('http api', function() {
 
       const { reply } = body.result;
       expect(reply.status.code).to.equal(202);
-
-      server.close();
-      server.closeAllConnections();
     });
   });
 
   describe('health check', function() {
     it('returns a health check', async function() {
-      const server = httpApi.listen(3000);
       let response = await fetch('http://localhost:3000/health', {
         method: 'GET',
       });
       expect(response.status).to.equal(200);
-      server.close();
-      server.closeAllConnections();
-
     });
   });
 
   describe('default http get response', function() {
     it('returns returns a default message', async function() {
-      const server = httpApi.listen(3000);
       let response = await fetch('http://localhost:3000/', {
         method: 'GET',
       });
       expect(response.status).to.equal(200);
-      server.close();
-      server.closeAllConnections();
-
     });
   });
 
-
-
   describe('RecordsRead', function() {
     it('returns message in response header and data in body', async function() {
-      const server = httpApi.listen(3000);
-
       const filePath = './fixtures/test.jpeg';
       const { cid: expectedCid, size, stream } = await getFileAsReadStream(filePath);
 
@@ -322,10 +308,6 @@ describe('http api', function() {
       // can't get response as stream from supertest :(
       const cid = await Cid.computeDagPbCidFromStream(response.body as any);
       expect(cid).to.equal(expectedCid);
-
-      server.close();
-      server.closeAllConnections();
     });
   });
 });
-

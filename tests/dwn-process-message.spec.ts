@@ -4,8 +4,8 @@ import { expect } from 'chai';
 import { v4 as uuidv4 } from 'uuid';
 
 import { dwn, clear as clearDwn } from './test-dwn.js';
+import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage } from './utils.js';
-import { createJsonRpcRequest, JsonRpcErrorCodes } from '../src/lib/json-rpc.js';
 import { handleDwnProcessMessage } from '../src/json-rpc-handlers/dwn/process-message.js';
 
 describe('handleDwnProcessMessage', function() {
@@ -13,10 +13,10 @@ describe('handleDwnProcessMessage', function() {
     await clearDwn();
   });
 
-  it('returns a DWN status code when processed successfully', async function() {
+  it('returns a JSON RPC Success Response when DWN returns a 2XX status code', async function() {
     const alice = await createProfile();
 
-    // Construct a well-formed DWN Request that will be successfully processed
+    // Construct a well-formed DWN Request that will be successfully processed.
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
     const requestId = uuidv4();
     const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
@@ -34,9 +34,9 @@ describe('handleDwnProcessMessage', function() {
     expect(reply.status.detail).to.equal('Accepted');
   });
 
-  it('returns a DWN status code when processing fails', async function() {
+  it('returns a JSON RPC Success Response when DWN returns a 4XX/5XX status code', async function() {
     // Construct a DWN Request that is missing the descriptor `method` property to ensure
-    // that `dwn.processMessage()` will return an error status
+    // that `dwn.processMessage()` will return an error status.
     const requestId = uuidv4();
     const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
       message: {
@@ -49,9 +49,11 @@ describe('handleDwnProcessMessage', function() {
 
     const { jsonRpcResponse } = await handleDwnProcessMessage(dwnRequest, context);
 
-    expect(jsonRpcResponse.error).to.exist;
-    const { error } = jsonRpcResponse;
-    expect(error.code).to.equal(JsonRpcErrorCodes.BadRequest);
-    expect(error.data).to.have.nested.property('status.code', 400);
+    expect(jsonRpcResponse.error).to.not.exist;
+    const { reply } = jsonRpcResponse.result;
+    expect(reply.status.code).to.equal(400);
+    expect(reply.status.detail).to.exist;
+    expect(reply.data).to.be.undefined;
+    expect(reply.entries).to.be.undefined;
   });
 });
