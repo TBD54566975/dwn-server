@@ -23,6 +23,13 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
 This can run on services like AWS, GCP, VPS, home server (with ngrok or cloudflare), fly.io, render.com etc.
 Ideally the volume is persistent so that data is kept (or has to be synced back from another DWN instance).
 
+## Running a specific version
+
+Running the command above will run the latest version at the time the image is pulled. If you need to run a specific version (and in many cases this is recommended) you can see the list published images here: https://github.com/TBD54566975/dwn-server/pkgs/container/dwn-server/versions
+
+To run a specific image: 
+```docker pull ghcr.io/tbd54566975/dwn-server@sha256:870e0f0f12016e6607060a81ea31458443f7439522fab2688d7a6706ab366c58```
+
 ## Running Locally for Development
 ```bash
 git clone https://github.com/TBD54566975/dwn-server.git
