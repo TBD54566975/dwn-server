@@ -1,0 +1,28 @@
+{{- if .Values.ingress.enabled }}
+{{ $fullName := include "dwn-server.fullname" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "dwn-server.fullname" . }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  rules:
+  {{- range .Values.ingress.hosts }}
+  - host: {{ .host }}
+    http:
+      paths:
+      {{- range .paths }}
+      - path: {{ .path }}
+        pathType: {{ .pathType }}
+        backend:
+          service:
+            name: {{ $fullName }}
+            port:
+              number: {{ $.Values.service.port }}
+      {{- end }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls: {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+{{- end }}

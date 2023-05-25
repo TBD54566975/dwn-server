@@ -1,0 +1,7 @@
+apiVersion: v2
+name: dwn-server
+description: |
+  A Helm chart for Kubernetes that deploys DWN Server - an implementation of DIF's emerging decentralized personal datastore standard. A Decentralized Web Node (DWN) is a data storage and message relay mechanism entities can use to locate public or private permissioned data related to a given Decentralized Identifier (DID). Decentralized Web Nodes are a mesh-like datastore construction that enable an entity to operate multiple nodes that sync to the same state across one another, enabling the owning entity to secure, manage, and transact their data with others without reliance on location or provider-specific infrastructure, interfaces, or routing mechanisms.
+home: https://github.com/TBD54566975/dwn-server
+version: 0.0.1
+appVersion: 0.0.1
