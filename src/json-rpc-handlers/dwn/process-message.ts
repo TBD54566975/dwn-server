@@ -15,10 +15,10 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (dwnRequest, contex
     let reply;
     const messageType = message?.descriptor?.interface + message?.descriptor?.method;
 
-    // When a record is deleted, the initial RecordsWrite is kept as a tombstone _in addition_ to the RecordsDelete message.
-    // the data associated to that initial RecordsWrite is deleted. If a record was written _and_ deleted before it ever got
-    // to dwn-server, we end up in a situation where we still need to process the tombstone so that we can process the
-    // RecordsDelete. This
+    // When a record is deleted via `RecordsDelete`, the initial RecordsWrite is kept as a tombstone _in addition_
+    // to the RecordsDelete message. the data associated to that initial RecordsWrite is deleted. If a record was written
+    // _and_ deleted before it ever got to dwn-server, we end up in a situation where we still need to process the tombstone
+    // so that we can process the RecordsDelete.
     if (messageType === DwnInterfaceName.Records + DwnMethodName.Write && !dataStream) {
       reply = await dwn.synchronizePrunedInitialRecordsWrite(target, message);
     } else {
