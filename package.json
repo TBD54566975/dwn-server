@@ -3,7 +3,7 @@
     "type": "module",
     "version": "0.0.2",
     "dependencies": {
-        "@tbd54566975/dwn-sdk-js": "0.0.32",
+        "@tbd54566975/dwn-sdk-js": "0.0.33",
         "bytes": "3.1.2",
         "node-fetch": "3.3.1",
         "cors": "2.8.5",
