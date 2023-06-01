@@ -59,7 +59,7 @@ describe('http api', function() {
     const alice = await createProfile();
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
 
-    // bork the message
+    // Intentionally delete a required property to produce an invalid RecordsWrite message.
     const message = recordsWrite.toJSON();
     delete message['descriptor']['interface'];
 
@@ -71,7 +71,7 @@ describe('http api', function() {
 
     const dataBytes = await DataStream.toBytes(dataStream);
 
-    // Attempt an initial RecordsWrite with the borked message to ensure the DWN returns an error.
+    // Attempt an initial RecordsWrite with the invalid message to ensure the DWN returns an error.
     let responseInitialWrite = await fetch('http://localhost:3000', {
       method  : 'POST',
       headers : {
