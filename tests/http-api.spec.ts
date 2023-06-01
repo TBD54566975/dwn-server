@@ -57,20 +57,27 @@ describe('http api', function() {
 
   it('responds with a 2XX HTTP status if JSON RPC handler returns 4XX/5XX DWN status code', async function() {
     const alice = await createProfile();
+    const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
+
+    // bork the message
+    const message = recordsWrite.toJSON();
+    delete message['descriptor']['interface'];
 
     const requestId = uuidv4();
-    const { recordsWrite } = await createRecordsWriteMessage(alice);
     const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-      message : recordsWrite.toJSON(),
+      message : message,
       target  : alice.did,
     });
 
-    // Attempt an initial RecordsWrite without any data to ensure the DWN returns an error.
+    const dataBytes = await DataStream.toBytes(dataStream);
+
+    // Attempt an initial RecordsWrite with the borked message to ensure the DWN returns an error.
     let responseInitialWrite = await fetch('http://localhost:3000', {
       method  : 'POST',
       headers : {
         'dwn-request': JSON.stringify(dwnRequest)
-      }
+      },
+      body: new Blob([dataBytes])
     });
 
     expect(responseInitialWrite.status).to.equal(200);
@@ -79,9 +86,10 @@ describe('http api', function() {
     expect(body.id).to.equal(requestId);
     expect(body.error).to.not.exist;
 
+
     const { reply } = body.result;
     expect(reply.status.code).to.equal(400);
-    expect(reply.status.detail).to.include('RecordsWriteMissingDataStream');
+    expect(reply.status.detail).to.include('Both interface and method must be present');
   });
 
   it('exposes dwn-response header', async function() {
@@ -215,6 +223,26 @@ describe('http api', function() {
 
       const { reply } = body.result;
       expect(reply.status.code).to.equal(202);
+    });
+
+    it('handles a RecordsWrite tombstone', async function() {
+      const alice = await createProfile();
+      const { recordsWrite: tombstone } = await createRecordsWriteMessage(alice);
+
+      let requestId = uuidv4();
+      let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message : tombstone.toJSON(),
+        target  : alice.did
+      });
+
+      let responeTombstone = await fetch('http://localhost:3000', {
+        method  : 'POST',
+        headers : {
+          'dwn-request': JSON.stringify(dwnRequest)
+        },
+      });
+
+      expect(responeTombstone.status).to.equal(200);
     });
   });
 
