@@ -2,6 +2,36 @@
 
 This is a Helm chart for deploying a DWN Server
 
+## Quick Start
+
+If you don't have an existing Kubernetes cluster to deploy to, using the built-in Kubernetes included with Docker Desktop is an easy way to get started. See the [Enable Kubernetes](https://docs.docker.com/desktop/kubernetes/) instructions.
+
+Installing this chart requires [having helm installed locally](https://helm.sh/docs/intro/install/)
+
+Once Kubernetes and Helm are ready:
+
+```
+git clone https://github.com/TBD54566975/dwn-server.git
+cd dwn-server/charts
+helm upgrade --install --namespace dwn-server dwn-server .
+```
+
+By default, the dwn-server that's deployed is only accessible from with the Kubernetes cluster. An `Ingress` or `VirtualService` are optional and can be installed by this chart. See values.yaml for the options.
+
+To access the dwn-server from within the cluster:
+
+```
+kubectl port-forward -n dwn-server service/dwn-server 3000:80
+```
+
+You can then, in another terminal window, confirm everything is working by running:
+
+```
+curl localhost:3000
+```
+
+Which should return the message "please use a web5 client, for example: https://github.com/TBD54566975/web5-js"
+
 ## Chart Values
 
 | Key | Type | Default | Description |

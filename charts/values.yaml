@@ -26,6 +26,11 @@ ingress:
   #   - dwn.example.com
   #   secretName: dwn-tls
 
+virtualService:
+  enabled: false
+  host: dwn.example.com
+  gateway: istio-system/primary-gateway
+
 persistence:
   size: 1Gi
   storageClass: ""
@@ -34,6 +39,11 @@ resources:
   requests:
     cpu: 100m
     memory: 500Mi
+
+# tolerations:
+# affinity:
+# topologySpreadConstraints:
+# nodeSelector:
 
 customLabels: {}
 
