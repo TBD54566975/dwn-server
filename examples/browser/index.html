@@ -15,6 +15,7 @@
       <button class="button" id="chonker_btn">Upload Large Image</button>
     </div>
     <div id="large_image_display"></div>
+    <img id="image_element" />
   </div>
 
 
@@ -57,7 +58,8 @@
       const iterableStreamReader = iterableReader(streamReader);
 
       const record = await RecordsWrite.create({
-        schema: 'test',
+        schema: 'urn://test',
+        published: true,
         dataCid: await Cid.computeDagPbCidFromStream(iterableStreamReader),
         dataSize: chonker.files[0].size,
         dataFormat: 'application/json',
@@ -84,7 +86,7 @@
 
       const resp = await fetch('http://localhost:3000', options)
       const result = await resp.json();
-
+      document.getElementById('image_element').src = `http://localhost:3000/${did}/records/${record.message.recordId}`
       console.log(result);
     });
   </script>
