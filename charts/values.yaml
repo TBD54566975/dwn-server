@@ -1,0 +1,53 @@
+replicaCount: 1 # do not override this unless you want to run a headless service and put your own reverse proxy in front
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/tbd54566975/dwn-server
+  tag: main
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: false
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: dwn.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # - hosts:
+  #   - dwn.example.com
+  #   secretName: dwn-tls
+
+virtualService:
+  enabled: false
+  host: dwn.example.com
+  gateway: istio-system/primary-gateway
+
+persistence:
+  size: 1Gi
+  storageClass: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 500Mi
+
+# tolerations:
+# affinity:
+# topologySpreadConstraints:
+# nodeSelector:
+
+customLabels: {}
+
+env:
+  DS_PORT: 3000
+  DS_MAX_RECORD_DATA_SIZE: "1gb"
+  DS_WEBSOCKET_SERVER: "on"

@@ -1,0 +1,18 @@
+{{- if .Values.virtualService.enabled }}
+{{ $fullName := include "dwn-server.fullname" . -}}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ $fullName }}
+spec:
+  hosts:
+  - "{{ .Values.virtualService.host }}"
+  gateways:
+  - {{ .Values.virtualService.gateway }}
+  http:
+  - route:
+    - destination:
+        port:
+          number: {{ .Values.service.port }}
+        host: {{ $fullName }}
+{{- end }}
