@@ -81,21 +81,18 @@ export class HttpApi {
       }
     });
 
-    // this.api.get('/:did/records', async (req: Request, res) => {
-    //   let reply = await this.dwn.processMessage(req.params.did, await RecordsQuery.create({
-    //     filter: req.query as any
-    //   }));
-
-    //   if (reply?.record?.data) {
-    //     const stream = reply.record.data;
-    //     delete reply.record.data;
-    //     res.setHeader('content-type', reply.record.descriptor.dataFormat);
-    //     res.setHeader('dwn-response', JSON.stringify(reply));
-    //     return stream.pipe(res);
-    //   } else {
-    //     return res.sendStatus(400);
-    //   }
-    // });
+    this.api.get('/:did/records', async (req: Request, res) => {
+      const record = await RecordsQuery.create({
+        filter: req.query
+      });
+      const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
+      if (reply.entries) {
+        res.setHeader('content-type', 'application/json');
+        return reply;
+      } else {
+        return res.sendStatus(400);
+      }
+    });
 
     this.api.get('/', (_req, res) => {
       // return a plain text string
