@@ -55,7 +55,7 @@ export class HttpApi {
     this.api.get('/', (_req, res) => {
       // return a plain text string
       res.setHeader('content-type', 'text/plain');
-      return res.send('please use a web5 client, for example: https://github.com/TBD54566975/web5-js ');
+      return res.send('decentralized bex node. loading...');
     });
 
     this.api.post('/', async (req: Request, res) => {
