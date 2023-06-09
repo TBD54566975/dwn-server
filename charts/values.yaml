@@ -4,7 +4,7 @@ fullnameOverride: ""
 
 image:
   repository: ghcr.io/tbd54566975/dwn-server
-  tag: main
+  tag: bexDwn
   pullPolicy: IfNotPresent
 
 service:
