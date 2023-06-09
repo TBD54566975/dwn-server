@@ -75,8 +75,10 @@ export class HttpApi {
         } else {
           return res.sendStatus(400);
         }
+      } else if (reply.status.code === 401) {
+        return res.sendStatus(404);
       } else {
-        res.status(reply.status.code).send(reply);
+        return res.status(reply.status.code).send(reply);
       }
 
     });

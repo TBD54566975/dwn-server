@@ -380,7 +380,7 @@ describe('http api', function() {
       expect(blob.size).to.equal(size);
     });
 
-    it('returns a 401 if an unpublished record is requested', async function () {
+    it('returns a 404 if an unpublished record is requested', async function () {
       const filePath = './fixtures/test.jpeg';
       const { cid: expectedCid, size, stream } = await getFileAsReadStream(filePath);
 
@@ -415,7 +415,7 @@ describe('http api', function() {
 
       response = await fetch(`http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`);
 
-      expect(response.status).to.equal(401);
+      expect(response.status).to.equal(404);
     });
 
     it('returns a 404 if record doesnt exist', async function () {
