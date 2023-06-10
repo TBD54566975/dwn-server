@@ -8,7 +8,7 @@ import express from 'express';
 import { register, Histogram } from 'prom-client';
 
 import { v4 as uuidv4 } from 'uuid';
-import { RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
+import { RecordsRead } from '@tbd54566975/dwn-sdk-js';
 
 import { jsonRpcApi } from './json-rpc-api.js';
 import {
@@ -60,36 +60,28 @@ export class HttpApi {
     });
 
     this.api.get('/:did/records/:recordId', async (req, res) => {
-      // return a plain text string
-      const record = await RecordsRead.create({
-        recordId: req.params.recordId
-      });
+      const record = await RecordsRead.create({ recordId: req.params.recordId });
       let reply = await this.dwn.processMessage(req.params.did, record.toJSON()) as RecordsReadReply;
 
-      if (reply?.record?.data) {
-        const stream = reply.record.data;
-        console.log(stream);
-        delete reply.record.data;
-        res.setHeader('content-type', reply.record.descriptor.dataFormat);
-        res.setHeader('dwn-response', JSON.stringify(reply));
-        return stream.pipe(res);
-      } else {
-        return res.sendStatus(400);
-      }
-    });
+      if (reply.status.code === 200) {
+        if (reply?.record?.data) {
+          const stream = reply.record.data;
+          delete reply.record.data;
 
-    // this.api.get('/:did/records', async (req: Request, res) => {
-    //   const record = await RecordsQuery.create({
-    //     filter: req.query
-    //   });
-    //   const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
-    //   if (reply.entries) {
-    //     res.setHeader('content-type', 'application/json');
-    //     return reply;
-    //   } else {
-    //     return res.sendStatus(400);
-    //   }
-    // });
+          res.setHeader('content-type', reply.record.descriptor.dataFormat);
+          res.setHeader('dwn-response', JSON.stringify(reply));
+
+          return stream.pipe(res);
+        } else {
+          return res.sendStatus(400);
+        }
+      } else if (reply.status.code === 401) {
+        return res.sendStatus(404);
+      } else {
+        return res.status(reply.status.code).send(reply);
+      }
+
+    });
 
     this.api.get('/', (_req, res) => {
       // return a plain text string
