@@ -61,13 +61,10 @@ export class HttpApi {
 
     this.api.get('/:did/records/:recordId', async (req, res) => {
       // return a plain text string
-      console.log(this.dwn);
       const record = await RecordsRead.create({
         recordId: req.params.recordId
       });
       let reply = await this.dwn.processMessage(req.params.did, record.toJSON()) as RecordsReadReply;
-
-      console.log(reply);
 
       if (reply?.record?.data) {
         const stream = reply.record.data;
@@ -81,18 +78,18 @@ export class HttpApi {
       }
     });
 
-    this.api.get('/:did/records', async (req: Request, res) => {
-      const record = await RecordsQuery.create({
-        filter: req.query
-      });
-      const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
-      if (reply.entries) {
-        res.setHeader('content-type', 'application/json');
-        return reply;
-      } else {
-        return res.sendStatus(400);
-      }
-    });
+    // this.api.get('/:did/records', async (req: Request, res) => {
+    //   const record = await RecordsQuery.create({
+    //     filter: req.query
+    //   });
+    //   const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
+    //   if (reply.entries) {
+    //     res.setHeader('content-type', 'application/json');
+    //     return reply;
+    //   } else {
+    //     return res.sendStatus(400);
+    //   }
+    // });
 
     this.api.get('/', (_req, res) => {
       // return a plain text string
