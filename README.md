@@ -152,14 +152,9 @@ Examples can be found in the `examples` directory.
 > 💡 **TODO**: Add examples in `examples` directory
 
 
-# Hosted examples that are free to use
-| Location  | URL                                                                  |
-| --------- | -------------------------------------------------------------------- |
-| Australia | `dwn-aggregator.faktj7f1fndve.ap-southeast-2.cs.amazonlightsail.com` |
-| India     | `dwn-india.vtv94qck5sjvq.ap-south-1.cs.amazonlightsail.com`          |
-| USA       | `dwn-usa-1.ue8cktdq71va0.us-east-2.cs.amazonlightsail.com`           |
-
 # Hosting your own DWN-server
+
+By default when you call `web5.connect()` there will be some bootstrap DWN nodes included which allow people to reach you via your DID. 
 
 You may want to run a DWN server just for you, or as a public service for you and your friends and family.
 DWNs can be as simple as a docker image or a node process running somewhere.
