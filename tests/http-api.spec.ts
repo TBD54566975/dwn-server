@@ -339,7 +339,7 @@ describe('http api', function() {
     });
   });
 
-  describe('/:did/records/:recordId', function () {
+  describe('/dwn/:did/records/:recordId', function () {
     it('returns record data if record is published', async function () {
       const filePath = './fixtures/test.jpeg';
       const { cid: expectedCid, size, stream } = await getFileAsReadStream(filePath);
@@ -374,7 +374,7 @@ describe('http api', function() {
       const { reply } = body.result;
       expect(reply.status.code).to.equal(202);
 
-      response = await fetch(`http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`);
+      response = await fetch(`http://localhost:3000/dwn/${alice.did}/records/${recordsWrite.message.recordId}`);
       const blob = await response.blob();
 
       expect(blob.size).to.equal(size);
@@ -413,7 +413,7 @@ describe('http api', function() {
       const { reply } = body.result;
       expect(reply.status.code).to.equal(202);
 
-      response = await fetch(`http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`);
+      response = await fetch(`http://localhost:3000/dwn/${alice.did}/records/${recordsWrite.message.recordId}`);
 
       expect(response.status).to.equal(404);
     });
@@ -422,7 +422,7 @@ describe('http api', function() {
       const alice = await createProfile();
       const { recordsWrite } = await createRecordsWriteMessage(alice);
 
-      const response = await fetch(`http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`);
+      const response = await fetch(`http://localhost:3000/dwn/${alice.did}/records/${recordsWrite.message.recordId}`);
       expect(response.status).to.equal(404);
     });
 
@@ -430,13 +430,13 @@ describe('http api', function() {
       const alice = await createProfile();
       const { recordsWrite } = await createRecordsWriteMessage(alice);
 
-      const response = await fetch(`http://localhost:3000/1234567892345678/records/${recordsWrite.message.recordId}`);
+      const response = await fetch(`http://localhost:3000/dwn/1234567892345678/records/${recordsWrite.message.recordId}`);
       expect(response.status).to.equal(404);
     });
 
     it('returns a 404 for invalid record id', async function () {
       const alice = await createProfile();
-      const response = await fetch(`http://localhost:3000/${alice.did}/records/kaka`);
+      const response = await fetch(`http://localhost:3000/dwn/${alice.did}/records/kaka`);
       expect(response.status).to.equal(404);
     });
   });

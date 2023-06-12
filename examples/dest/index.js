@@ -49,7 +49,7 @@ const { web5, did } = await Web5.connect({
 console.log(did);
 
 if (localStorage.lastImageId) {
-  image_element.setAttribute('src', did + '/records/' + localStorage.lastImageId);
+  image_element.setAttribute('src', `/dwn/${did}/records/${localStorage.lastImageId}`);
 }
 
 file_input.addEventListener('change', async e => {

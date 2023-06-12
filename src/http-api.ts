@@ -59,7 +59,7 @@ export class HttpApi {
       }
     });
 
-    this.api.get('/:did/records/:recordId', async (req, res) => {
+    this.api.get('/dwn/:did/records/:recordId', async (req, res) => {
       const record = await RecordsRead.create({ recordId: req.params.recordId });
       let reply = await this.dwn.processMessage(req.params.did, record.toJSON()) as RecordsReadReply;
 

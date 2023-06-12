@@ -86,7 +86,7 @@
 
       const resp = await fetch('http://localhost:3000', options)
       const result = await resp.json();
-      document.getElementById('image_element').src = `http://localhost:3000/${did}/records/${record.message.recordId}`
+      document.getElementById('image_element').src = `http://localhost:3000/dwn/${did}/records/${record.message.recordId}`
       console.log(result);
     });
   </script>
