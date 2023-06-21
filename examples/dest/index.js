@@ -96,7 +96,7 @@ console.log(did);
 watchDom(web5);
 
 if (localStorage.lastImageId) {
-  image_element.setAttribute('src', did + '/records/' + localStorage.lastImageId);
+  image_element.setAttribute('src', `http://localhost:3000/${did}/records/${localStorage.lastImageId}`);
 }
 
 file_input.addEventListener('change', async e => {

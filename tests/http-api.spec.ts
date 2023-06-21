@@ -339,7 +339,7 @@ describe('http api', function() {
     });
   });
 
-  describe('/:did/records/:recordId', function () {
+  describe('/:did/records/:id', function () {
     it('returns record data if record is published', async function () {
       const filePath = './fixtures/test.jpeg';
       const { cid: expectedCid, size, stream } = await getFileAsReadStream(filePath);

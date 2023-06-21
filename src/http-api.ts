@@ -59,8 +59,8 @@ export class HttpApi {
       }
     });
 
-    this.api.get('/:did/records/:recordId', async (req, res) => {
-      const record = await RecordsRead.create({ recordId: req.params.recordId });
+    this.api.get('/:did/records/:id', async (req, res) => {
+      const record = await RecordsRead.create({ recordId: req.params.id });
       let reply = await this.dwn.processMessage(req.params.did, record.toJSON()) as RecordsReadReply;
 
       if (reply.status.code === 200) {
