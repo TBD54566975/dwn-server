@@ -1,11 +1,13 @@
 
 import { Web5 } from 'https://cdn.jsdelivr.net/npm/@tbd54566975/web5@0.7.6/dist/browser.mjs';
 
+let instance, init, observer;
+let dwnCache = {};
+let dwnCacheTimeout = 60 * 60 * 1000 * 6;
 const attributes = ['src', 'href', 'data'];
 const splitDRL = /^(.*?)\/(.*)$/;
 
 function detectMutation(element){
-  console.log(element);
   const attribute = attributes.find(attr => {
     return element?.[attr]?.startsWith('did:') ? attr : null;
   });
@@ -15,28 +17,71 @@ function detectMutation(element){
 async function handleMutation(attribute, element){
   const [_, did, path] = element[attribute]?.split(splitDRL) || [];
   if (did && path) {
-    const response = await Web5.did.resolve(did);
-    const nodes = response?.didDocument?.service?.find(service => service.type === 'DecentralizedWebNode')?.serviceEndpoint.nodes;
-    element[attribute] = `${nodes[0].replace(/\/$/, '')}/${did}/${path}`;
+    let urls = [];
+    const cacheEntry = dwnCache[did];
+    if (cacheEntry && new Date().getTime() - dwnCacheTimeout > cacheEntry.timestamp) {
+      urls = cacheEntry.urls;
+    }
+    else {
+      const response = await instance.did.resolve(did);
+      response?.didDocument?.service?.forEach(service => {
+        if (service.type === 'DecentralizedWebNode') {
+          const nodes = service?.serviceEndpoint?.nodes;
+          if (nodes) {
+            urls.push(...nodes.filter(url => url.match(/^(http|https):/)));
+          }
+        }
+      });
+      dwnCache[did] = {
+        urls,
+        timestamp: new Date().getTime()
+      };
+    }
+    if (urls.length) {
+      element[attribute] = `${urls[0].replace(/\/$/, '')}/${did}/${path}`;
+    }
   }
 }
 
-document.addEventListener('DOMContentLoaded', e => {
+function parseExistingDom () {
   const elements = document.querySelectorAll('[' + attributes.join('], [') + ']');
   for (const element of elements) {
     detectMutation(element);
   }
-});
+}
 
-(new MutationObserver(mutationsList => {
+function observeMutations (mutationsList) {
   for (const mutation of mutationsList) {
-    detectMutation(mutation.target);
+    if (mutation?.addedNodes?.length) {
+      for (let node of mutation.addedNodes) detectMutation(node);
+    }
+    else if (mutation.type === 'attributes') {
+      detectMutation(mutation.target);
+    }
   }
-})).observe(document, {
-  subtree         : true,
-  attributes      : true,
-  attributeFilter : attributes,
-});
+}
+
+function watchDom(web5){
+  instance = web5;
+  if (!init) {
+    document.addEventListener('DOMContentLoaded', e => parseExistingDom);
+    observer = new MutationObserver(observeMutations);
+    init = true;
+  }
+  if (document.readyState !== 'loading') parseExistingDom();
+  observer.observe(document, {
+    childList       : true,
+    subtree         : true,
+    attributes      : true,
+    attributeFilter : attributes,
+  });
+}
+
+function unwatchDom(){
+  if (observer) {
+    observer.disconnect();
+  }
+}
 
 /* TEST PAGE CODE */
 
@@ -47,6 +92,8 @@ const { web5, did } = await Web5.connect({
 });
 
 console.log(did);
+
+watchDom(web5);
 
 if (localStorage.lastImageId) {
   image_element.setAttribute('src', did + '/records/' + localStorage.lastImageId);
