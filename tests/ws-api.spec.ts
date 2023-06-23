@@ -15,7 +15,7 @@ let wsServer: WsApi;
 describe('websocket api', function() {
   before(async function () {
     server = http.createServer();
-    server.listen(9001, '127.0.0.1');
+    server.listen(9002, '127.0.0.1');
 
     wsServer = new WsApi(server, dwn);
     wsServer.listen();
@@ -32,7 +32,7 @@ describe('websocket api', function() {
   });
 
   it('returns an error response if no request payload is provided', async function() {
-    const data = await sendWsMessage('ws://127.0.0.1:9001', Buffer.from(''));
+    const data = await sendWsMessage('ws://127.0.0.1:9002', Buffer.from(''));
 
     const resp = JSON.parse(data.toString());
     expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
@@ -40,7 +40,7 @@ describe('websocket api', function() {
   });
 
   it('returns an error response if parsing dwn request fails', async function() {
-    const data = await sendWsMessage('ws://127.0.0.1:9001', Buffer.from('@#$%^&*&%$#'));
+    const data = await sendWsMessage('ws://127.0.0.1:9002', Buffer.from('@#$%^&*&%$#'));
 
     const resp = JSON.parse(data.toString());
     expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
@@ -60,7 +60,7 @@ describe('websocket api', function() {
       encodedData
     });
 
-    const data = await sendWsMessage('ws://127.0.0.1:9001', JSON.stringify(dwnRequest));
+    const data = await sendWsMessage('ws://127.0.0.1:9002', JSON.stringify(dwnRequest));
     const resp = JSON.parse(data.toString());
     expect(resp.id).to.equal(requestId);
     expect(resp.error).to.not.exist;
