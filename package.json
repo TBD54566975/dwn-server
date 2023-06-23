@@ -1,9 +1,9 @@
 {
     "name": "dwn-server",
     "type": "module",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "dependencies": {
-        "@tbd54566975/dwn-sdk-js": "0.0.33",
+        "@tbd54566975/dwn-sdk-js": "0.0.35",
         "bytes": "3.1.2",
         "node-fetch": "3.3.1",
         "cors": "2.8.5",
