@@ -42,5 +42,6 @@ module.exports = {
     ],
     '@typescript-eslint/no-explicit-any' : 'off',
     'no-trailing-spaces'                 : ['error'],
+    '@typescript-eslint/ban-ts-comment'  : 'off'
   }
 };
