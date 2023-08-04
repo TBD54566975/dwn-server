@@ -1,6 +1,7 @@
 import type { Config } from './config.js';
 
-import { Dwn, DataStoreLevel, EventLogLevel, MessageStoreLevel } from '@tbd54566975/dwn-sdk-js';
+import { Dwn } from '@tbd54566975/dwn-sdk-js';
+import { DataStoreLevel, EventLogLevel, MessageStoreLevel } from '@tbd54566975/dwn-sdk-js/stores';
 
 import { WsApi } from './ws-api.js';
 import { HttpApi } from './http-api.js';
