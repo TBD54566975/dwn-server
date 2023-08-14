@@ -6,6 +6,7 @@ import { WsApi } from './ws-api.js';
 import { HttpApi } from './http-api.js';
 import { config as defaultConfig } from './config.js';
 import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
+import { setProcessHandlers } from './process-handlers.js';
 
 export type DwnServerOptions = {
   dwn?: Dwn;
@@ -20,6 +21,11 @@ export class DwnServer {
   constructor(options: DwnServerOptions = {}) {
     this.config = options.config ?? defaultConfig;
     this.dwn = options.dwn;
+  }
+
+  async start() : Promise<void> {
+    await this.listen();
+    setProcessHandlers(this);
   }
 
   async listen(): Promise<void> {

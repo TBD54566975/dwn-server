@@ -10,7 +10,7 @@
     "declaration": true,
     "declarationMap": true,
     "rootDir": ".",
-    "outDir": "./dist",
+    "outDir": "./dist/esm",
     "sourceMap": true,
     // `NodeNext` will throw compilation errors if relative import paths are missing file extension
     // reference: https://devblogs.microsoft.com/typescript/announcing-typescript-4-7/#ecmascript-module-support-in-node-js
@@ -22,4 +22,8 @@
     "src",
     "tests"
   ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
