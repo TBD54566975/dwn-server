@@ -8,7 +8,9 @@ export const config = {
   // port that server listens on
   port                   : parseInt(process.env.DS_PORT || '3000'),
   // whether to enable 'ws:'
-  webSocketServerEnabled : { 'on': true, 'off': false }[process.env.DS_WEBSOCKET_SERVER] ?? true
-  // TODO: add config option to change data path. will need to change dwn.ts to ensure that the option works
-  //       inside and outside a docker container.
+  webSocketServerEnabled : { 'on': true, 'off': false }[process.env.DS_WEBSOCKET_SERVER] ?? true,
+  // where to store persistant data
+  messageStore           : process.env.DWN_STORAGE_MESSAGES || process.env.DWN_STORAGE || 'level://data',
+  dataStore              : process.env.DWN_STORAGE_DATA || process.env.DWN_STORAGE || 'level://data',
+  eventLog               : process.env.DWN_STORAGE_EVENTS || process.env.DWN_STORAGE || 'level://data',
 };

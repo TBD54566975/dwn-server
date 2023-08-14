@@ -1,12 +1,12 @@
 import type { Config } from './config.js';
 
 import { Dwn } from '@tbd54566975/dwn-sdk-js';
-import { DataStoreLevel, EventLogLevel, MessageStoreLevel } from '@tbd54566975/dwn-sdk-js/stores';
 
 import { WsApi } from './ws-api.js';
 import { HttpApi } from './http-api.js';
 import { config as defaultConfig } from './config.js';
 import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
+import { getDWNConfig } from './storage.js';
 
 export type DwnServerOptions = {
   dwn?: Dwn;
@@ -14,7 +14,7 @@ export type DwnServerOptions = {
 };
 
 export class DwnServer {
-  dwn: Dwn;
+  dwn?: Dwn;
   config: Config;
   httpServerShutdownHandler: HttpServerShutdownHandler;
 
@@ -25,14 +25,7 @@ export class DwnServer {
 
   async listen(): Promise<void> {
     if (!this.dwn) {
-      const dataStore = new DataStoreLevel({ blockstoreLocation: 'data/DATASTORE' });
-      const eventLog = new EventLogLevel({ location: 'data/EVENTLOG' });
-      const messageStore = new MessageStoreLevel({
-        blockstoreLocation : 'data/MESSAGESTORE',
-        indexLocation      : 'data/INDEX'
-      });
-
-      this.dwn = await Dwn.create({ eventLog, dataStore, messageStore });
+      this.dwn = await Dwn.create(getDWNConfig(this.config));
     }
 
     const httpApi = new HttpApi(this.dwn);
