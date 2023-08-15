@@ -63,7 +63,7 @@
         "clean": "rimraf dist && rimraf generated/*",
         "lint": "eslint . --ext .ts --max-warnings 0",
         "lint:fix": "eslint . --ext .ts --fix",
-        "test": "npm run tsc && cp -R tests/fixtures dist/tests && mocha dist/tests/*.spec.js",
+        "test": "npm run build:esm && cp -R tests/fixtures dist/tests && mocha dist/tests/*.spec.js",
         "server": "npm run build:esm && node dist/esm/src/run-server.js"
     }
 }
