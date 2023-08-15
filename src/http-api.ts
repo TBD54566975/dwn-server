@@ -22,7 +22,7 @@ export class HttpApi {
 
     const responseHistogram = new Histogram({
       name       : 'http_response',
-      help      : 'response histogram',
+      help       : 'response histogram',
       buckets    : [50, 250, 500, 750, 1000],
       labelNames : ['route', 'code'],
     });
