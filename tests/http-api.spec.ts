@@ -11,6 +11,7 @@ import { dwn, clear as clearDwn } from './test-dwn.js';
 import { Cid, DataStream, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
 import { createProfile, createRecordsWriteMessage, getFileAsReadStream, streamHttpRequest } from './utils.js';
 import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
+import { join } from 'path/posix';
 
 describe('http api', function() {
   let httpApi: HttpApi;
@@ -141,7 +142,7 @@ describe('http api', function() {
 
   describe('RecordsWrite', function () {
     it('handles RecordsWrite with request body', async function() {
-      const filePath = '../../tests/fixtures/test.jpeg';
+      const filePath = './fixtures/test.jpeg';
       const { cid, size, stream } = await getFileAsReadStream(filePath);
 
       const alice = await createProfile();
@@ -266,7 +267,7 @@ describe('http api', function() {
 
   describe('RecordsRead', function() {
     it('returns message in response header and data in body', async function() {
-      const filePath = '../../tests/fixtures/test.jpeg';
+      const filePath = './fixtures/test.jpeg';
       const { cid: expectedCid, size, stream } = await getFileAsReadStream(filePath);
 
       const alice = await createProfile();
