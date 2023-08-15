@@ -2,8 +2,7 @@ name: Run Tests
 
 on:
   push:
-    branches:
-      - main
+    branches: ['*']
   pull_request:
     branches:
       - main
@@ -24,5 +23,8 @@ jobs:
     - name: Install dependencies
       run: npm install
 
+    - name: eslint
+      run: eslint .
+
     - name: Run tests
-      run: npm run test
+      run: npm run test -- --color
