@@ -141,7 +141,7 @@ describe('http api', function() {
 
   describe('RecordsWrite', function () {
     it('handles RecordsWrite with request body', async function() {
-      const filePath = './fixtures/test.jpeg';
+      const filePath = '../../tests/fixtures/test.jpeg';
       const { cid, size, stream } = await getFileAsReadStream(filePath);
 
       const alice = await createProfile();
@@ -266,7 +266,7 @@ describe('http api', function() {
 
   describe('RecordsRead', function() {
     it('returns message in response header and data in body', async function() {
-      const filePath = './fixtures/test.jpeg';
+      const filePath = '../../tests/fixtures/test.jpeg';
       const { cid: expectedCid, size, stream } = await getFileAsReadStream(filePath);
 
       const alice = await createProfile();
