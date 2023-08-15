@@ -24,7 +24,7 @@ jobs:
       run: npm install
 
     - name: eslint
-      run: eslint .
+      run: node_modules/.bin/eslint .
 
     - name: Run tests
       run: npm run test -- --color
