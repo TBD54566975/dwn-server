@@ -11,6 +11,7 @@ import { base64url } from 'multiformats/bases/base64';
 
 import { jsonRpcApi } from './json-rpc-api.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes, JsonRpcResponse } from './lib/json-rpc.js';
+import { requestCounter } from './metrics.js';
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 
@@ -79,6 +80,15 @@ export class WsApi {
 
         const requestContext: RequestContext = { dwn, transport: 'ws', dataStream: requestDataStream };
         const { jsonRpcResponse } = await jsonRpcApi.handle(dwnRequest, requestContext);
+
+        if (jsonRpcResponse.error) {
+          requestCounter.inc({ method: dwnRequest.method, error: 1 });
+        } else {
+          requestCounter.inc({
+            method : dwnRequest.method,
+            status : jsonRpcResponse?.result?.reply?.status?.code || 0,
+          });
+        }
 
         const responseBuffer = WsApi.jsonRpcResponseToBuffer(jsonRpcResponse);
         return socket.send(responseBuffer);
