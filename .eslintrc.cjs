@@ -11,16 +11,8 @@ module.exports = {
     es2022 : true
   },
   rules: {
-    'key-spacing': [
-      'error',
-      {
-        'align': {
-          'afterColon'  : true,
-          'beforeColon' : true,
-          'on'          : 'colon'
-        }
-      }
-    ],
+    'key-spacing': ['error'],
+    'semi-spacing': ['error', { 'before': false, 'after': true }],
     'quotes': [
       'error',
       'single',
@@ -28,8 +20,6 @@ module.exports = {
     ],
     'semi'                              : ['error', 'always'],
     'indent'                            : ['error', 2],
-    'no-unused-vars'                    : 'off',
-    'prefer-const'                      : 'off',
     '@typescript-eslint/no-unused-vars' : [
       'error',
       {
@@ -42,6 +32,9 @@ module.exports = {
     ],
     '@typescript-eslint/no-explicit-any' : 'off',
     'no-trailing-spaces'                 : ['error'],
-    '@typescript-eslint/ban-ts-comment'  : 'off'
+    '@typescript-eslint/ban-ts-comment'  : 'off',
+    'keyword-spacing' : ['error', { 'before': true }],
+    'comma-dangle': ['error', 'always-multiline'],
+    'eol-last': ['error', 'always'],
   }
 };
