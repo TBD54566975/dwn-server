@@ -23,12 +23,12 @@
         "url": "https://github.com/TBD54566975/dwn-server/issues"
     },
     "dependencies": {
-        "@tbd54566975/dwn-sdk-js": "0.0.35",
+        "@tbd54566975/dwn-sdk-js": "0.2.1",
         "bytes": "3.1.2",
-        "node-fetch": "3.3.1",
         "cors": "2.8.5",
         "express": "4.18.2",
         "multiformats": "11.0.2",
+        "node-fetch": "3.3.1",
         "prom-client": "14.2.0",
         "readable-stream": "4.3.0",
         "response-time": "2.3.2",
@@ -54,7 +54,7 @@
         "eslint-plugin-mocha": "10.1.0",
         "mocha": "10.2.0",
         "supertest": "6.3.3",
-        "typescript": "5.0.4"
+        "typescript": "^5.0.4"
     },
     "scripts": {
         "build:esm": "tsc",
