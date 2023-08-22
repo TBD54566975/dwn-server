@@ -11,7 +11,6 @@ import { dwn, clear as clearDwn } from './test-dwn.js';
 import { Cid, DataStream, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
 import { createProfile, createRecordsWriteMessage, getFileAsReadStream, streamHttpRequest } from './utils.js';
 import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
-import { join } from 'path/posix';
 
 describe('http api', function() {
   let httpApi: HttpApi;
