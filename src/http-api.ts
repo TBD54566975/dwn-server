@@ -5,7 +5,7 @@ import responseTime from 'response-time';
 
 import cors from 'cors';
 import express from 'express';
-import { register, Histogram, Counter } from 'prom-client';
+import { register } from 'prom-client';
 import log from 'loglevel';
 
 import { v4 as uuidv4 } from 'uuid';
@@ -13,27 +13,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { jsonRpcApi } from './json-rpc-api.js';
 import { JsonRpcRequest } from './lib/json-rpc.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
+import { responseHistogram, requestCounter } from './metrics.js';
 
 export class HttpApi {
-  requestCounter = new Counter({
-    name       : 'dwn_requests_total',
-    help       : 'all dwn requests processed',
-    labelNames : ['method', 'status', 'error'],
-  });
-
   api: Express;
   dwn: Dwn;
 
   constructor(dwn: Dwn) {
     this.api = express();
     this.dwn = dwn;
-
-    const responseHistogram = new Histogram({
-      name       : 'http_response',
-      help       : 'response histogram',
-      buckets    : [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
-      labelNames : ['route', 'code'],
-    });
 
     this.api.use(cors({ exposedHeaders: 'dwn-response' }));
     this.api.use(responseTime((req: Request, res: Response, time) => {
@@ -97,11 +85,11 @@ export class HttpApi {
       // If the handler catches a thrown exception and returns a JSON RPC InternalError, return the equivalent
       // HTTP 500 Internal Server Error with the response.
       if (jsonRpcResponse.error) {
-        this.requestCounter.inc({ method: dwnRpcRequest.method, error: 1 });
+        requestCounter.inc({ method: dwnRpcRequest.method, error: 1 });
         return res.status(500).json(jsonRpcResponse);
       }
 
-      this.requestCounter.inc({
+      requestCounter.inc({
         method : dwnRpcRequest.method,
         status : jsonRpcResponse?.result?.reply?.status?.code || 0,
       });
