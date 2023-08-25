@@ -13,4 +13,7 @@ export const config = {
   messageStore           : process.env.DWN_STORAGE_MESSAGES || process.env.DWN_STORAGE || 'level://data',
   dataStore              : process.env.DWN_STORAGE_DATA || process.env.DWN_STORAGE || 'level://data',
   eventLog               : process.env.DWN_STORAGE_EVENTS || process.env.DWN_STORAGE || 'level://data',
+
+  // log level - trace/debug/info/warn/error
+  logLevel: process.env.DWN_SERVER_LOG_LEVEL || 'INFO',
 };
