@@ -64,7 +64,7 @@
         "typescript": "^5.0.4"
     },
     "scripts": {
-        "build:esm": "tsc",
+        "build:esm": "npm run clean & tsc",
         "build:cjs": "npm run build:esm && node build/create-cjs-bundle.cjs && echo '{\"type\": \"commonjs\"}' > ./dist/cjs/package.json",
         "build": "npm run clean && npm run build:esm && npm run build:cjs",
         "clean": "rimraf dist && rimraf generated/*",
