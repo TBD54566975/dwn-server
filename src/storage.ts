@@ -39,7 +39,8 @@ function getLevelStore(storeURI: URL, storeType: EStoreType) {
     });
   case EStoreType.MessageStore:
     return new MessageStoreLevel({
-      blockstoreLocation: storeURI.host + storeURI.pathname + '/DATASTORE',
+      blockstoreLocation : storeURI.host + storeURI.pathname + '/MESSAGESTORE',
+      indexLocation      : storeURI.host + storeURI.pathname + '/INDEX',
     });
   case EStoreType.EventLog:
     return new EventLogLevel({
