@@ -71,6 +71,6 @@
         "lint": "eslint . --ext .ts --max-warnings 0",
         "lint:fix": "eslint . --ext .ts --fix",
         "test": "npm run build:esm && cp -R tests/fixtures dist/esm/tests && mocha dist/esm/tests/*.spec.js",
-        "server": "npm run build:esm && node dist/esm/src/run-server.js"
+        "server": "npm run build:esm && node dist/esm/src/main.js"
     }
 }

@@ -6,7 +6,7 @@
     ],
     "allowJs": true,
     "target": "ESNext",
-    "module": "ESNext", // Required for enabling JavaScript import assertion support
+    "module": "NodeNext", // Required for enabling JavaScript import assertion support
     "declaration": true,
     "declarationMap": true,
     "rootDir": ".",
