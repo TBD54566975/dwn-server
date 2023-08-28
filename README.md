@@ -214,8 +214,22 @@ cloudflared tunnel --url http://localhost:3000
 # Configuration
 Configuration can be set using environment variables
 
-| Env Var                   | Description                                                               | Default |
-| ------------------------- | ------------------------------------------------------------------------- | ------- |
-| `DS_PORT`                 | Port that the server listens on                                           | `3000`  |
-| `DS_MAX_RECORD_DATA_SIZE` | maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value | `1gb`   |
-| `DS_WEBSOCKET_SERVER`     | whether to enable listening over `ws:`. values: `on`,`off`                | `on`    |
+| Env Var                   | Description                                                                            | Default                |
+| ------------------------- | ---------------------------------------------------------------------------------------| ---------------------- |
+| `DS_PORT`                 | Port that the server listens on                                                        | `3000`                 |
+| `DS_MAX_RECORD_DATA_SIZE` | maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value              | `1gb`                  |
+| `DS_WEBSOCKET_SERVER`     | whether to enable listening over `ws:`. values: `on`,`off`                             | `on`                   |
+| `DWN_STORAGE`             | URL to use for storage by default. See [Storage Options](#storage-options) for details | `level://data`         |
+| `DWN_STORAGE_MESSAGES`    | URL to use for storage of messages.                                                    | value of `DWN_STORAGE` |
+| `DWN_STORAGE_DATA`        | URL to use for data storage                                                            | value of `DWN_STORAGE` |
+| `DWN_STORAGE_EVENTS`      | URL to use for event storage                                                           | value of `DWN_STORAGE` |
+
+# Storage Options
+Several storage formats are supported, and may be configured with the `DWN_STORAGE_*` environment variables:
+
+| Database   | Example                                               | Notes                                                                                                                                                                                 |
+|------------|-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| LevelDB    | `level://data`                                        | use three slashes for absolute paths, two for relative. Example shown uses directory `data` in the current working directory                                                          |
+| Sqlite     | `sqlite://dwn.db`                                     | use three slashes for absolute paths, two for relative. Example shown creates a file `dwn.db` in the current working directory                                                        |
+| MySQL      | `mysql://user:pass@host/db?debug=true&timezone=-0700` | [all URL options documented here](https://github.com/mysqljs/mysql#connection-options)                                                                                                |
+| PostgreSQL | `postgres:///dwn`                                     | any options other than the URL scheme (`postgres://`) may also be specified via [standard environment variables](https://node-postgres.com/features/connecting#environment-variables) |

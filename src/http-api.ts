@@ -5,12 +5,15 @@ import responseTime from 'response-time';
 
 import cors from 'cors';
 import express from 'express';
-import { register, Histogram } from 'prom-client';
+import { register } from 'prom-client';
+import log from 'loglevel';
 
 import { v4 as uuidv4 } from 'uuid';
 
 import { jsonRpcApi } from './json-rpc-api.js';
+import { JsonRpcRequest } from './lib/json-rpc.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
+import { responseHistogram, requestCounter } from './metrics.js';
 
 export class HttpApi {
   api: Express;
@@ -19,13 +22,6 @@ export class HttpApi {
   constructor(dwn: Dwn) {
     this.api = express();
     this.dwn = dwn;
-
-    const responseHistogram = new Histogram({
-      name       : 'http_response',
-      help       : 'response histogram',
-      buckets    : [50, 250, 500, 750, 1000],
-      labelNames : ['route', 'code'],
-    });
 
     this.api.use(cors({ exposedHeaders: 'dwn-response' }));
     this.api.use(responseTime((req: Request, res: Response, time) => {
@@ -36,6 +32,7 @@ export class HttpApi {
 
       const statusCode = res.statusCode.toString();
       responseHistogram.labels(route, statusCode).observe(time);
+      log.info(req.method, decodeURI(req.url), res.statusCode);
     }));
 
     this.api.get('/health', (_req, res) => {
@@ -68,8 +65,9 @@ export class HttpApi {
         return res.status(400).json(reply);
       }
 
+      let dwnRpcRequest: JsonRpcRequest;
       try {
-        dwnRequest = JSON.parse(dwnRequest);
+        dwnRpcRequest = JSON.parse(dwnRequest);
       } catch (e) {
         const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
 
@@ -82,14 +80,19 @@ export class HttpApi {
       const requestDataStream = (parseInt(contentLength) > 0 || transferEncoding !== undefined) ? req : undefined;
 
       const requestContext: RequestContext = { dwn: this.dwn, transport: 'http', dataStream: requestDataStream };
-      const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcApi.handle(dwnRequest, requestContext as RequestContext);
+      const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcApi.handle(dwnRpcRequest, requestContext as RequestContext);
 
       // If the handler catches a thrown exception and returns a JSON RPC InternalError, return the equivalent
       // HTTP 500 Internal Server Error with the response.
       if (jsonRpcResponse.error) {
+        requestCounter.inc({ method: dwnRpcRequest.method, error: 1 });
         return res.status(500).json(jsonRpcResponse);
       }
 
+      requestCounter.inc({
+        method : dwnRpcRequest.method,
+        status : jsonRpcResponse?.result?.reply?.status?.code || 0,
+      });
       if (responseDataStream) {
         res.setHeader('content-type', 'application/octet-stream');
         res.setHeader('dwn-response', JSON.stringify(jsonRpcResponse));
