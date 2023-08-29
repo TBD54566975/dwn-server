@@ -30,12 +30,12 @@ See more in [Storage Options](#storage-options)
 
 # Installation
 ```bash
-npm install @tbd54566975/dwn-server
+npm install @web5/dwn-server
 ```
 
 # Package usage
 ```typescript
-import { DwnServer } from '@tbd54566975/dwn-server';
+import { DwnServer } from '@web5/dwn-server';
 
 const server = new DwnServer();
 
@@ -248,7 +248,7 @@ cloudflared tunnel --url http://localhost:3000
 | `npm run clean`         | deletes compiled JS                         |
 | `npm run lint`          | runs linter                                 |
 | `npm run lint:fix`      | runs linter and fixes auto-fixable problems |
-| `npm run test`          | runs tests.                                 |
+| `npm run test`          | runs tests                                  |
 | `npm run server`          | starts server                                |
 
 
