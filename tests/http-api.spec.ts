@@ -2,21 +2,21 @@
 import { webcrypto } from 'node:crypto';
 
 // @ts-ignore
-if (!globalThis.crypto) globalThis.crypto = webcrypto;
+if (!globalThis.crypto) {globalThis.crypto = webcrypto;}
 
 import type { Server } from 'http';
+import type { JsonRpcErrorResponse, JsonRpcResponse } from '../src/lib/json-rpc.js';
 
 import fetch from 'node-fetch';
 import request from 'supertest';
 
 import { expect } from 'chai';
-import { v4 as uuidv4 } from 'uuid';
-
 import { HttpApi } from '../src/http-api.js';
-import { dwn, clear as clearDwn } from './test-dwn.js';
-import { Cid, DataStream, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
+import { v4 as uuidv4 } from 'uuid';
+import { Cid, DataStream, RecordsQuery, RecordsRead } from '@tbd54566975/dwn-sdk-js';
+import { clear as clearDwn, dwn } from './test-dwn.js';
+import { createJsonRpcRequest, JsonRpcErrorCodes } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage, getFileAsReadStream, streamHttpRequest } from './utils.js';
-import { JsonRpcErrorCodes, JsonRpcErrorResponse, JsonRpcResponse, createJsonRpcRequest } from '../src/lib/json-rpc.js';
 
 describe('http api', function() {
   let httpApi: HttpApi;
@@ -78,7 +78,7 @@ describe('http api', function() {
     const dataBytes = await DataStream.toBytes(dataStream);
 
     // Attempt an initial RecordsWrite with the invalid message to ensure the DWN returns an error.
-    let responseInitialWrite = await fetch('http://localhost:3000', {
+    const responseInitialWrite = await fetch('http://localhost:3000', {
       method  : 'POST',
       headers : {
         'dwn-request': JSON.stringify(dwnRequest)
@@ -104,7 +104,8 @@ describe('http api', function() {
     // that have CORS enabled to read and parse DWeb Messages that are returned as Response headers, particularly
     // in the case of RecordsRead messages.
 
-    // TODO: Consider replacing this test with a more robust method of testing, such as writing Playwright tests
+    // TODO: github.com/TBD54566975/dwn-server/issues/50
+    // Consider replacing this test with a more robust method of testing, such as writing Playwright tests
     // that run in a browser to verify that the `dwn-response` header can be read from the `fetch()` response
     // when CORS mode is enabled.
     const response = await request(httpApi.api)
@@ -189,7 +190,7 @@ describe('http api', function() {
         target  : alice.did
       });
 
-      let responseInitialWrite = await fetch('http://localhost:3000', {
+      const responseInitialWrite = await fetch('http://localhost:3000', {
         method  : 'POST',
         headers : {
           'dwn-request': JSON.stringify(dwnRequest)
@@ -213,7 +214,7 @@ describe('http api', function() {
         message : overWrite.toJSON(),
         target  : alice.did
       });
-      let responseOverwrite = await fetch('http://localhost:3000', {
+      const responseOverwrite = await fetch('http://localhost:3000', {
         method  : 'POST',
         headers : {
           'dwn-request': JSON.stringify(dwnRequest)
@@ -235,13 +236,13 @@ describe('http api', function() {
       const alice = await createProfile();
       const { recordsWrite: tombstone } = await createRecordsWriteMessage(alice);
 
-      let requestId = uuidv4();
-      let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message : tombstone.toJSON(),
         target  : alice.did
       });
 
-      let responeTombstone = await fetch('http://localhost:3000', {
+      const responeTombstone = await fetch('http://localhost:3000', {
         method  : 'POST',
         headers : {
           'dwn-request': JSON.stringify(dwnRequest)
@@ -254,7 +255,7 @@ describe('http api', function() {
 
   describe('health check', function() {
     it('returns a health check', async function() {
-      let response = await fetch('http://localhost:3000/health', {
+      const response = await fetch('http://localhost:3000/health', {
         method: 'GET',
       });
       expect(response.status).to.equal(200);
@@ -263,7 +264,7 @@ describe('http api', function() {
 
   describe('default http get response', function() {
     it('returns returns a default message', async function() {
-      let response = await fetch('http://localhost:3000/', {
+      const response = await fetch('http://localhost:3000/', {
         method: 'GET',
       });
       expect(response.status).to.equal(200);

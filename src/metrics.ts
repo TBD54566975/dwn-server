@@ -1,4 +1,4 @@
-import { Histogram, Counter } from 'prom-client';
+import { Counter, Histogram } from 'prom-client';
 
 export const requestCounter = new Counter({
   name       : 'dwn_requests_total',

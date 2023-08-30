@@ -1,5 +1,5 @@
-import { Server } from 'http';
-import { Socket } from 'net';
+import type { Server } from 'http';
+import type { Socket } from 'net';
 
 const SOCKET_IDLE_SYMBOL = Symbol('idle');
 
@@ -55,7 +55,7 @@ export class HttpServerShutdownHandler {
     });
   }
 
-  stop(callback) {
+  stop(callback): void {
     this.stopping = true;
 
     // Stops the server from accepting new connections and keeps existing connections. This function is asynchronous,

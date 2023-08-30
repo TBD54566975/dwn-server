@@ -1,12 +1,14 @@
-import { Config } from './config.js';
-import { DataStore, EventLog, MessageStore, DwnConfig } from '@tbd54566975/dwn-sdk-js';
-import { SqliteDialect, MysqlDialect, PostgresDialect, MessageStoreSql, DataStoreSql, EventLogSql, Dialect } from '@tbd54566975/dwn-sql-store';
-import { DataStoreLevel, EventLogLevel, MessageStoreLevel } from '@tbd54566975/dwn-sdk-js/stores';
+import type { Config } from './config.js';
+import type { Dialect } from '@tbd54566975/dwn-sql-store';
+import type { DataStore, DwnConfig, EventLog, MessageStore } from '@tbd54566975/dwn-sdk-js';
 
-import Database from 'better-sqlite3';
-import { createPool as MySQLCreatePool } from 'mysql2';
-import pg from 'pg';
 import Cursor from 'pg-cursor';
+import Database from 'better-sqlite3';
+import pg from 'pg';
+
+import { createPool as MySQLCreatePool } from 'mysql2';
+import { DataStoreLevel, EventLogLevel, MessageStoreLevel } from '@tbd54566975/dwn-sdk-js/stores';
+import { DataStoreSql, EventLogSql, MessageStoreSql, MysqlDialect, PostgresDialect, SqliteDialect } from '@tbd54566975/dwn-sql-store';
 
 enum EStoreType {
   DataStore,
@@ -24,14 +26,14 @@ enum BackendTypes {
 type StoreType = DataStore | EventLog | MessageStore;
 
 export function getDWNConfig(config: Config): DwnConfig {
-  let dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
-  let eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);
-  let messageStore: MessageStore = getStore(config.messageStore, EStoreType.MessageStore);
+  const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
+  const eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);
+  const messageStore: MessageStore = getStore(config.messageStore, EStoreType.MessageStore);
 
   return { eventLog, dataStore, messageStore };
 }
 
-function getLevelStore(storeURI: URL, storeType: EStoreType) {
+function getLevelStore(storeURI: URL, storeType: EStoreType): DataStore | MessageStore | EventLog {
   switch (storeType) {
   case EStoreType.DataStore:
     return new DataStoreLevel({
@@ -51,7 +53,7 @@ function getLevelStore(storeURI: URL, storeType: EStoreType) {
   }
 }
 
-function getDBStore(db: Dialect, storeType: EStoreType) {
+function getDBStore(db: Dialect, storeType: EStoreType): DataStore | MessageStore | EventLog {
   switch (storeType) {
   case EStoreType.DataStore:
     return new DataStoreSql(db);
@@ -85,7 +87,7 @@ function getStore(storeString: string, storeType: EStoreType): StoreType {
 }
 
 function getDBFromURI(u: URL): Dialect {
-  switch(u.protocol.slice(0, -1)) {
+  switch (u.protocol.slice(0, -1)) {
   case BackendTypes.SQLITE:
     return new SqliteDialect({
       database: async () => new Database(u.host + u.pathname),
@@ -96,14 +98,14 @@ function getDBFromURI(u: URL): Dialect {
     });
   case BackendTypes.POSTGRES:
     return new PostgresDialect({
-      pool   : async () => new pg.Pool({u}),
+      pool   : async () => new pg.Pool({ u }),
       cursor : Cursor,
     });
   }
 }
 
 function invalidStorageSchemeMessage(protocol: string): string {
-  let schemes = [];
+  const schemes = [];
   for (const [_, value] of Object.entries(BackendTypes)) {
     schemes.push(value);
   }

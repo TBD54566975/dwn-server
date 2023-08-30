@@ -1,19 +1,19 @@
-import type { Express, Request, Response } from 'express';
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+import type { JsonRpcRequest } from './lib/json-rpc.js';
 import type { RequestContext } from './lib/json-rpc-router.js';
-import responseTime from 'response-time';
+import type { Server } from 'http';
+import type { Express, Request, Response } from 'express';
 
 import cors from 'cors';
 import express from 'express';
-import { register } from 'prom-client';
 import log from 'loglevel';
-
-import { v4 as uuidv4 } from 'uuid';
+import responseTime from 'response-time';
 
 import { jsonRpcApi } from './json-rpc-api.js';
-import { JsonRpcRequest } from './lib/json-rpc.js';
+import { register } from 'prom-client';
+import { v4 as uuidv4 } from 'uuid';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
-import { responseHistogram, requestCounter } from './metrics.js';
+import { requestCounter, responseHistogram } from './metrics.js';
 
 export class HttpApi {
   api: Express;
@@ -56,7 +56,7 @@ export class HttpApi {
     });
 
     this.api.post('/', async (req: Request, res) => {
-      let dwnRequest = req.headers['dwn-request'] as any;
+      const dwnRequest = req.headers['dwn-request'] as any;
 
       if (!dwnRequest) {
         const reply = createJsonRpcErrorResponse(uuidv4(),
@@ -104,7 +104,7 @@ export class HttpApi {
     });
   }
 
-  listen(port: number, callback?: () => void) {
+  listen(port: number, callback?: () => void): Server {
     return this.api.listen(port, callback);
   }
 }

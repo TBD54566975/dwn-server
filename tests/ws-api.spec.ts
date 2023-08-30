@@ -1,12 +1,12 @@
 import http from 'node:http';
-import { expect } from 'chai';
+
 import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
+import { expect } from 'chai';
 import { v4 as uuidv4 } from 'uuid';
-
-import { dwn, clear as clearDwn } from './test-dwn.js';
 import { WsApi } from '../src/ws-api.js';
-import { JsonRpcErrorCodes, createJsonRpcRequest } from '../src/lib/json-rpc.js';
+import { clear as clearDwn, dwn } from './test-dwn.js';
+import { createJsonRpcRequest, JsonRpcErrorCodes } from '../src/lib/json-rpc.js';
 import { createProfile, createRecordsWriteMessage, sendWsMessage } from './utils.js';
 
 let server: http.Server;

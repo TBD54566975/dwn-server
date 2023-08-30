@@ -2,7 +2,7 @@
 import { webcrypto } from 'node:crypto';
 
 // @ts-ignore
-if (!globalThis.crypto) globalThis.crypto = webcrypto;
+if (!globalThis.crypto) {globalThis.crypto = webcrypto;}
 
 import { DwnServer } from './dwn-server.js';
 
@@ -31,7 +31,7 @@ process.on('SIGTERM', async () => {
   gracefulShutdown();
 });
 
-function gracefulShutdown() {
+function gracefulShutdown(): void {
   dwnServer.stop(() => {
     console.log('http server stopped.. exiting');
     process.exit(0);
