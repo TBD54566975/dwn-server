@@ -1,7 +1,8 @@
-import type { Dwn } from '@tbd54566975/dwn-sdk-js';
 import type { JsonRpcRequest } from './lib/json-rpc.js';
+import { RecordsRead } from '@tbd54566975/dwn-sdk-js';
 import type { RequestContext } from './lib/json-rpc-router.js';
 import type { Server } from 'http';
+import type { Dwn, RecordsReadReply } from '@tbd54566975/dwn-sdk-js';
 import type { Express, Request, Response } from 'express';
 
 import cors from 'cors';
@@ -47,6 +48,30 @@ export class HttpApi {
       } catch (e) {
         res.status(500).end(e);
       }
+    });
+
+    this.api.get('/:did/records/:id', async (req, res) => {
+      const record = await RecordsRead.create({ recordId: req.params.id });
+      const reply = await this.dwn.processMessage(req.params.did, record.toJSON()) as RecordsReadReply;
+
+      if (reply.status.code === 200) {
+        if (reply?.record?.data) {
+          const stream = reply.record.data;
+          delete reply.record.data;
+
+          res.setHeader('content-type', reply.record.descriptor.dataFormat);
+          res.setHeader('dwn-response', JSON.stringify(reply));
+
+          return stream.pipe(res);
+        } else {
+          return res.sendStatus(400);
+        }
+      } else if (reply.status.code === 401) {
+        return res.sendStatus(404);
+      } else {
+        return res.status(reply.status.code).send(reply);
+      }
+
     });
 
     this.api.get('/', (_req, res) => {
