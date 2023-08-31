@@ -61,7 +61,7 @@
         "eslint-plugin-mocha": "10.1.0",
         "mocha": "10.2.0",
         "supertest": "6.3.3",
-        "typescript": "^5.0.4"
+        "typescript": "^5.2.2"
     },
     "scripts": {
         "build:esm": "npm run clean & tsc",
