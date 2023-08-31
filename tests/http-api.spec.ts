@@ -344,4 +344,106 @@ describe('http api', function() {
       expect(cid).to.equal(expectedCid);
     });
   });
+
+  describe('/:did/records/:id', function () {
+    it('returns record data if record is published', async function () {
+      const filePath = './fixtures/test.jpeg';
+      const { cid: expectedCid, size, stream } = await getFileAsReadStream(filePath);
+
+      const alice = await createProfile();
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
+        dataCid   : expectedCid,
+        dataSize  : size,
+        published : true
+      });
+
+      let requestId = uuidv4();
+      let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message : recordsWrite.toJSON(),
+        target  : alice.did,
+      });
+
+      let response = await fetch('http://localhost:3000', {
+        method  : 'POST',
+        headers : {
+          'dwn-request': JSON.stringify(dwnRequest)
+        },
+        body: stream
+      });
+
+      expect(response.status).to.equal(200);
+
+      const body = await response.json() as JsonRpcResponse;
+      expect(body.id).to.equal(requestId);
+      expect(body.error).to.not.exist;
+
+      const { reply } = body.result;
+      expect(reply.status.code).to.equal(202);
+
+      response = await fetch(`http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`);
+      const blob = await response.blob();
+
+      expect(blob.size).to.equal(size);
+    });
+
+    it('returns a 404 if an unpublished record is requested', async function () {
+      const filePath = './fixtures/test.jpeg';
+      const { cid: expectedCid, size, stream } = await getFileAsReadStream(filePath);
+
+      const alice = await createProfile();
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
+        dataCid  : expectedCid,
+        dataSize : size,
+      });
+
+      let requestId = uuidv4();
+      let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message : recordsWrite.toJSON(),
+        target  : alice.did,
+      });
+
+      let response = await fetch('http://localhost:3000', {
+        method  : 'POST',
+        headers : {
+          'dwn-request': JSON.stringify(dwnRequest)
+        },
+        body: stream
+      });
+
+      expect(response.status).to.equal(200);
+
+      const body = await response.json() as JsonRpcResponse;
+      expect(body.id).to.equal(requestId);
+      expect(body.error).to.not.exist;
+
+      const { reply } = body.result;
+      expect(reply.status.code).to.equal(202);
+
+      response = await fetch(`http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`);
+
+      expect(response.status).to.equal(404);
+    });
+
+    it('returns a 404 if record doesnt exist', async function () {
+      const alice = await createProfile();
+      const { recordsWrite } = await createRecordsWriteMessage(alice);
+
+      const response = await fetch(`http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`);
+      expect(response.status).to.equal(404);
+    });
+
+    it('returns a 404 for invalid did', async function () {
+      const alice = await createProfile();
+      const { recordsWrite } = await createRecordsWriteMessage(alice);
+
+      const response = await fetch(`http://localhost:3000/1234567892345678/records/${recordsWrite.message.recordId}`);
+      expect(response.status).to.equal(404);
+    });
+
+    it('returns a 404 for invalid record id', async function () {
+      const alice = await createProfile();
+      const response = await fetch(`http://localhost:3000/${alice.did}/records/kaka`);
+      expect(response.status).to.equal(404);
+    });
+  });
 });
