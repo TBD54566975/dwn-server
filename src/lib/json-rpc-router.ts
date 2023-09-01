@@ -11,9 +11,9 @@ export type RequestContext = {
 export type HandlerResponse = {
   jsonRpcResponse: JsonRpcResponse,
   dataStream?: Readable
-}
+};
 
-export type JsonRpcHandler = (JsonRpcRequest: JsonRpcRequest, context: RequestContext) => Promise<HandlerResponse>
+export type JsonRpcHandler = (JsonRpcRequest: JsonRpcRequest, context: RequestContext) => Promise<HandlerResponse>;
 
 export class JsonRpcRouter {
   private methodHandlers: { [method: string]: JsonRpcHandler };
@@ -22,11 +22,11 @@ export class JsonRpcRouter {
     this.methodHandlers = {};
   }
 
-  on(methodName: string, handler: JsonRpcHandler) {
+  on(methodName: string, handler: JsonRpcHandler): void {
     this.methodHandlers[methodName] = handler;
   }
 
-  async handle(rpcRequest: JsonRpcRequest, context: RequestContext) {
+  async handle(rpcRequest: JsonRpcRequest, context: RequestContext): Promise<HandlerResponse> {
     const handler = this.methodHandlers[rpcRequest.method];
 
     return await handler(rpcRequest, context);

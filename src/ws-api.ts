@@ -1,17 +1,16 @@
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+import type { JsonRpcResponse } from './lib/json-rpc.js';
 import type { RequestContext } from './lib/json-rpc-router.js';
+import type { Server } from 'http';
+import type { AddressInfo, WebSocket } from 'ws';
 
-import { Server } from 'http';
-
-import { WebSocket } from 'ws';
+import { base64url } from 'multiformats/bases/base64';
+import { DataStream } from '@tbd54566975/dwn-sdk-js';
+import { jsonRpcApi } from './json-rpc-api.js';
+import { requestCounter } from './metrics.js';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from 'ws';
-import { DataStream } from '@tbd54566975/dwn-sdk-js';
-import { base64url } from 'multiformats/bases/base64';
-
-import { jsonRpcApi } from './json-rpc-api.js';
-import { createJsonRpcErrorResponse, JsonRpcErrorCodes, JsonRpcResponse } from './lib/json-rpc.js';
-import { requestCounter } from './metrics.js';
+import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 
@@ -24,13 +23,14 @@ export class WsApi {
     this.wsServer = new WebSocketServer({ server: server });
   }
 
-  get address() {
-    return this.wsServer.address;
+  // TODO: github.com/TBD54566975/dwn-server/issues/49 Add code coverage tracker, similar to either dwn-sdk-js or to web5-js
+  get address(): AddressInfo | string {
+    return this.wsServer.address();
   }
 
-  listen() {
+  listen(): void {
     const dwn = this.dwn;
-    this.wsServer.on('connection', function (socket: WebSocket, _request, _client) {
+    this.wsServer.on('connection', function (socket: WebSocket, _request, _client): void {
       socket[SOCKET_ISALIVE_SYMBOL] = true;
 
       // Pong messages are automatically sent in response to ping messages as required by
@@ -116,11 +116,11 @@ export class WsApi {
     });
   }
 
-  close() {
+  close(): void {
     this.wsServer.close();
   }
 
-  private static jsonRpcResponseToBuffer(jsonRpcResponse: JsonRpcResponse) {
+  private static jsonRpcResponseToBuffer(jsonRpcResponse: JsonRpcResponse): Buffer {
     const str = JSON.stringify(jsonRpcResponse);
     return Buffer.from(str);
   }

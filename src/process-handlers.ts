@@ -1,13 +1,13 @@
-import { DwnServer } from './dwn-server.js';
+import type { DwnServer } from './dwn-server.js';
 
-export const gracefulShutdown = (dwnServer: DwnServer) => {
+export const gracefulShutdown = (dwnServer: DwnServer): void => {
   dwnServer.stop(() => {
     console.log('http server stopped.. exiting');
     process.exit(0);
   });
 };
 
-export const setProcessHandlers = (dwnServer: DwnServer) => {
+export const setProcessHandlers = (dwnServer: DwnServer): void => {
   process.on('unhandledRejection', (reason, promise) => {
     console.error(`Unhandled promise rejection. Reason: ${reason}. Promise: ${JSON.stringify(promise)}`);
   });

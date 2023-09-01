@@ -1,13 +1,14 @@
-import type { SignatureInput, PublicJwk, PrivateJwk } from '@tbd54566975/dwn-sdk-js';
+import type { Readable } from 'readable-stream';
+import type { ReadStream } from 'node:fs';
+import type { PrivateJwk, PublicJwk, SignatureInput } from '@tbd54566975/dwn-sdk-js';
 
-import path from 'path';
 import fs from 'node:fs';
 import http from 'node:http';
+import path from 'path';
 
-import { WebSocket } from 'ws';
-import { ReadStream } from 'node:fs';
 import { fileURLToPath } from 'url';
-import { DidKeyResolver, RecordsWrite, DataStream, Cid } from '@tbd54566975/dwn-sdk-js';
+import { WebSocket } from 'ws';
+import { Cid, DataStream, DidKeyResolver, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +21,7 @@ export type Profile = {
     privateJwk: PrivateJwk
   } ,
   signatureInput: SignatureInput
-}
+};
 
 export async function createProfile(): Promise<Profile> {
   const { did, keyPair, keyId } = await DidKeyResolver.generate();
@@ -56,7 +57,15 @@ export type CreateRecordsWriteOverrides = (
   } & { data?: Uint8Array }
 );
 
-export async function createRecordsWriteMessage(signer: Profile, overrides: CreateRecordsWriteOverrides = {}) {
+export type GenerateProtocolsConfigureOutput = {
+  recordsWrite: RecordsWrite,
+  dataStream: Readable | undefined,
+};
+
+export async function createRecordsWriteMessage(
+  signer: Profile,
+  overrides: CreateRecordsWriteOverrides = {}
+): Promise<GenerateProtocolsConfigureOutput> {
   if (!overrides.dataCid && !overrides.data) {
     overrides.data = randomBytes(32);
   }
@@ -67,8 +76,7 @@ export async function createRecordsWriteMessage(signer: Profile, overrides: Crea
     authorizationSignatureInput : signer.signatureInput,
   });
 
-
-  let dataStream;
+  let dataStream: Readable | undefined;
   if (overrides.data) {
     dataStream = DataStream.fromBytes(overrides.data);
   }
@@ -78,7 +86,6 @@ export async function createRecordsWriteMessage(signer: Profile, overrides: Crea
     dataStream
   };
 }
-
 
 export function randomBytes(length: number): Uint8Array {
   const randomBytes = new Uint8Array(length);
@@ -160,8 +167,8 @@ export async function sendWsMessage(address: string, message: any): Promise<Buff
   return new Promise((resolve) => {
     const socket = new WebSocket(address);
 
-    socket.onopen = (_event) => {
-      socket.onmessage = event => {
+    socket.onopen = (_event): void => {
+      socket.onmessage = (event): void => {
         socket.terminate();
         return resolve(<Buffer>event.data);
       };
