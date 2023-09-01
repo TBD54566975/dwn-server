@@ -8,20 +8,20 @@ import { createPool as MySQLCreatePool } from 'mysql2';
 import pg from 'pg';
 import Cursor from 'pg-cursor';
 
-enum EStoreType {
+export enum EStoreType {
   DataStore,
   MessageStore,
   EventLog,
 }
 
-enum BackendTypes {
+export enum BackendTypes {
   LEVEL = 'level',
   SQLITE = 'sqlite',
   MYSQL = 'mysql',
   POSTGRES = 'postgres',
 }
 
-type StoreType = DataStore | EventLog | MessageStore;
+export type StoreType = DataStore | EventLog | MessageStore;
 
 export function getDWNConfig(config: Config): DwnConfig {
   let dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);

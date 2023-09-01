@@ -8,6 +8,7 @@ import { WsApi } from './ws-api.js';
 import { HttpApi } from './http-api.js';
 import { config as defaultConfig } from './config.js';
 import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
+import { setProcessHandlers } from './process-handlers.js';
 import { getDWNConfig } from './storage.js';
 
 export type DwnServerOptions = {
@@ -26,6 +27,11 @@ export class DwnServer {
     log.setLevel(this.config.logLevel as log.LogLevelDesc);
     prefix.reg(log);
     prefix.apply(log);
+  }
+
+  async start() : Promise<void> {
+    await this.listen();
+    setProcessHandlers(this);
   }
 
   async listen(): Promise<void> {

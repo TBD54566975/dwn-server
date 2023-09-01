@@ -1,7 +1,27 @@
 {
-    "name": "dwn-server",
+    "name": "@web5/dwn-server",
     "type": "module",
-    "version": "0.0.3",
+    "version": "0.1.0",
+    "files": [
+        "dist",
+        "src"
+    ],
+    "main": "./dist/cjs/index.js",
+    "module": "./dist/esm/src/index.js",
+    "exports": {
+        ".": {
+            "import": "./dist/esm/src/index.js",
+            "require": "./dist/cjs/index.js"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/TBD54566975/dwn-server.git"
+    },
+    "homepage": "https://github.com/TBD54566975/dwn-server#readme",
+    "bugs": {
+        "url": "https://github.com/TBD54566975/dwn-server/issues"
+    },
     "dependencies": {
         "@tbd54566975/dwn-sdk-js": "0.2.1",
         "@tbd54566975/dwn-sql-store": "^0.0.3",
@@ -35,16 +55,22 @@
         "@typescript-eslint/parser": "5.59.0",
         "chai": "4.3.6",
         "chai-as-promised": "7.1.1",
+        "esbuild": "0.16.17",
         "eslint": "8.33.0",
         "eslint-plugin-import": "2.26.0",
         "eslint-plugin-mocha": "10.1.0",
         "mocha": "10.2.0",
         "supertest": "6.3.3",
-        "typescript": "^5.0.4"
+        "typescript": "^5.1.6"
     },
     "scripts": {
-        "compile": "tsc",
-        "test": "npm run compile && cp -R tests/fixtures dist/tests && mocha dist/tests/*.spec.js",
-        "server": "npm run compile && node dist/src/main.js"
+        "build:esm": "npm run clean & tsc",
+        "build:cjs": "npm run build:esm && node build/create-cjs-bundle.cjs && echo '{\"type\": \"commonjs\"}' > ./dist/cjs/package.json",
+        "build": "npm run clean && npm run build:esm && npm run build:cjs",
+        "clean": "rimraf dist && rimraf generated/*",
+        "lint": "eslint . --ext .ts --max-warnings 0",
+        "lint:fix": "eslint . --ext .ts --fix",
+        "test": "npm run build:esm && cp -R tests/fixtures dist/esm/tests && mocha dist/esm/tests/*.spec.js",
+        "server": "npm run build:esm && node dist/esm/src/main.js"
     }
 }
