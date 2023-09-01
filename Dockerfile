@@ -13,7 +13,7 @@ COPY src ./src
 # RUN apk add --update python3 make g++
 
 RUN npm install
-RUN npm run compile
+RUN npm run build:esm
 
 VOLUME /dwn-server/data
 
