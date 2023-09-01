@@ -2,6 +2,9 @@
 
 Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API over `http:` and `ws:`
 
+- [Supported DBs](#supported-dbs)
+- [Installation](#installation)
+- [Package usage](#package-usage)
 - [Running The Server](#running-the-server)
 - [Hosted examples you can use:](#hosted-examples-you-can-use)
 - [JSON-RPC API](#json-rpc-api)
@@ -13,10 +16,35 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
       - [Example Error Response](#example-error-response)
       - [Transporting large amounts of data](#transporting-large-amounts-of-data)
       - [Receiving large amounts of data](#receiving-large-amounts-of-data)
+- [npm scripts](#npm-scripts)
 - [Configuration](#configuration)
+  - [Storage Options](#storage-options)
 
+# Supported DBs
+* LevelDB ✔️
+* SQLite ✔️
+* MySQL ✔️
+* PostgreSQL ✔️
 
-# Running the server via docker
+See more in [Storage Options](#storage-options)
+
+# Installation
+```bash
+npm install @web5/dwn-server
+```
+
+# Package usage
+```typescript
+import { DwnServer } from '@web5/dwn-server';
+
+const server = new DwnServer();
+
+server.start();
+```
+
+# Running the server 
+
+## Running via docker
 
 `docker run -p 3000:3000 -v myvolume:/dwn-server/data ghcr.io/tbd54566975/dwn-server:main`
 
@@ -210,6 +238,19 @@ cloudflared tunnel --url http://localhost:3000
 ... check back soon ... 
 (enterprising people I am sure can work it out)
 
+# `npm` scripts
+
+| Script                  | Description                                 |
+| ----------------------- | ------------------------------------------- |
+| `npm run build:esm`   | compiles typescript into ESM JS             |
+| `npm run build:cjs`       | compiles typescript into CommonJS             |
+| `npm run build`       | compiles typescript into ESM JS &  CommonJS             |
+| `npm run clean`         | deletes compiled JS                         |
+| `npm run lint`          | runs linter                                 |
+| `npm run lint:fix`      | runs linter and fixes auto-fixable problems |
+| `npm run test`          | runs tests                                  |
+| `npm run server`          | starts server                                |
+
 
 # Configuration
 Configuration can be set using environment variables
@@ -224,7 +265,7 @@ Configuration can be set using environment variables
 | `DWN_STORAGE_DATA`        | URL to use for data storage                                                            | value of `DWN_STORAGE` |
 | `DWN_STORAGE_EVENTS`      | URL to use for event storage                                                           | value of `DWN_STORAGE` |
 
-# Storage Options
+## Storage Options
 Several storage formats are supported, and may be configured with the `DWN_STORAGE_*` environment variables:
 
 | Database   | Example                                               | Notes                                                                                                                                                                                 |

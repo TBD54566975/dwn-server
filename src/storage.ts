@@ -10,20 +10,20 @@ import { createPool as MySQLCreatePool } from 'mysql2';
 import { DataStoreLevel, EventLogLevel, MessageStoreLevel } from '@tbd54566975/dwn-sdk-js/stores';
 import { DataStoreSql, EventLogSql, MessageStoreSql, MysqlDialect, PostgresDialect, SqliteDialect } from '@tbd54566975/dwn-sql-store';
 
-enum EStoreType {
+export enum EStoreType {
   DataStore,
   MessageStore,
   EventLog,
 }
 
-enum BackendTypes {
+export enum BackendTypes {
   LEVEL = 'level',
   SQLITE = 'sqlite',
   MYSQL = 'mysql',
   POSTGRES = 'postgres',
 }
 
-type StoreType = DataStore | EventLog | MessageStore;
+export type StoreType = DataStore | EventLog | MessageStore;
 
 export function getDWNConfig(config: Config): DwnConfig {
   const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
