@@ -65,7 +65,8 @@
     "mocha": "10.2.0",
     "prettier": "3.0.3",
     "supertest": "6.3.3",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "husky": "^8.0.0"
   },
   "scripts": {
     "build:esm": "npm run clean & tsc",
@@ -75,6 +76,7 @@
     "lint": "eslint . --ext .ts --max-warnings 0",
     "lint:fix": "eslint . --ext .ts --fix",
     "test": "npm run build:esm && cp -R tests/fixtures dist/esm/tests && mocha dist/esm/tests/*.spec.js",
-    "server": "npm run build:esm && node dist/esm/src/main.js"
+    "server": "npm run build:esm && node dist/esm/src/main.js",
+    "prepare": "husky install"
   }
 }
