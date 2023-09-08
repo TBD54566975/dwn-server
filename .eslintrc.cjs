@@ -6,6 +6,7 @@ module.exports = {
   },
   plugins: [
     '@typescript-eslint',
+    'prettier',
     'todo-plz', // for enforcing TODO formatting to require "github.com/TBD54566975/dwn-server/issues/"
   ],
   env: {
@@ -13,7 +14,8 @@ module.exports = {
     browser: true,
   },
   rules: {
-    curly: ['error', 'multi'],
+    'prettier/prettier': 'error',
+    curly: ['error', 'all'],
     'no-console': 'off',
     '@typescript-eslint/explicit-function-return-type': ['error'],
     // enforce `import type` when an import is not used at runtime, allowing transpilers/bundlers to drop imports as an optimization
