@@ -9,11 +9,15 @@ export const gracefulShutdown = (dwnServer: DwnServer): void => {
 
 export const setProcessHandlers = (dwnServer: DwnServer): void => {
   process.on('unhandledRejection', (reason, promise) => {
-    console.error(`Unhandled promise rejection. Reason: ${reason}. Promise: ${JSON.stringify(promise)}`);
+    console.error(
+      `Unhandled promise rejection. Reason: ${reason}. Promise: ${JSON.stringify(
+        promise,
+      )}`,
+    );
   });
 
-  process.on('uncaughtException', err => {
-    console.error('Uncaught exception:', (err.stack || err));
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught exception:', err.stack || err);
   });
 
   // triggered by ctrl+c with no traps in between

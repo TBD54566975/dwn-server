@@ -1,77 +1,80 @@
 {
-    "name": "@web5/dwn-server",
-    "type": "module",
-    "version": "0.1.0",
-    "files": [
-        "dist",
-        "src"
-    ],
-    "main": "./dist/cjs/index.js",
-    "module": "./dist/esm/src/index.js",
-    "exports": {
-        ".": {
-            "import": "./dist/esm/src/index.js",
-            "require": "./dist/cjs/index.js"
-        }
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/TBD54566975/dwn-server.git"
-    },
-    "homepage": "https://github.com/TBD54566975/dwn-server#readme",
-    "bugs": {
-        "url": "https://github.com/TBD54566975/dwn-server/issues"
-    },
-    "dependencies": {
-        "@tbd54566975/dwn-sdk-js": "0.2.1",
-        "@tbd54566975/dwn-sql-store": "^0.0.3",
-        "better-sqlite3": "^8.5.0",
-        "bytes": "3.1.2",
-        "cors": "2.8.5",
-        "express": "4.18.2",
-        "loglevel": "^1.8.1",
-        "loglevel-plugin-prefix": "^0.8.4",
-        "multiformats": "11.0.2",
-        "mysql2": "^3.6.0",
-        "node-fetch": "3.3.1",
-        "pg": "^8.11.2",
-        "pg-cursor": "^2.10.2",
-        "prom-client": "14.2.0",
-        "readable-stream": "4.3.0",
-        "response-time": "2.3.2",
-        "uuid": "9.0.0",
-        "ws": "8.12.0"
-    },
-    "devDependencies": {
-        "@types/bytes": "3.1.1",
-        "@types/chai": "4.3.4",
-        "@types/express": "4.17.17",
-        "@types/mocha": "10.0.1",
-        "@types/node": "18.11.18",
-        "@types/readable-stream": "2.3.15",
-        "@types/supertest": "2.0.12",
-        "@types/ws": "8.5.4",
-        "@typescript-eslint/eslint-plugin": "5.59.0",
-        "@typescript-eslint/parser": "5.59.0",
-        "chai": "4.3.6",
-        "chai-as-promised": "7.1.1",
-        "esbuild": "0.16.17",
-        "eslint": "8.33.0",
-        "eslint-plugin-import": "2.26.0",
-        "eslint-plugin-mocha": "10.1.0",
-        "eslint-plugin-todo-plz": "^1.3.0",
-        "mocha": "10.2.0",
-        "supertest": "6.3.3",
-        "typescript": "^5.1.6"
-    },
-    "scripts": {
-        "build:esm": "npm run clean & tsc",
-        "build:cjs": "npm run build:esm && node build/create-cjs-bundle.cjs && echo '{\"type\": \"commonjs\"}' > ./dist/cjs/package.json",
-        "build": "npm run clean && npm run build:esm && npm run build:cjs",
-        "clean": "rimraf dist && rimraf generated/*",
-        "lint": "eslint . --ext .ts --max-warnings 0",
-        "lint:fix": "eslint . --ext .ts --fix",
-        "test": "npm run build:esm && cp -R tests/fixtures dist/esm/tests && mocha dist/esm/tests/*.spec.js",
-        "server": "npm run build:esm && node dist/esm/src/main.js"
+  "name": "@web5/dwn-server",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/src/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/src/index.js",
+      "require": "./dist/cjs/index.js"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TBD54566975/dwn-server.git"
+  },
+  "homepage": "https://github.com/TBD54566975/dwn-server#readme",
+  "bugs": {
+    "url": "https://github.com/TBD54566975/dwn-server/issues"
+  },
+  "dependencies": {
+    "@tbd54566975/dwn-sdk-js": "0.2.1",
+    "@tbd54566975/dwn-sql-store": "^0.0.3",
+    "better-sqlite3": "^8.5.0",
+    "bytes": "3.1.2",
+    "cors": "2.8.5",
+    "express": "4.18.2",
+    "loglevel": "^1.8.1",
+    "loglevel-plugin-prefix": "^0.8.4",
+    "multiformats": "11.0.2",
+    "mysql2": "^3.6.0",
+    "node-fetch": "3.3.1",
+    "pg": "^8.11.2",
+    "pg-cursor": "^2.10.2",
+    "prom-client": "14.2.0",
+    "readable-stream": "4.3.0",
+    "response-time": "2.3.2",
+    "uuid": "9.0.0",
+    "ws": "8.12.0"
+  },
+  "devDependencies": {
+    "@types/bytes": "3.1.1",
+    "@types/chai": "4.3.4",
+    "@types/express": "4.17.17",
+    "@types/mocha": "10.0.1",
+    "@types/node": "18.11.18",
+    "@types/readable-stream": "2.3.15",
+    "@types/supertest": "2.0.12",
+    "@types/ws": "8.5.4",
+    "@typescript-eslint/eslint-plugin": "5.59.0",
+    "@typescript-eslint/parser": "5.59.0",
+    "chai": "4.3.6",
+    "chai-as-promised": "7.1.1",
+    "esbuild": "0.16.17",
+    "eslint": "8.33.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-mocha": "10.1.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-todo-plz": "^1.3.0",
+    "mocha": "10.2.0",
+    "prettier": "3.0.3",
+    "supertest": "6.3.3",
+    "typescript": "^5.1.6"
+  },
+  "scripts": {
+    "build:esm": "npm run clean & tsc",
+    "build:cjs": "npm run build:esm && node build/create-cjs-bundle.cjs && echo '{\"type\": \"commonjs\"}' > ./dist/cjs/package.json",
+    "build": "npm run clean && npm run build:esm && npm run build:cjs",
+    "clean": "rimraf dist && rimraf generated/*",
+    "lint": "eslint . --ext .ts --max-warnings 0",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "test": "npm run build:esm && cp -R tests/fixtures dist/esm/tests && mocha dist/esm/tests/*.spec.js",
+    "server": "npm run build:esm && node dist/esm/src/main.js"
+  }
 }

@@ -1,6 +1,6 @@
 replicaCount: 1 # do not override this unless you want to run a headless service and put your own reverse proxy in front
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: ''
+fullnameOverride: ''
 
 image:
   repository: ghcr.io/tbd54566975/dwn-server
@@ -33,7 +33,7 @@ virtualService:
 
 persistence:
   size: 1Gi
-  storageClass: ""
+  storageClass: ''
 
 resources:
   requests:
@@ -49,5 +49,5 @@ customLabels: {}
 
 env:
   DS_PORT: 3000
-  DS_MAX_RECORD_DATA_SIZE: "1gb"
-  DS_WEBSOCKET_SERVER: "on"
+  DS_MAX_RECORD_DATA_SIZE: '1gb'
+  DS_WEBSOCKET_SERVER: 'on'

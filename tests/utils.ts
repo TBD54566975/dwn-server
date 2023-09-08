@@ -1,6 +1,10 @@
 import type { Readable } from 'readable-stream';
 import type { ReadStream } from 'node:fs';
-import type { PrivateJwk, PublicJwk, SignatureInput } from '@tbd54566975/dwn-sdk-js';
+import type {
+  PrivateJwk,
+  PublicJwk,
+  SignatureInput,
+} from '@tbd54566975/dwn-sdk-js';
 
 import fs from 'node:fs';
 import http from 'node:http';
@@ -8,7 +12,12 @@ import path from 'path';
 
 import { fileURLToPath } from 'url';
 import { WebSocket } from 'ws';
-import { Cid, DataStream, DidKeyResolver, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
+import {
+  Cid,
+  DataStream,
+  DidKeyResolver,
+  RecordsWrite,
+} from '@tbd54566975/dwn-sdk-js';
 
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);
@@ -17,10 +26,10 @@ const __dirname = path.dirname(__filename);
 export type Profile = {
   did: string;
   keyPair: {
-    publicJwk: PublicJwk,
-    privateJwk: PrivateJwk
-  } ,
-  signatureInput: SignatureInput
+    publicJwk: PublicJwk;
+    privateJwk: PrivateJwk;
+  };
+  signatureInput: SignatureInput;
 };
 
 export async function createProfile(): Promise<Profile> {
@@ -28,43 +37,41 @@ export async function createProfile(): Promise<Profile> {
 
   // signatureInput is required by all dwn message classes. it's used to sign messages
   const signatureInput = {
-    privateJwk      : keyPair.privateJwk,
-    protectedHeader : { alg: keyPair.privateJwk.alg, kid: `${did}#${keyId}` }
+    privateJwk: keyPair.privateJwk,
+    protectedHeader: { alg: keyPair.privateJwk.alg, kid: `${did}#${keyId}` },
   };
 
   return {
     did,
     keyPair,
-    signatureInput
+    signatureInput,
   };
 }
 
-export type CreateRecordsWriteOverrides = (
-  {
-    dataCid?: string;
-    dataSize?: number;
-    dateCreated?: string;
-    published?: boolean;
-    recordId?: string
-  } & { data?: never })
-  |
-  ({
-    dataCid?: never;
-    dataSize?: never;
-    dateCreated?: string;
-    published?: boolean;
-    recordId?: string
-  } & { data?: Uint8Array }
-);
+export type CreateRecordsWriteOverrides =
+  | ({
+      dataCid?: string;
+      dataSize?: number;
+      dateCreated?: string;
+      published?: boolean;
+      recordId?: string;
+    } & { data?: never })
+  | ({
+      dataCid?: never;
+      dataSize?: never;
+      dateCreated?: string;
+      published?: boolean;
+      recordId?: string;
+    } & { data?: Uint8Array });
 
 export type GenerateProtocolsConfigureOutput = {
-  recordsWrite: RecordsWrite,
-  dataStream: Readable | undefined,
+  recordsWrite: RecordsWrite;
+  dataStream: Readable | undefined;
 };
 
 export async function createRecordsWriteMessage(
   signer: Profile,
-  overrides: CreateRecordsWriteOverrides = {}
+  overrides: CreateRecordsWriteOverrides = {},
 ): Promise<GenerateProtocolsConfigureOutput> {
   if (!overrides.dataCid && !overrides.data) {
     overrides.data = randomBytes(32);
@@ -72,8 +79,8 @@ export async function createRecordsWriteMessage(
 
   const recordsWrite = await RecordsWrite.create({
     ...overrides,
-    dataFormat                  : 'application/json',
-    authorizationSignatureInput : signer.signatureInput,
+    dataFormat: 'application/json',
+    authorizationSignatureInput: signer.signatureInput,
   });
 
   let dataStream: Readable | undefined;
@@ -83,7 +90,7 @@ export async function createRecordsWriteMessage(
 
   return {
     recordsWrite,
-    dataStream
+    dataStream,
   };
 }
 
@@ -96,7 +103,9 @@ export function randomBytes(length: number): Uint8Array {
   return randomBytes;
 }
 
-export async function getFileAsReadStream(filePath: string): Promise<{ stream: fs.ReadStream, cid: string, size: number }> {
+export async function getFileAsReadStream(
+  filePath: string,
+): Promise<{ stream: fs.ReadStream; cid: string; size: number }> {
   const absoluteFilePath = `${__dirname}/${filePath}`;
 
   let readStream = fs.createReadStream(absoluteFilePath);
@@ -104,41 +113,43 @@ export async function getFileAsReadStream(filePath: string): Promise<{ stream: f
 
   let size = 0;
   readStream = fs.createReadStream(absoluteFilePath);
-  readStream.on('data', chunk => {
+  readStream.on('data', (chunk) => {
     size += chunk['byteLength'];
   });
 
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     readStream.on('close', () => {
       return resolve({
         stream: fs.createReadStream(absoluteFilePath),
         cid,
-        size
+        size,
       });
     });
   });
 }
 
 type HttpResponse = {
-  status: number,
-  headers: http.IncomingHttpHeaders,
-  body?: any
+  status: number;
+  headers: http.IncomingHttpHeaders;
+  body?: any;
 };
 
-export function streamHttpRequest(url: string, opts: http.RequestOptions, bodyStream: ReadStream):
-  Promise<HttpResponse> {
-
+export function streamHttpRequest(
+  url: string,
+  opts: http.RequestOptions,
+  bodyStream: ReadStream,
+): Promise<HttpResponse> {
   return new Promise((resolve, reject) => {
-    const request = http.request(url, opts, rawResponse => {
+    const request = http.request(url, opts, (rawResponse) => {
       rawResponse.setEncoding('utf8');
 
       const response: HttpResponse = {
-        status  : rawResponse.statusCode,
-        headers : rawResponse.headers
+        status: rawResponse.statusCode,
+        headers: rawResponse.headers,
       };
 
       let body = '';
-      rawResponse.on('data', chunk => {
+      rawResponse.on('data', (chunk) => {
         body += chunk;
       });
 
@@ -163,7 +174,10 @@ export function streamHttpRequest(url: string, opts: http.RequestOptions, bodySt
   });
 }
 
-export async function sendWsMessage(address: string, message: any): Promise<Buffer> {
+export async function sendWsMessage(
+  address: string,
+  message: any,
+): Promise<Buffer> {
   return new Promise((resolve) => {
     const socket = new WebSocket(address);
 

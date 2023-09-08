@@ -21,19 +21,22 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
   - [Storage Options](#storage-options)
 
 # Supported DBs
-* LevelDB ✔️
-* SQLite ✔️
-* MySQL ✔️
-* PostgreSQL ✔️
+
+- LevelDB ✔️
+- SQLite ✔️
+- MySQL ✔️
+- PostgreSQL ✔️
 
 See more in [Storage Options](#storage-options)
 
 # Installation
+
 ```bash
 npm install @web5/dwn-server
 ```
 
 # Package usage
+
 ```typescript
 import { DwnServer } from '@web5/dwn-server';
 
@@ -42,7 +45,7 @@ const server = new DwnServer();
 server.start();
 ```
 
-# Running the server 
+# Running the server
 
 ## Running via docker
 
@@ -55,10 +58,11 @@ Ideally the volume is persistent so that data is kept (or has to be synced back 
 
 Running the command above will run the latest version at the time the image is pulled. If you need to run a specific version (and in many cases this is recommended) you can see the list published images here: https://github.com/TBD54566975/dwn-server/pkgs/container/dwn-server/versions
 
-To run a specific image: 
-```docker pull ghcr.io/tbd54566975/dwn-server@sha256:870e0f0f12016e6607060a81ea31458443f7439522fab2688d7a6706ab366c58```
+To run a specific image:
+`docker pull ghcr.io/tbd54566975/dwn-server@sha256:870e0f0f12016e6607060a81ea31458443f7439522fab2688d7a6706ab366c58`
 
 ## Running Locally for Development
+
 ```bash
 git clone https://github.com/TBD54566975/dwn-server.git
 cd dwn-server
@@ -68,40 +72,43 @@ npm run server
 
 ## Building a docker image locally
 
-A docker image is continuously published from this repository, but if you want to build it locally run: 
+A docker image is continuously published from this repository, but if you want to build it locally run:
 `docker build -t dwn-server .`
-
 
 # JSON-RPC API
 
 [JSON-RPC](https://www.jsonrpc.org/specification) is a lightweight remote procedure call (RPC) protocol that uses JSON as a data format for exchanging information between a client and a server over a network. JSON-RPC is language-independent and transport-agnostic which makes it usable in a variety of contexts (e.g. browser, server-side)
 
-With JSON-RPC, a client sends a request message to a server over a network, and the server responds with a response message. 
+With JSON-RPC, a client sends a request message to a server over a network, and the server responds with a response message.
 
-The request message consists of: 
-* a method name (`method`)
-* a set of parameters (`params`)
-* an identifier (`id`). 
+The request message consists of:
+
+- a method name (`method`)
+- a set of parameters (`params`)
+- an identifier (`id`).
 
 The response message contains:
-* the same identifier that was sent with the request message (`id`)
-* the result of the method invocation (`result`)
-* an error message if the method invocation failed (`error`)
+
+- the same identifier that was sent with the request message (`id`)
+- the result of the method invocation (`result`)
+- an error message if the method invocation failed (`error`)
 
 ## Available Methods
+
 ### `dwn.processMessage`
 
 Used to send DWeb Messages to the server.
 
 #### Params
+
 | Property      | Required (Y/N) | Description                                                               |
 | ------------- | -------------- | ------------------------------------------------------------------------- |
 | `target`      | Y              | The DID that the message is intended for                                  |
 | `message`     | Y              | The DWeb Message                                                          |
 | `encodedData` | N              | Data associated to the message (e.g. data associated to a `RecordsWrite`) |
 
-
 #### Example Request Message
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -136,6 +143,7 @@ Used to send DWeb Messages to the server.
 ```
 
 #### Example Success Response
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -152,6 +160,7 @@ Used to send DWeb Messages to the server.
 ```
 
 #### Example Error Response
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -164,25 +173,29 @@ Used to send DWeb Messages to the server.
 ```
 
 #### Transporting large amounts of data
-`RecordsWrite` data can be of any size. If needed, large amounts of data can be streamed to the server over http by:
-* including the JSON-RPC request message in a `dwn-request` request header 
-* setting the `content-type` request header to `application/octet-stream`
-* sending binary data in the request body.
 
-> 💡 Examples can be found in the [`examples`](./examples) directory. 
+`RecordsWrite` data can be of any size. If needed, large amounts of data can be streamed to the server over http by:
+
+- including the JSON-RPC request message in a `dwn-request` request header
+- setting the `content-type` request header to `application/octet-stream`
+- sending binary data in the request body.
+
+> 💡 Examples can be found in the [`examples`](./examples) directory.
 
 #### Receiving large amounts of data
-`RecordsWrite` data can be of any size. `RecordsWrite` messages returned as the result of a `RecordsQuery` will include `encodedData` _if_ the `RecordsWrite` data is under `9.77KB`. Data larger than this will need to be fetched using `RecordsRead` which can be done over http. The response to a `RecordsRead` includes: 
-* The JSON-RPC response message in a `dwn-response` header
-* The associated data as binary in the response body.
 
-Examples can be found in the `examples` directory. 
+`RecordsWrite` data can be of any size. `RecordsWrite` messages returned as the result of a `RecordsQuery` will include `encodedData` _if_ the `RecordsWrite` data is under `9.77KB`. Data larger than this will need to be fetched using `RecordsRead` which can be done over http. The response to a `RecordsRead` includes:
+
+- The JSON-RPC response message in a `dwn-response` header
+- The associated data as binary in the response body.
+
+Examples can be found in the `examples` directory.
+
 > 💡 **TODO**: Add examples in `examples` directory
-
 
 # Hosting your own DWN-server
 
-By default when you call `web5.connect()` there will be some bootstrap DWN nodes included which allow people to reach you via your DID. 
+By default when you call `web5.connect()` there will be some bootstrap DWN nodes included which allow people to reach you via your DID.
 
 You may want to run a DWN server just for you, or as a public service for you and your friends and family.
 DWNs can be as simple as a docker image or a node process running somewhere.
@@ -192,14 +205,15 @@ See below for some suggestions.
 
 ## Running on render.com
 
-You can run an instance on the render.com service: 
-* Create a render.com account 
-* Fork this repo
-* Upgrade your render.com account to a paid account
-* Create a new "Web service" type application
-* Choose the forked repo to run (or you can point to to the main repo)
-* Choose the "starter" size instance
-* Create a 1GB (or larger) disk, and mount it on /dwn-server/data
+You can run an instance on the render.com service:
+
+- Create a render.com account
+- Fork this repo
+- Upgrade your render.com account to a paid account
+- Create a new "Web service" type application
+- Choose the forked repo to run (or you can point to to the main repo)
+- Choose the "starter" size instance
+- Create a 1GB (or larger) disk, and mount it on /dwn-server/data
 
 ## Running with ngrok
 
@@ -207,19 +221,20 @@ You can run a DWN-server on your local machine or home server and expose it to t
 
 First, install ngrok: https://ngrok.com/download
 
-Then run: 
-  
-  ```bash
-  docker run -p 3000:3000 -v myvolume:/dwn-server/data ghcr.io/tbd54566975/dwn-server:main
+Then run:
 
-  ## in another terminal: 
-  ngrok http 3000
-  ```
+```bash
+docker run -p 3000:3000 -v myvolume:/dwn-server/data ghcr.io/tbd54566975/dwn-server:main
+
+## in another terminal:
+ngrok http 3000
+```
+
 Note the resulting publicly addressable https url for your DWN instance.
 
 ## Running with cloudflared
 
-Cloudflare has a tunnel service that you can use to expose your DWN server to the internet, if you run it on a server at home. 
+Cloudflare has a tunnel service that you can use to expose your DWN server to the internet, if you run it on a server at home.
 With https://github.com/cloudflare/cloudflared installed, run the following commands:
 
 ```bash
@@ -235,28 +250,28 @@ cloudflared tunnel --url http://localhost:3000
 
 ## Running on GCP
 
-... check back soon ... 
+... check back soon ...
 (enterprising people I am sure can work it out)
 
 # `npm` scripts
 
-| Script                  | Description                                 |
-| ----------------------- | ------------------------------------------- |
-| `npm run build:esm`   | compiles typescript into ESM JS             |
-| `npm run build:cjs`       | compiles typescript into CommonJS             |
-| `npm run build`       | compiles typescript into ESM JS &  CommonJS             |
-| `npm run clean`         | deletes compiled JS                         |
-| `npm run lint`          | runs linter                                 |
-| `npm run lint:fix`      | runs linter and fixes auto-fixable problems |
-| `npm run test`          | runs tests                                  |
-| `npm run server`          | starts server                                |
-
+| Script              | Description                                 |
+| ------------------- | ------------------------------------------- |
+| `npm run build:esm` | compiles typescript into ESM JS             |
+| `npm run build:cjs` | compiles typescript into CommonJS           |
+| `npm run build`     | compiles typescript into ESM JS & CommonJS  |
+| `npm run clean`     | deletes compiled JS                         |
+| `npm run lint`      | runs linter                                 |
+| `npm run lint:fix`  | runs linter and fixes auto-fixable problems |
+| `npm run test`      | runs tests                                  |
+| `npm run server`    | starts server                               |
 
 # Configuration
+
 Configuration can be set using environment variables
 
 | Env Var                   | Description                                                                            | Default                |
-| ------------------------- | ---------------------------------------------------------------------------------------| ---------------------- |
+| ------------------------- | -------------------------------------------------------------------------------------- | ---------------------- |
 | `DS_PORT`                 | Port that the server listens on                                                        | `3000`                 |
 | `DS_MAX_RECORD_DATA_SIZE` | maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value              | `1gb`                  |
 | `DS_WEBSOCKET_SERVER`     | whether to enable listening over `ws:`. values: `on`,`off`                             | `on`                   |
@@ -266,10 +281,11 @@ Configuration can be set using environment variables
 | `DWN_STORAGE_EVENTS`      | URL to use for event storage                                                           | value of `DWN_STORAGE` |
 
 ## Storage Options
+
 Several storage formats are supported, and may be configured with the `DWN_STORAGE_*` environment variables:
 
 | Database   | Example                                               | Notes                                                                                                                                                                                 |
-|------------|-------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ---------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | LevelDB    | `level://data`                                        | use three slashes for absolute paths, two for relative. Example shown uses directory `data` in the current working directory                                                          |
 | Sqlite     | `sqlite://dwn.db`                                     | use three slashes for absolute paths, two for relative. Example shown creates a file `dwn.db` in the current working directory                                                        |
 | MySQL      | `mysql://user:pass@host/db?debug=true&timezone=-0700` | [all URL options documented here](https://github.com/mysqljs/mysql#connection-options)                                                                                                |
