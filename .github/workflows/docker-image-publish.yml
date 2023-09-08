@@ -41,14 +41,14 @@ jobs:
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      
+
       - name: Retrieve DWN SDK version
         run: |
           echo "dwn_sdk_image_tag=${{ env.REGISTRY }}/${IMAGE_NAME,,}:dwn-sdk-$(jq -r '.dependencies."@tbd54566975/dwn-sdk-js"' package.json)" >> $GITHUB_OUTPUT
         id: dwn_sdk_version
         env:
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
-      
+
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:

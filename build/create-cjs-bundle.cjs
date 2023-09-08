@@ -9,7 +9,7 @@ const includeList = new Set([
   'blockstore-core',
   'ipfs-unixfs-exporter',
   'ipfs-unixfs-importer',
-  'multiformats'
+  'multiformats',
 ]);
 
 // create list of dependencies that we _do not_ want to include in our bundle
@@ -24,16 +24,16 @@ for (const dependency in packageJson.dependencies) {
 
 /** @type {import('esbuild').BuildOptions} */
 const baseConfig = {
-  platform : 'node',
-  format   : 'cjs',
-  bundle   : true,
-  external : excludeList,
+  platform: 'node',
+  format: 'cjs',
+  bundle: true,
+  external: excludeList,
 };
 
 const indexConfig = {
   ...baseConfig,
-  entryPoints : ['./dist/esm/src/index.js'],
-  outfile     : './dist/cjs/index.js',
+  entryPoints: ['./dist/esm/src/index.js'],
+  outfile: './dist/cjs/index.js',
 };
 
 esbuild.buildSync(indexConfig);

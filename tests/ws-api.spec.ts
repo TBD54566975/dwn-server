@@ -6,13 +6,20 @@ import { expect } from 'chai';
 import { v4 as uuidv4 } from 'uuid';
 import { WsApi } from '../src/ws-api.js';
 import { clear as clearDwn, dwn } from './test-dwn.js';
-import { createJsonRpcRequest, JsonRpcErrorCodes } from '../src/lib/json-rpc.js';
-import { createProfile, createRecordsWriteMessage, sendWsMessage } from './utils.js';
+import {
+  createJsonRpcRequest,
+  JsonRpcErrorCodes,
+} from '../src/lib/json-rpc.js';
+import {
+  createProfile,
+  createRecordsWriteMessage,
+  sendWsMessage,
+} from './utils.js';
 
 let server: http.Server;
 let wsServer: WsApi;
 
-describe('websocket api', function() {
+describe('websocket api', function () {
   before(async function () {
     server = http.createServer();
     server.listen(9002, '127.0.0.1');
@@ -21,17 +28,17 @@ describe('websocket api', function() {
     wsServer.listen();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await clearDwn();
   });
 
-  after(function() {
+  after(function () {
     wsServer.close();
     server.close();
     server.closeAllConnections();
   });
 
-  it('returns an error response if no request payload is provided', async function() {
+  it('returns an error response if no request payload is provided', async function () {
     const data = await sendWsMessage('ws://127.0.0.1:9002', Buffer.from(''));
 
     const resp = JSON.parse(data.toString());
@@ -39,15 +46,18 @@ describe('websocket api', function() {
     expect(resp.error.message).to.equal('request payload required.');
   });
 
-  it('returns an error response if parsing dwn request fails', async function() {
-    const data = await sendWsMessage('ws://127.0.0.1:9002', Buffer.from('@#$%^&*&%$#'));
+  it('returns an error response if parsing dwn request fails', async function () {
+    const data = await sendWsMessage(
+      'ws://127.0.0.1:9002',
+      Buffer.from('@#$%^&*&%$#'),
+    );
 
     const resp = JSON.parse(data.toString());
     expect(resp.error.code).to.equal(JsonRpcErrorCodes.BadRequest);
     expect(resp.error.message).to.include('JSON');
   });
 
-  it('handles RecordsWrite messages', async function() {
+  it('handles RecordsWrite messages', async function () {
     const alice = await createProfile();
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
     const dataBytes = await DataStream.toBytes(dataStream);
@@ -55,12 +65,15 @@ describe('websocket api', function() {
 
     const requestId = uuidv4();
     const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-      message : recordsWrite.toJSON(),
-      target  : alice.did,
-      encodedData
+      message: recordsWrite.toJSON(),
+      target: alice.did,
+      encodedData,
     });
 
-    const data = await sendWsMessage('ws://127.0.0.1:9002', JSON.stringify(dwnRequest));
+    const data = await sendWsMessage(
+      'ws://127.0.0.1:9002',
+      JSON.stringify(dwnRequest),
+    );
     const resp = JSON.parse(data.toString());
     expect(resp.id).to.equal(requestId);
     expect(resp.error).to.not.exist;

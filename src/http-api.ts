@@ -13,7 +13,10 @@ import responseTime from 'response-time';
 import { jsonRpcApi } from './json-rpc-api.js';
 import { register } from 'prom-client';
 import { v4 as uuidv4 } from 'uuid';
-import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
+import {
+  createJsonRpcErrorResponse,
+  JsonRpcErrorCodes,
+} from './lib/json-rpc.js';
 import { requestCounter, responseHistogram } from './metrics.js';
 
 export class HttpApi {
@@ -25,16 +28,19 @@ export class HttpApi {
     this.dwn = dwn;
 
     this.api.use(cors({ exposedHeaders: 'dwn-response' }));
-    this.api.use(responseTime((req: Request, res: Response, time) => {
-      const url = req.url === '/' ? '/jsonrpc' : req.url;
-      const route = (req.method + url).toLowerCase()
-        .replace(/[:.]/g, '')
-        .replace(/\//g, '_');
+    this.api.use(
+      responseTime((req: Request, res: Response, time) => {
+        const url = req.url === '/' ? '/jsonrpc' : req.url;
+        const route = (req.method + url)
+          .toLowerCase()
+          .replace(/[:.]/g, '')
+          .replace(/\//g, '_');
 
-      const statusCode = res.statusCode.toString();
-      responseHistogram.labels(route, statusCode).observe(time);
-      log.info(req.method, decodeURI(req.url), res.statusCode);
-    }));
+        const statusCode = res.statusCode.toString();
+        responseHistogram.labels(route, statusCode).observe(time);
+        log.info(req.method, decodeURI(req.url), res.statusCode);
+      }),
+    );
 
     this.api.get('/health', (_req, res) => {
       // return 200 ok
@@ -52,7 +58,10 @@ export class HttpApi {
 
     this.api.get('/:did/records/:id', async (req, res) => {
       const record = await RecordsRead.create({ recordId: req.params.id });
-      const reply = await this.dwn.processMessage(req.params.did, record.toJSON()) as RecordsReadReply;
+      const reply = (await this.dwn.processMessage(
+        req.params.did,
+        record.toJSON(),
+      )) as RecordsReadReply;
 
       if (reply.status.code === 200) {
         if (reply?.record?.data) {
@@ -71,21 +80,25 @@ export class HttpApi {
       } else {
         return res.status(reply.status.code).send(reply);
       }
-
     });
 
     this.api.get('/', (_req, res) => {
       // return a plain text string
       res.setHeader('content-type', 'text/plain');
-      return res.send('please use a web5 client, for example: https://github.com/TBD54566975/web5-js ');
+      return res.send(
+        'please use a web5 client, for example: https://github.com/TBD54566975/web5-js ',
+      );
     });
 
     this.api.post('/', async (req: Request, res) => {
       const dwnRequest = req.headers['dwn-request'] as any;
 
       if (!dwnRequest) {
-        const reply = createJsonRpcErrorResponse(uuidv4(),
-          JsonRpcErrorCodes.BadRequest, 'request payload required.');
+        const reply = createJsonRpcErrorResponse(
+          uuidv4(),
+          JsonRpcErrorCodes.BadRequest,
+          'request payload required.',
+        );
 
         return res.status(400).json(reply);
       }
@@ -94,7 +107,11 @@ export class HttpApi {
       try {
         dwnRpcRequest = JSON.parse(dwnRequest);
       } catch (e) {
-        const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
+        const reply = createJsonRpcErrorResponse(
+          uuidv4(),
+          JsonRpcErrorCodes.BadRequest,
+          e.message,
+        );
 
         return res.status(400).json(reply);
       }
@@ -102,10 +119,21 @@ export class HttpApi {
       // Check whether data was provided in the request body
       const contentLength = req.headers['content-length'];
       const transferEncoding = req.headers['transfer-encoding'];
-      const requestDataStream = (parseInt(contentLength) > 0 || transferEncoding !== undefined) ? req : undefined;
+      const requestDataStream =
+        parseInt(contentLength) > 0 || transferEncoding !== undefined
+          ? req
+          : undefined;
 
-      const requestContext: RequestContext = { dwn: this.dwn, transport: 'http', dataStream: requestDataStream };
-      const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcApi.handle(dwnRpcRequest, requestContext as RequestContext);
+      const requestContext: RequestContext = {
+        dwn: this.dwn,
+        transport: 'http',
+        dataStream: requestDataStream,
+      };
+      const { jsonRpcResponse, dataStream: responseDataStream } =
+        await jsonRpcApi.handle(
+          dwnRpcRequest,
+          requestContext as RequestContext,
+        );
 
       // If the handler catches a thrown exception and returns a JSON RPC InternalError, return the equivalent
       // HTTP 500 Internal Server Error with the response.
@@ -115,8 +143,8 @@ export class HttpApi {
       }
 
       requestCounter.inc({
-        method : dwnRpcRequest.method,
-        status : jsonRpcResponse?.result?.reply?.status?.code || 0,
+        method: dwnRpcRequest.method,
+        status: jsonRpcResponse?.result?.reply?.status?.code || 0,
       });
       if (responseDataStream) {
         res.setHeader('content-type', 'application/octet-stream');

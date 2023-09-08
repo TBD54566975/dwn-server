@@ -1,9 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "DOM",
-      "ES6"
-    ],
+    "lib": ["DOM", "ES6"],
     "allowJs": true,
     "target": "ESNext",
     "module": "NodeNext", // Required for enabling JavaScript import assertion support
@@ -18,12 +15,6 @@
     // required otherwise `ms` lib doesn't import
     "esModuleInterop": true
   },
-  "include": [
-    "src",
-    "tests"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src", "tests"],
+  "exclude": ["node_modules", "dist"]
 }

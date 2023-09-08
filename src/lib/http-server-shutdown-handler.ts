@@ -16,8 +16,7 @@ export class HttpServerShutdownHandler {
     this.stopping = false;
 
     // This event is emitted when a new TCP stream is established
-    this.server.on('connection', socket => {
-
+    this.server.on('connection', (socket) => {
       // set socket to idle. this same socket will be accessible within the `http.on('request', (req, res))` event listener
       // as `request.connection`
       socket[SOCKET_IDLE_SYMBOL] = true;
@@ -43,7 +42,6 @@ export class HttpServerShutdownHandler {
       // operating system for transmission over the network.
       // It does not imply that the client has received anything yet.
       response.on('finish', () => {
-
         // set __idle back to true because the socket has finished facilitating a request. This socket may be used again without being
         // destroyed if keep-alive is being leveraged
         socket[SOCKET_IDLE_SYMBOL] = true;

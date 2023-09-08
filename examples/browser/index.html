@@ -1,93 +1,108 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Chonker Example</title>
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Upload Chonker Example</title>
-</head>
-
-<body>
-  <div>
+  <body>
     <div>
-      <input type="file" name="chonker" id="chonker">
-      <button class="button" id="chonker_btn">Upload Large Image</button>
+      <div>
+        <input type="file" name="chonker" id="chonker" />
+        <button class="button" id="chonker_btn">Upload Large Image</button>
+      </div>
+      <div id="large_image_display"></div>
     </div>
-    <div id="large_image_display"></div>
-  </div>
 
+    <div
+      style="
+        margin-top: 10px;
+        padding: 20px;
+        border: 1px solid black;
+        width: fit-content;
+      "
+    >
+      <button class="button" id="get_events_btn">Get Events</button>
+    </div>
+    <script type="module">
+      import {
+        DID,
+        generateKeyPair,
+      } from 'https://cdn.jsdelivr.net/npm/@decentralized-identity/ion-tools@1.0.7/dist/browser/esm.js';
+      import {
+        RecordsWrite,
+        RecordsRead,
+        RecordsQuery,
+        EventsGet,
+        Cid,
+      } from 'https://cdn.jsdelivr.net/npm/@tbd54566975/dwn-sdk-js@0.0.30/dist/bundles/browser.js';
 
-  <div style="margin-top: 10px; padding: 20px; border: 1px solid black; width: fit-content;">
-    <button class="button" id="get_events_btn">Get Events</button>
-  </div>
-  <script type="module">
-    import { DID, generateKeyPair } from 'https://cdn.jsdelivr.net/npm/@decentralized-identity/ion-tools@1.0.7/dist/browser/esm.js';
-    import { RecordsWrite, RecordsRead, RecordsQuery, EventsGet, Cid } from 'https://cdn.jsdelivr.net/npm/@tbd54566975/dwn-sdk-js@0.0.30/dist/bundles/browser.js';
-
-    const keyPair = await generateKeyPair();
-    const didState = new DID({
-      content: {
-        publicKeys: [{
-          id: 'key-1',
-          type: 'JsonWebKey2020',
-          publicKeyJwk: keyPair.publicJwk,
-          purposes: ['authentication']
-        }]
-      }
-    });
-
-    const did = await didState.getURI('long');
-    const authorizationSignatureInput = {
-      privateJwk: keyPair.privateJwk,
-      protectedHeader: { alg: 'ES256K', kid: `${did}#key-1` }
-    };
-
-    async function* iterableReader(reader) {
-      let chunk;
-      do {
-        chunk = await reader.read()
-        yield chunk.value ?? new Uint8Array();
-      } while (!chunk.done);
-    }
-
-    chonker_btn.addEventListener('click', async event => {
-      const file = chonker.files[0];
-      const streamReader = file.stream().getReader();
-      const iterableStreamReader = iterableReader(streamReader);
-
-      const record = await RecordsWrite.create({
-        schema: 'test',
-        dataCid: await Cid.computeDagPbCidFromStream(iterableStreamReader),
-        dataSize: chonker.files[0].size,
-        dataFormat: 'application/json',
-        authorizationSignatureInput: authorizationSignatureInput
+      const keyPair = await generateKeyPair();
+      const didState = new DID({
+        content: {
+          publicKeys: [
+            {
+              id: 'key-1',
+              type: 'JsonWebKey2020',
+              publicKeyJwk: keyPair.publicJwk,
+              purposes: ['authentication'],
+            },
+          ],
+        },
       });
 
-      const jsonRpcPayload = {
-        jsonrpc: '2.0',
-        method: 'dwn.processMessage',
-        params: {
-          target: did,
-          message: record
-        },
-        id: Date.now()
-      }
-
-      const options = {
-        method: 'POST',
-        body: file,
-        headers: {
-          'dwn-request': JSON.stringify(jsonRpcPayload)
-        }
+      const did = await didState.getURI('long');
+      const authorizationSignatureInput = {
+        privateJwk: keyPair.privateJwk,
+        protectedHeader: { alg: 'ES256K', kid: `${did}#key-1` },
       };
 
-      const resp = await fetch('http://localhost:3000', options)
-      const result = await resp.json();
+      async function* iterableReader(reader) {
+        let chunk;
+        do {
+          chunk = await reader.read();
+          yield chunk.value ?? new Uint8Array();
+        } while (!chunk.done);
+      }
 
-      console.log(result);
-    });
-  </script>
-</body>
+      chonker_btn.addEventListener('click', async (event) => {
+        const file = chonker.files[0];
+        const streamReader = file.stream().getReader();
+        const iterableStreamReader = iterableReader(streamReader);
 
+        const record = await RecordsWrite.create({
+          schema: 'test',
+          dataCid: await Cid.computeDagPbCidFromStream(iterableStreamReader),
+          dataSize: chonker.files[0].size,
+          dataFormat: 'application/json',
+          authorizationSignatureInput: authorizationSignatureInput,
+        });
+
+        const jsonRpcPayload = {
+          jsonrpc: '2.0',
+          method: 'dwn.processMessage',
+          params: {
+            target: did,
+            message: record,
+          },
+          id: Date.now(),
+        };
+
+        const options = {
+          method: 'POST',
+          body: file,
+          headers: {
+            'dwn-request': JSON.stringify(jsonRpcPayload),
+          },
+        };
+
+        const resp = await fetch('http://localhost:3000', options);
+        const result = await resp.json();
+
+        console.log(result);
+      });
+    </script>
+  </body>
 </html>

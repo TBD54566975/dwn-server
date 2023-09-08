@@ -28,7 +28,7 @@ export class DwnServer {
     prefix.apply(log);
   }
 
-  async start() : Promise<void> {
+  async start(): Promise<void> {
     await this.listen();
     setProcessHandlers(this);
   }

@@ -1,10 +1,8 @@
-
 # TBD Code of Conduct
 
 TBD builds infrastructure for the next wave of innovation in financial services — which we believe will be decentralized, permissionless, and non-custodial. This means opening the global economy to everyone. We extend the same principles of inclusion to our developer ecosystem. We are excited to build with you. So we will ensure our community is truly open, transparent and inclusive. Because of the global nature of our project, diversity and inclusivity is paramount to our success. We not only welcome diverse perspectives, we **need** them!
 
 The code of conduct below reflects the expectations for ourselves and for our community.
-
 
 ## Our Pledge
 
@@ -22,23 +20,23 @@ diverse, inclusive, and healthy community.
 Examples of behavior that contributes to a positive environment for our
 community include:
 
-* Demonstrating empathy and kindness toward other people
-* Being respectful and welcoming of differing opinions, viewpoints, and experiences
-* Giving and gracefully accepting constructive feedback
-* Accepting responsibility and apologizing to those affected by our mistakes,
+- Demonstrating empathy and kindness toward other people
+- Being respectful and welcoming of differing opinions, viewpoints, and experiences
+- Giving and gracefully accepting constructive feedback
+- Accepting responsibility and apologizing to those affected by our mistakes,
   and learning from the experience
-* Focusing on what is best not just for us as individuals, but for the overall
+- Focusing on what is best not just for us as individuals, but for the overall
   community
 
 Examples of unacceptable behavior include:
 
-* The use of sexualized language or imagery, and sexual attention or advances of
+- The use of sexualized language or imagery, and sexual attention or advances of
   any kind
-* Trolling, insulting or derogatory comments, and personal or political attacks
-* Public or private harassment
-* Publishing others' private information, such as a physical or email address,
+- Trolling, insulting or derogatory comments, and personal or political attacks
+- Public or private harassment
+- Publishing others' private information, such as a physical or email address,
   without their explicit permission
-* Other conduct which could reasonably be considered inappropriate in a
+- Other conduct which could reasonably be considered inappropriate in a
   professional setting
 
 ## Enforcement Responsibilities
@@ -90,7 +88,7 @@ actions.
 interaction with the people involved, including unsolicited interaction with
 those enforcing the Code of Conduct, for a specified period of time. This
 includes avoiding interactions in community spaces as well as external channels
-like social media and forums. 
+like social media and forums.
 
 Although this list cannot be exhaustive, we explicitly honor diversity in age, culture, ethnicity, gender identity or expression, language, national origin, political beliefs, profession, race, religion, sexual orientation, socioeconomic status, and technical ability. We will not tolerate discrimination based on any of the protected characteristics above, including participants with disabilities.
 
