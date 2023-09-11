@@ -23,6 +23,11 @@
     "url": "https://github.com/TBD54566975/dwn-server/issues"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.5.0",
+    "@opentelemetry/resources": "^1.16.0",
+    "@opentelemetry/sdk-node": "^0.42.0",
+    "@opentelemetry/sdk-trace-node": "^1.16.0",
+    "@opentelemetry/semantic-conventions": "^1.16.0",
     "@tbd54566975/dwn-sdk-js": "0.2.1",
     "@tbd54566975/dwn-sql-store": "^0.0.3",
     "better-sqlite3": "^8.5.0",

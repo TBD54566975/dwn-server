@@ -6,6 +6,7 @@ if (!globalThis.crypto) {
   globalThis.crypto = webcrypto;
 }
 
+import './instrumentation.js';
 import { DwnServer } from './dwn-server.js';
 
 const dwnServer = new DwnServer();
