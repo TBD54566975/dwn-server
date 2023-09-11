@@ -1,17 +1,27 @@
-import { v4 as uuidv4 } from 'uuid';
 import {
   createJsonRpcErrorResponse,
   createJsonRpcSuccessResponse,
   JsonRpcErrorCodes,
 } from '../../lib/json-rpc.js';
+import { GetStorage, type KVStore } from './storage.js';
 import type {
   HandlerResponse,
   JsonRpcHandler,
 } from '../../lib/json-rpc-router.js';
 import type { JsonRpcId, JsonRpcRequest } from '../../lib/json-rpc.js';
-import { type KVStore, LocalDiskStore } from './storage.js';
 
-const store: KVStore = new LocalDiskStore('./data/connect');
+import { v4 as uuidv4 } from 'uuid';
+
+let store: KVStore;
+
+export async function initializeConnect(storeURL: string): Promise<void> {
+  store = GetStorage(storeURL);
+  await store.connect();
+}
+
+export async function shutdownConnect(): Promise<void> {
+  await store.shutdown();
+}
 
 export const handleConnectCreateRequest: JsonRpcHandler = async (
   req: JsonRpcRequest,

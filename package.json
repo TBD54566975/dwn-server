@@ -38,6 +38,7 @@
     "pg-cursor": "^2.10.2",
     "prom-client": "14.2.0",
     "readable-stream": "4.3.0",
+    "redis": "^4.6.8",
     "response-time": "2.3.2",
     "uuid": "9.0.0",
     "ws": "8.12.0"

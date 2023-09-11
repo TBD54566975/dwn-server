@@ -1,24 +1,27 @@
 // node.js 18 and earlier,  needs globalThis.crypto polyfill
 import { webcrypto } from 'node:crypto';
 
-// @ts-ignore
 if (!globalThis.crypto) {
+  // @ts-ignore
   globalThis.crypto = webcrypto;
 }
-
-import type { Server } from 'http';
-
-import fetch from 'node-fetch';
-
+import { config } from '../src/config.js';
 import { expect } from 'chai';
+import fetch from 'node-fetch';
 import { HttpApi } from '../src/http-api.js';
 import type { JsonRpcResponse } from '../src/lib/json-rpc.js';
+
+import type { Server } from 'http';
 import { v4 as uuidv4 } from 'uuid';
 import { clear as clearDwn, dwn } from './test-dwn.js';
 import {
   createJsonRpcRequest,
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
+import {
+  initializeConnect,
+  shutdownConnect,
+} from '../src/json-rpc-handlers/connect/connect.js';
 
 describe('connect rpc methods', function () {
   let httpApi: HttpApi;
@@ -26,6 +29,11 @@ describe('connect rpc methods', function () {
 
   before(async function () {
     httpApi = new HttpApi(dwn);
+    initializeConnect(config.connectStore);
+  });
+
+  after(async function () {
+    await shutdownConnect();
   });
 
   beforeEach(async function () {
@@ -54,7 +62,7 @@ describe('connect rpc methods', function () {
       },
     });
 
-    expect(resp.status).to.equal(500); // i guess all errors are 500, even when they're client request errors
+    expect(resp.status).to.equal(500); // i guess all errors are 500
 
     const rpcResponse = (await resp.json()) as JsonRpcResponse;
     expect(rpcResponse.error.code).to.equal(JsonRpcErrorCodes.NotFound);
