@@ -255,16 +255,18 @@ cloudflared tunnel --url http://localhost:3000
 
 # `npm` scripts
 
-| Script              | Description                                 |
-| ------------------- | ------------------------------------------- |
-| `npm run build:esm` | compiles typescript into ESM JS             |
-| `npm run build:cjs` | compiles typescript into CommonJS           |
-| `npm run build`     | compiles typescript into ESM JS & CommonJS  |
-| `npm run clean`     | deletes compiled JS                         |
-| `npm run lint`      | runs linter                                 |
-| `npm run lint:fix`  | runs linter and fixes auto-fixable problems |
-| `npm run test`      | runs tests                                  |
-| `npm run server`    | starts server                               |
+| Script                 | Description                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| `npm run build:esm`    | compiles typescript into ESM JS                                    |
+| `npm run build:cjs`    | compiles typescript into CommonJS                                  |
+| `npm run build`        | compiles typescript into ESM JS & CommonJS                         |
+| `npm run clean`        | deletes compiled JS                                                |
+| `npm run lint`         | runs linter                                                        |
+| `npm run lint:fix`     | runs linter and fixes auto-fixable problems                        |
+| `npm run prettier:fix` | runs prettier and fixes auto-fixable problems                      |
+| `npm run test`         | runs tests                                                         |
+| `npm run server`       | starts server                                                      |
+| `npm run prepare`      | prepares husky for pre-commit hooks (auto-runs with `npm install`) |
 
 # Configuration
 
