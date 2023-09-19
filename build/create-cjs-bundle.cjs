@@ -10,6 +10,7 @@ const includeList = new Set([
   'ipfs-unixfs-exporter',
   'ipfs-unixfs-importer',
   'multiformats',
+  'pg',
 ]);
 
 // create list of dependencies that we _do not_ want to include in our bundle
