@@ -4,6 +4,8 @@ import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { expect } from 'chai';
 import { v4 as uuidv4 } from 'uuid';
+import { type WebSocketServer } from 'ws';
+
 import { WsApi } from '../src/ws-api.js';
 import { clear as clearDwn, dwn } from './test-dwn.js';
 import {
@@ -17,15 +19,15 @@ import {
 } from './utils.js';
 
 let server: http.Server;
-let wsServer: WsApi;
+let wsServer: WebSocketServer;
 
 describe('websocket api', function () {
   before(async function () {
     server = http.createServer();
     server.listen(9002, '127.0.0.1');
 
-    wsServer = new WsApi(server, dwn);
-    wsServer.listen();
+    const wsApi = new WsApi(server, dwn);
+    wsServer = wsApi.start();
   });
 
   afterEach(async function () {
