@@ -39,8 +39,6 @@ export class WsApi {
    * Sets listeners for `message`, `pong`, `close`, and `error` events.
    */
   #handleConnection(socket: WebSocket, _request: IncomingMessage): void {
-    console.log('CONNECTION------');
-
     const dwn = this.dwn;
 
     socket[SOCKET_ISALIVE_SYMBOL] = true;
