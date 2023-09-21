@@ -10,6 +10,8 @@ export interface KVStore {
   get(key: string): Promise<string | null>; // returns null if the key doesn't exist in the store
 }
 
+const EXPIRE_TIME_SECONDS = 300;
+
 export function GetStorage(url: string): KVStore {
   const storeURI = new URL(url);
   switch (storeURI.protocol) {
@@ -85,7 +87,7 @@ class RedisStore {
       throw 'key already exists';
     }
 
-    await this.client.set(key, value);
+    await this.client.set(key, value, 'EX', EXPIRE_TIME_SECONDS);
   }
 
   async get(key: string): Promise<string | null> {
