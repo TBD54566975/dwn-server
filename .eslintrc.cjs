@@ -31,16 +31,6 @@ module.exports = {
       },
     ],
     'prefer-const': ['error', { destructuring: 'all' }],
-    'sort-imports': [
-      'error',
-      {
-        ignoreCase: true,
-        ignoreDeclarationSort: false,
-        ignoreMemberSort: false,
-        memberSyntaxSortOrder: ['none', 'all', 'single', 'multiple'],
-        allowSeparatedGroups: true,
-      },
-    ],
     // enforce github issue reference for every TO-DO comment
     'todo-plz/ticket-ref': [
       'error',

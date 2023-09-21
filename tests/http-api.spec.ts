@@ -45,7 +45,7 @@ describe('http api', function () {
   });
 
   beforeEach(async function () {
-    server = httpApi.listen(3000);
+    server = httpApi.start(3000);
   });
 
   afterEach(async function () {

@@ -1,9 +1,13 @@
-import type { JsonRpcRequest } from './lib/json-rpc.js';
-import { RecordsRead } from '@tbd54566975/dwn-sdk-js';
-import type { RequestContext } from './lib/json-rpc-router.js';
-import type { Server } from 'http';
-import type { Dwn, RecordsReadReply } from '@tbd54566975/dwn-sdk-js';
+import http from 'http';
+import {
+  type Dwn,
+  RecordsRead,
+  type RecordsReadReply,
+} from '@tbd54566975/dwn-sdk-js';
 import type { Express, Request, Response } from 'express';
+
+import type { JsonRpcRequest } from './lib/json-rpc.js';
+import type { RequestContext } from './lib/json-rpc-router.js';
 
 import cors from 'cors';
 import express from 'express';
@@ -20,15 +24,31 @@ import {
 import { requestCounter, responseHistogram } from './metrics.js';
 
 export class HttpApi {
-  api: Express;
+  #api: Express;
+  #server: http.Server;
   dwn: Dwn;
 
   constructor(dwn: Dwn) {
-    this.api = express();
+    this.#api = express();
+    this.#server = http.createServer(this.#api);
     this.dwn = dwn;
 
-    this.api.use(cors({ exposedHeaders: 'dwn-response' }));
-    this.api.use(
+    this.#setupMiddleware();
+    this.#setupRoutes();
+  }
+
+  get server(): http.Server {
+    return this.#server;
+  }
+
+  get api(): Express {
+    return this.#api;
+  }
+
+  #setupMiddleware(): void {
+    this.#api.use(cors({ exposedHeaders: 'dwn-response' }));
+
+    this.#api.use(
       responseTime((req: Request, res: Response, time) => {
         const url = req.url === '/' ? '/jsonrpc' : req.url;
         const route = (req.method + url)
@@ -41,13 +61,15 @@ export class HttpApi {
         log.info(req.method, decodeURI(req.url), res.statusCode);
       }),
     );
+  }
 
-    this.api.get('/health', (_req, res) => {
+  #setupRoutes(): void {
+    this.#api.get('/health', (_req, res) => {
       // return 200 ok
       return res.json({ ok: true });
     });
 
-    this.api.get('/metrics', async (req, res) => {
+    this.#api.get('/metrics', async (req, res) => {
       try {
         res.set('Content-Type', register.contentType);
         res.end(await register.metrics());
@@ -56,7 +78,7 @@ export class HttpApi {
       }
     });
 
-    this.api.get('/:did/records/:id', async (req, res) => {
+    this.#api.get('/:did/records/:id', async (req, res) => {
       const record = await RecordsRead.create({ recordId: req.params.id });
       const reply = (await this.dwn.processMessage(
         req.params.did,
@@ -82,7 +104,7 @@ export class HttpApi {
       }
     });
 
-    this.api.get('/', (_req, res) => {
+    this.#api.get('/', (_req, res) => {
       // return a plain text string
       res.setHeader('content-type', 'text/plain');
       return res.send(
@@ -90,7 +112,7 @@ export class HttpApi {
       );
     });
 
-    this.api.post('/', async (req: Request, res) => {
+    this.#api.post('/', async (req: Request, res) => {
       const dwnRequest = req.headers['dwn-request'] as any;
 
       if (!dwnRequest) {
@@ -157,7 +179,12 @@ export class HttpApi {
     });
   }
 
-  listen(port: number, callback?: () => void): Server {
-    return this.api.listen(port, callback);
+  #listen(port: number, callback?: () => void): void {
+    this.#server.listen(port, callback);
+  }
+
+  start(port: number, callback?: () => void): http.Server {
+    this.#listen(port, callback);
+    return this.#server;
   }
 }
