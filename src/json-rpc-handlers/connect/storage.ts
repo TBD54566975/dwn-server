@@ -12,19 +12,7 @@ export interface KVStore {
 
 const EXPIRE_TIME_SECONDS = 300;
 
-export function GetStorage(url: string): KVStore {
-  const storeURI = new URL(url);
-  switch (storeURI.protocol) {
-    case 'file:':
-      return new LocalDiskStore(storeURI.host + storeURI.pathname);
-    case 'redis:':
-      return new RedisStore(url);
-    default:
-      throw 'unsupported connect storage format';
-  }
-}
-
-class LocalDiskStore {
+export class LocalDiskStore {
   private path: string;
 
   constructor(path: string) {
@@ -66,7 +54,7 @@ class LocalDiskStore {
   }
 }
 
-class RedisStore {
+export class RedisStore {
   private client: RedisClientType;
 
   constructor(url: string) {
@@ -87,7 +75,7 @@ class RedisStore {
       throw 'key already exists';
     }
 
-    await this.client.set(key, value, 'EX', EXPIRE_TIME_SECONDS);
+    await this.client.set(key, value, { EX: EXPIRE_TIME_SECONDS });
   }
 
   async get(key: string): Promise<string | null> {

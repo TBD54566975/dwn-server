@@ -1,97 +1,124 @@
+import { v4 as uuidv4 } from 'uuid';
 import {
   createJsonRpcErrorResponse,
   createJsonRpcSuccessResponse,
   JsonRpcErrorCodes,
 } from '../../lib/json-rpc.js';
-import { GetStorage, type KVStore } from './storage.js';
 import type {
   HandlerResponse,
-  JsonRpcHandler,
+  RequestContext,
 } from '../../lib/json-rpc-router.js';
 import type { JsonRpcId, JsonRpcRequest } from '../../lib/json-rpc.js';
+import { type KVStore, LocalDiskStore, RedisStore } from './storage.js';
 
-import { v4 as uuidv4 } from 'uuid';
+export class Web5Connect {
+  private store: KVStore;
 
-let store: KVStore;
+  constructor(store: KVStore) {
+    if (!store) {
+      throw 'refusing to build Web5Connect with no data store';
+    }
 
-export async function initializeConnect(storeURL: string): Promise<void> {
-  store = GetStorage(storeURL);
-  await store.connect();
-}
-
-export async function shutdownConnect(): Promise<void> {
-  await store.shutdown();
-}
-
-export const handleConnectCreateRequest: JsonRpcHandler = async (
-  req: JsonRpcRequest,
-): Promise<HandlerResponse> => {
-  const { message, uuid } = req.params;
-
-  try {
-    await store.set('request-' + uuid, message);
-  } catch (e) {
-    return error(req.id, JsonRpcErrorCodes.Forbidden, e);
+    this.store = store;
   }
 
-  return success(req.id, true);
-};
+  static async WithStoreUrl(uri: string): Promise<Web5Connect> {
+    const storeURI = new URL(uri);
+    let store: KVStore;
+    switch (storeURI.protocol) {
+      case 'file:':
+        store = new LocalDiskStore(storeURI.host + storeURI.pathname);
+        break;
+      case 'redis:':
+        store = new RedisStore(uri);
+        break;
+      default:
+        throw 'unsupported connect storage format';
+    }
 
-export const handleConnectGetRequest: JsonRpcHandler = async (
-  req: JsonRpcRequest,
-): Promise<HandlerResponse> => {
-  const { uuid } = req.params;
+    await store.connect(); // fail early if there are any issues talking to the storage
 
-  const message = await store.get('request-' + uuid);
-  if (message == null) {
-    return error(req.id, JsonRpcErrorCodes.NotFound, '');
+    return new Web5Connect(store);
   }
 
-  return success(req.id, message);
-};
-
-export const handleConnectCreateGrant: JsonRpcHandler = async (
-  req: JsonRpcRequest,
-): Promise<HandlerResponse> => {
-  const { message, id } = req.params;
-
-  await store.set('grant-' + id, message);
-
-  return success(req.id, true);
-};
-
-export const handleConnectGetGrant: JsonRpcHandler = async (
-  req: JsonRpcRequest,
-): Promise<HandlerResponse> => {
-  const { id } = req.params;
-
-  const message = await store.get('grant-' + id);
-  if (message == null) {
-    return error(req.id, JsonRpcErrorCodes.NotFound, '');
+  async shutdown(): Promise<void> {
+    await this.store.shutdown();
   }
 
-  return success(req.id, message);
-};
+  async handleConnectCreateRequest(
+    req: JsonRpcRequest,
+    _: RequestContext,
+  ): Promise<HandlerResponse> {
+    const { message, uuid } = req.params;
 
-function success(requestID: JsonRpcId | null, message: any): HandlerResponse {
-  return {
-    jsonRpcResponse: createJsonRpcSuccessResponse(
-      requestID || uuidv4(),
-      message,
-    ),
-  };
-}
+    try {
+      await this.store.set('request-' + uuid, message);
+    } catch (e) {
+      return this.error(req.id, JsonRpcErrorCodes.Forbidden, e);
+    }
 
-function error(
-  requestID: JsonRpcId | null,
-  code: JsonRpcErrorCodes,
-  message: string,
-): HandlerResponse {
-  return {
-    jsonRpcResponse: createJsonRpcErrorResponse(
-      requestID || uuidv4(),
-      code,
-      message,
-    ),
-  };
+    return this.success(req.id, true);
+  }
+
+  async handleConnectGetRequest(
+    req: JsonRpcRequest,
+    _: RequestContext,
+  ): Promise<HandlerResponse> {
+    const { uuid } = req.params;
+
+    const message = await this.store.get('request-' + uuid);
+    if (message == null) {
+      return this.error(req.id, JsonRpcErrorCodes.NotFound, '');
+    }
+
+    return this.success(req.id, message);
+  }
+
+  async handleConnectCreateGrant(
+    req: JsonRpcRequest,
+    _: RequestContext,
+  ): Promise<HandlerResponse> {
+    const { message, id } = req.params;
+
+    await this.store.set('grant-' + id, message);
+
+    return this.success(req.id, true);
+  }
+
+  async handleConnectGetGrant(
+    req: JsonRpcRequest,
+    _: RequestContext,
+  ): Promise<HandlerResponse> {
+    const { id } = req.params;
+
+    const message = await this.store.get('grant-' + id);
+    if (message == null) {
+      return this.error(req.id, JsonRpcErrorCodes.NotFound, '');
+    }
+
+    return this.success(req.id, message);
+  }
+
+  private success(requestID: JsonRpcId | null, message: any): HandlerResponse {
+    return {
+      jsonRpcResponse: createJsonRpcSuccessResponse(
+        requestID || uuidv4(),
+        message,
+      ),
+    };
+  }
+
+  private error(
+    requestID: JsonRpcId | null,
+    code: JsonRpcErrorCodes,
+    message: string,
+  ): HandlerResponse {
+    return {
+      jsonRpcResponse: createJsonRpcErrorResponse(
+        requestID || uuidv4(),
+        code,
+        message,
+      ),
+    };
+  }
 }

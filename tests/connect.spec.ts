@@ -11,29 +11,29 @@ import fetch from 'node-fetch';
 import { HttpApi } from '../src/http-api.js';
 import type { JsonRpcResponse } from '../src/lib/json-rpc.js';
 
+import { getJsonRpcApi } from '../src/json-rpc-api.js';
 import type { Server } from 'http';
 import { v4 as uuidv4 } from 'uuid';
+import { Web5Connect } from '../src/json-rpc-handlers/connect/connect.js';
 import { clear as clearDwn, dwn } from './test-dwn.js';
 import {
   createJsonRpcRequest,
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
-import {
-  initializeConnect,
-  shutdownConnect,
-} from '../src/json-rpc-handlers/connect/connect.js';
 
 describe('connect rpc methods', function () {
   let httpApi: HttpApi;
   let server: Server;
+  let connect: Web5Connect;
 
   before(async function () {
-    httpApi = new HttpApi(dwn);
-    initializeConnect(config.connectStore);
+    const store = config.connectStore || 'file://data/connect';
+    connect = await Web5Connect.WithStoreUrl(store);
+    httpApi = new HttpApi(dwn, getJsonRpcApi(connect));
   });
 
   after(async function () {
-    await shutdownConnect();
+    await connect.shutdown();
   });
 
   beforeEach(async function () {

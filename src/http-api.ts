@@ -1,16 +1,15 @@
 import type { JsonRpcRequest } from './lib/json-rpc.js';
 import { RecordsRead } from '@tbd54566975/dwn-sdk-js';
-import type { RequestContext } from './lib/json-rpc-router.js';
 import type { Server } from 'http';
 import type { Dwn, RecordsReadReply } from '@tbd54566975/dwn-sdk-js';
 import type { Express, Request, Response } from 'express';
+import type { JsonRpcRouter, RequestContext } from './lib/json-rpc-router.js';
 
 import cors from 'cors';
 import express from 'express';
 import log from 'loglevel';
 import responseTime from 'response-time';
 
-import { jsonRpcApi } from './json-rpc-api.js';
 import { register } from 'prom-client';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -22,10 +21,12 @@ import { requestCounter, responseHistogram } from './metrics.js';
 export class HttpApi {
   api: Express;
   dwn: Dwn;
+  rpcRouter: JsonRpcRouter;
 
-  constructor(dwn: Dwn) {
+  constructor(dwn: Dwn, rpcRouter: JsonRpcRouter) {
     this.api = express();
     this.dwn = dwn;
+    this.rpcRouter = rpcRouter;
 
     this.api.use(cors({ exposedHeaders: 'dwn-response' }));
     this.api.use(
@@ -130,7 +131,7 @@ export class HttpApi {
         dataStream: requestDataStream,
       };
       const { jsonRpcResponse, dataStream: responseDataStream } =
-        await jsonRpcApi.handle(
+        await this.rpcRouter.handle(
           dwnRpcRequest,
           requestContext as RequestContext,
         );

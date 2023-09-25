@@ -16,6 +16,7 @@ import fetch from 'node-fetch';
 import request from 'supertest';
 
 import { expect } from 'chai';
+import { getJsonRpcApi } from '../src/json-rpc-api.js';
 import { HttpApi } from '../src/http-api.js';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -41,7 +42,7 @@ describe('http api', function () {
   let server: Server;
 
   before(async function () {
-    httpApi = new HttpApi(dwn);
+    httpApi = new HttpApi(dwn, getJsonRpcApi());
   });
 
   beforeEach(async function () {

@@ -1,12 +1,11 @@
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
 import type { JsonRpcResponse } from './lib/json-rpc.js';
-import type { RequestContext } from './lib/json-rpc-router.js';
 import type { Server } from 'http';
 import type { AddressInfo, WebSocket } from 'ws';
+import type { JsonRpcRouter, RequestContext } from './lib/json-rpc-router.js';
 
 import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
-import { jsonRpcApi } from './json-rpc-api.js';
 import { requestCounter } from './metrics.js';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from 'ws';
@@ -20,10 +19,12 @@ const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 export class WsApi {
   wsServer: WebSocketServer;
   dwn: Dwn;
+  rpcRouter: JsonRpcRouter;
 
-  constructor(server: Server, dwn: Dwn) {
+  constructor(server: Server, dwn: Dwn, rpcRouter: JsonRpcRouter) {
     this.dwn = dwn;
     this.wsServer = new WebSocketServer({ server: server });
+    this.rpcRouter = rpcRouter;
   }
 
   // TODO: github.com/TBD54566975/dwn-server/issues/49 Add code coverage tracker, similar to either dwn-sdk-js or to web5-js
@@ -33,6 +34,7 @@ export class WsApi {
 
   listen(): void {
     const dwn = this.dwn;
+    const rpcRouter = this.rpcRouter;
     this.wsServer.on(
       'connection',
       function (socket: WebSocket, _request, _client): void {
@@ -98,7 +100,7 @@ export class WsApi {
             transport: 'ws',
             dataStream: requestDataStream,
           };
-          const { jsonRpcResponse } = await jsonRpcApi.handle(
+          const { jsonRpcResponse } = await rpcRouter.handle(
             dwnRequest,
             requestContext,
           );

@@ -1,6 +1,13 @@
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+import log from 'loglevel';
 import type { Readable } from 'node:stream';
-import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  createJsonRpcErrorResponse,
+  JsonRpcErrorCodes,
+  type JsonRpcRequest,
+  type JsonRpcResponse,
+} from './json-rpc.js';
 
 export type RequestContext = {
   dwn: Dwn;
@@ -33,8 +40,42 @@ export class JsonRpcRouter {
     rpcRequest: JsonRpcRequest,
     context: RequestContext,
   ): Promise<HandlerResponse> {
-    const handler = this.methodHandlers[rpcRequest.method];
+    let handler = this.methodHandlers[rpcRequest.method];
 
-    return await handler(rpcRequest, context);
+    if (!handler) {
+      handler = JsonRpcRouter.notFoundHandler;
+    }
+
+    let resp: HandlerResponse;
+    try {
+      resp = await handler(rpcRequest, context);
+    } catch (e) {
+      log.error(
+        'uncaught error from',
+        rpcRequest.method,
+        'handler: ',
+        e.stack || e,
+      );
+      resp = {
+        jsonRpcResponse: createJsonRpcErrorResponse(
+          rpcRequest.id || uuidv4(),
+          JsonRpcErrorCodes.InternalError,
+          'internal server error',
+        ),
+      };
+    }
+    return resp;
+  }
+
+  private static async notFoundHandler(
+    rpcRequest: JsonRpcRequest,
+  ): Promise<HandlerResponse> {
+    return {
+      jsonRpcResponse: createJsonRpcErrorResponse(
+        rpcRequest.id || uuidv4(),
+        JsonRpcErrorCodes.BadRequest,
+        'method not supported',
+      ),
+    };
   }
 }

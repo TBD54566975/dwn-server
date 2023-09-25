@@ -3,6 +3,7 @@ import http from 'node:http';
 import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
 import { expect } from 'chai';
+import { getJsonRpcApi } from '../src/json-rpc-api.js';
 import { v4 as uuidv4 } from 'uuid';
 import { WsApi } from '../src/ws-api.js';
 import { clear as clearDwn, dwn } from './test-dwn.js';
@@ -24,7 +25,7 @@ describe('websocket api', function () {
     server = http.createServer();
     server.listen(9002, '127.0.0.1');
 
-    wsServer = new WsApi(server, dwn);
+    wsServer = new WsApi(server, dwn, getJsonRpcApi());
     wsServer.listen();
   });
 
