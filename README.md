@@ -23,7 +23,7 @@ The **first 20 contributors** to succesfully merge a PR will secure exclusive sw
 
 ## **What is Hacktoberfest?**
 
-Celebrate the 10th anniversary of Hacktoberfest this year! Hosted annually every October, Hacktoberfest is a month-long event sponsored by DigitalOcean, GitHub, and various other partners, championing open-source contributions. 
+Celebrate the 10th anniversary of Hacktoberfest this year! Hosted annually every October, Hacktoberfest is a month-long event sponsored by DigitalOcean, GitHub, and various other partners, championing open-source contributions.
 
 > ⭐️ If you're new to Hacktoberfest, you can learn more and register to participate [here](https://hacktoberfest.com/participation/). Registration is from **September 26th- October 31st**.
 
@@ -43,9 +43,6 @@ We wholeheartedly embrace new contributors to our community. Remember, every exp
 Your contribution, be it big or minuscule, carries immense value. We eagerly await to see the waves you'll make in our community! 🚀
 
 Here's to a thrilling Hacktoberfest voyage with us! 🎉
-
-
-
 
 # DWN Server <!-- omit in toc -->
 
@@ -77,6 +74,12 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
 - PostgreSQL ✔️
 
 See more in [Storage Options](#storage-options)
+
+## Running online environment
+
+Interested in contributing instantly? You can make your updates directly without cloning in the running CodeSandbox environment.
+
+[![Edit in CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/github/TBD54566975/dwn-server/main)
 
 # Installation
 
