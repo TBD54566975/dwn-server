@@ -141,7 +141,7 @@ describe('http api', function () {
       filter: {
         schema: 'woosa',
       },
-      authorizationSignatureInput: alice.signatureInput,
+      authorizationSigner: alice.signer,
     });
 
     const requestId = uuidv4();
@@ -337,8 +337,10 @@ describe('http api', function () {
       expect(reply.status.code).to.equal(202);
 
       const recordsRead = await RecordsRead.create({
-        authorizationSignatureInput: alice.signatureInput,
-        recordId: recordsWrite.message.recordId,
+        authorizationSigner: alice.signer,
+        filter: {
+          recordId: recordsWrite.message.recordId,
+        },
       });
 
       requestId = uuidv4();

@@ -1,5 +1,10 @@
 import type { Config } from './config.js';
 import type { Dialect } from '@tbd54566975/dwn-sql-store';
+import {
+  DataStoreLevel,
+  EventLogLevel,
+  MessageStoreLevel,
+} from '@tbd54566975/dwn-sdk-js';
 import type {
   DataStore,
   DwnConfig,
@@ -12,11 +17,6 @@ import Database from 'better-sqlite3';
 import pg from 'pg';
 
 import { createPool as MySQLCreatePool } from 'mysql2';
-import {
-  DataStoreLevel,
-  EventLogLevel,
-  MessageStoreLevel,
-} from '@tbd54566975/dwn-sdk-js/stores';
 import {
   DataStoreSql,
   EventLogSql,

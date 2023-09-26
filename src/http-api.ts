@@ -79,7 +79,9 @@ export class HttpApi {
     });
 
     this.#api.get('/:did/records/:id', async (req, res) => {
-      const record = await RecordsRead.create({ recordId: req.params.id });
+      const record = await RecordsRead.create({
+        filter: { recordId: req.params.id },
+      });
       const reply = (await this.dwn.processMessage(
         req.params.did,
         record.toJSON(),
