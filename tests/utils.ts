@@ -1,10 +1,6 @@
 import type { Readable } from 'readable-stream';
 import type { ReadStream } from 'node:fs';
-import type {
-  PrivateJwk,
-  PublicJwk,
-  SignatureInput,
-} from '@tbd54566975/dwn-sdk-js';
+import type { PrivateJwk, PublicJwk, Signer } from '@tbd54566975/dwn-sdk-js';
 
 import fs from 'node:fs';
 import http from 'node:http';
@@ -16,6 +12,7 @@ import {
   Cid,
   DataStream,
   DidKeyResolver,
+  PrivateKeySigner,
   RecordsWrite,
 } from '@tbd54566975/dwn-sdk-js';
 
@@ -29,22 +26,23 @@ export type Profile = {
     publicJwk: PublicJwk;
     privateJwk: PrivateJwk;
   };
-  signatureInput: SignatureInput;
+  signer: Signer;
 };
 
 export async function createProfile(): Promise<Profile> {
   const { did, keyPair, keyId } = await DidKeyResolver.generate();
 
-  // signatureInput is required by all dwn message classes. it's used to sign messages
-  const signatureInput = {
+  // signer is required by all dwn message classes. it's used to sign messages
+  const signer = new PrivateKeySigner({
     privateJwk: keyPair.privateJwk,
-    protectedHeader: { alg: keyPair.privateJwk.alg, kid: `${did}#${keyId}` },
-  };
+    algorithm: keyPair.privateJwk.alg,
+    keyId: `${did}#${keyId}`,
+  });
 
   return {
     did,
     keyPair,
-    signatureInput,
+    signer,
   };
 }
 
@@ -80,7 +78,7 @@ export async function createRecordsWriteMessage(
   const recordsWrite = await RecordsWrite.create({
     ...overrides,
     dataFormat: 'application/json',
-    authorizationSignatureInput: signer.signatureInput,
+    authorizationSigner: signer.signer,
   });
 
   let dataStream: Readable | undefined;
