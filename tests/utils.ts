@@ -14,6 +14,7 @@ import {
   DidKeyResolver,
   PrivateKeySigner,
   RecordsWrite,
+  SubscriptionRequest,
 } from '@tbd54566975/dwn-sdk-js';
 
 // __filename and __dirname are not defined in ES module scope
@@ -66,6 +67,19 @@ export type GenerateProtocolsConfigureOutput = {
   recordsWrite: RecordsWrite;
   dataStream: Readable | undefined;
 };
+
+export type CreateSubscriptionRequestOverride = {};
+
+export async function createSubscriptionRequest(
+  signer: Profile,
+  overrides: CreateSubscriptionRequestOverride,
+): Promise<SubscriptionRequest> {
+  console.log(overrides);
+  const subscriptionRequest = await SubscriptionRequest.create({
+    authorizationSignatureInput: signer.signatureInput,
+  });
+  return subscriptionRequest;
+}
 
 export async function createRecordsWriteMessage(
   signer: Profile,

@@ -22,4 +22,8 @@ export const config = {
 
   // log level - trace/debug/info/warn/error
   logLevel: process.env.DWN_SERVER_LOG_LEVEL || 'INFO',
+
+  subscriptionsEnabled:
+    { on: true, off: false }[process.env.SUBSCRIPTIONS] ?? true,
+  // where to store persistant data
 };
