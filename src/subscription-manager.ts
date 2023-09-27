@@ -1,12 +1,10 @@
 import type { Dwn, SubscriptionFilter } from '@tbd54566975/dwn-sdk-js';
 import type { EventMessage, PermissionsGrant } from '@tbd54566975/dwn-sdk-js';
-import type {
-  MessageStore,
-  SubscriptionRequestReply,
-} from '@tbd54566975/dwn-sdk-js';
 
 import type { JsonRpcSuccessResponse } from './lib/json-rpc.js';
+import type { MessageStore } from '@tbd54566975/dwn-sdk-js';
 import { SubscriptionRequest } from '@tbd54566975/dwn-sdk-js';
+import type { SubscriptionRequestReply } from '@tbd54566975/dwn-sdk-js';
 import type WebSocket from 'ws';
 import { WebSocketServer } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,8 +32,8 @@ export type RegisterSubscriptionRequest = {
   from: string;
   socket: WebSocket;
   filters?: SubscriptionFilter[];
-  permissionGrant: PermissionsGrant;
-  subscriptionRequestMessage: SubscriptionRequest;
+  permissionGrant?: PermissionsGrant;
+  request: SubscriptionRequest;
 };
 
 export type RegisterSubscriptionReply = {
@@ -46,8 +44,7 @@ export type RegisterSubscriptionReply = {
 export type defaultSubscriptionChannel = 'event';
 
 export type SubscriptionManagerOptions = {
-  subscriptionChannel: string;
-  wss: WebSocketServer;
+  wss?: WebSocketServer;
   dwn: Dwn;
   messageStore: MessageStore;
   tenant: string;
@@ -116,8 +113,13 @@ export class SubscriptionManager {
     data: any,
   ): Promise<RegisterSubscriptionReply> {
     // parse message
-    const req = SubscriptionRequest.parse(data);
-    return await this.subscribe(req, socket);
+    const req = await SubscriptionRequest.parse(data);
+
+    return await this.subscribe({
+      request: req,
+      socket: socket,
+      from: req.author,
+    });
   }
 
   createJSONRPCEvent(e: EventMessage): JsonRpcSuccessResponse {
@@ -130,11 +132,10 @@ export class SubscriptionManager {
 
   async subscribe(
     req: RegisterSubscriptionRequest,
-    socket: WebSocket,
   ): Promise<RegisterSubscriptionReply> {
     const subscriptionReply = await this.dwn.handleSubscriptionRequest(
       this.tenant,
-      req.subscriptionRequestMessage,
+      req.request.message,
     );
     if (subscriptionReply.status.code !== 200) {
       return { reply: subscriptionReply };
@@ -146,7 +147,7 @@ export class SubscriptionManager {
       async (e: EventMessage): Promise<void> => {
         const jsonRpcResponse = this.createJSONRPCEvent(e);
         const str = JSON.stringify(jsonRpcResponse);
-        return socket.send(Buffer.from(str));
+        return req.socket.send(Buffer.from(str));
       },
     );
   }

@@ -1,3 +1,31 @@
+import {
+  Cid,
+  DataStream,
+  RecordsQuery,
+  RecordsRead,
+} from '@tbd54566975/dwn-sdk-js';
+import {
+  JsonRpcErrorCodes,
+  createJsonRpcRequest,
+} from '../src/lib/json-rpc.js';
+import type {
+  JsonRpcErrorResponse,
+  JsonRpcResponse,
+} from '../src/lib/json-rpc.js';
+import { clear as clearDwn, dwn } from './test-dwn.js';
+import {
+  createProfile,
+  createRecordsWriteMessage,
+  getFileAsReadStream,
+  streamHttpRequest,
+} from './utils.js';
+
+import { HttpApi } from '../src/http-api.js';
+import type { Server } from 'http';
+import { expect } from 'chai';
+import fetch from 'node-fetch';
+import request from 'supertest';
+import { v4 as uuidv4 } from 'uuid';
 // node.js 18 and earlier,  needs globalThis.crypto polyfill
 import { webcrypto } from 'node:crypto';
 
@@ -5,36 +33,6 @@ if (!globalThis.crypto) {
   // @ts-ignore
   globalThis.crypto = webcrypto;
 }
-
-import type { Server } from 'http';
-import type {
-  JsonRpcErrorResponse,
-  JsonRpcResponse,
-} from '../src/lib/json-rpc.js';
-
-import fetch from 'node-fetch';
-import request from 'supertest';
-
-import { expect } from 'chai';
-import { HttpApi } from '../src/http-api.js';
-import { v4 as uuidv4 } from 'uuid';
-import {
-  Cid,
-  DataStream,
-  RecordsQuery,
-  RecordsRead,
-} from '@tbd54566975/dwn-sdk-js';
-import { clear as clearDwn, dwn } from './test-dwn.js';
-import {
-  createJsonRpcRequest,
-  JsonRpcErrorCodes,
-} from '../src/lib/json-rpc.js';
-import {
-  createProfile,
-  createRecordsWriteMessage,
-  getFileAsReadStream,
-  streamHttpRequest,
-} from './utils.js';
 
 describe('http api', function () {
   let httpApi: HttpApi;
