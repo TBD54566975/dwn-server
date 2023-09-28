@@ -1,7 +1,7 @@
 import { base64url } from 'multiformats/bases/base64';
 import { v4 as uuidv4 } from 'uuid';
 import { DataStream, type Dwn } from '@tbd54566975/dwn-sdk-js';
-import type { IncomingMessage, Server } from 'http';
+import { type IncomingMessage, type Server } from 'http';
 import { type AddressInfo, type WebSocket, WebSocketServer } from 'ws';
 
 import { jsonRpcApi } from './json-rpc-api.js';
@@ -12,6 +12,10 @@ import {
   JsonRpcErrorCodes,
   type JsonRpcResponse,
 } from './lib/json-rpc.js';
+import {
+  SubscriptionManager,
+  type SubscriptionController,
+} from './subscription-manager.js';
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 const HEARTBEAT_INTERVAL = 30_000;
@@ -19,10 +23,16 @@ const HEARTBEAT_INTERVAL = 30_000;
 export class WsApi {
   #wsServer: WebSocketServer;
   dwn: Dwn;
+  #subscriptionManager: SubscriptionController;
 
   constructor(server: Server, dwn: Dwn) {
     this.dwn = dwn;
     this.#wsServer = new WebSocketServer({ server });
+    this.#subscriptionManager = new SubscriptionManager({
+      dwn: dwn,
+      tenant: 'asdf',
+      wss: this.#wsServer,
+    });
   }
 
   // TODO: github.com/TBD54566975/dwn-server/issues/49 Add code coverage tracker, similar to either dwn-sdk-js or to web5-js
@@ -63,7 +73,6 @@ export class WsApi {
 
     socket.on('message', async function (dataBuffer) {
       let dwnRequest;
-
       try {
         // deserialize bytes into JSON object
         dwnRequest = dataBuffer.toString();
@@ -77,7 +86,6 @@ export class WsApi {
           const responseBuffer = WsApi.jsonRpcResponseToBuffer(jsonRpcResponse);
           return socket.send(responseBuffer);
         }
-
         dwnRequest = JSON.parse(dwnRequest);
       } catch (e) {
         const jsonRpcResponse = createJsonRpcErrorResponse(
@@ -85,7 +93,6 @@ export class WsApi {
           JsonRpcErrorCodes.BadRequest,
           e.message,
         );
-
         const responseBuffer = WsApi.jsonRpcResponseToBuffer(jsonRpcResponse);
         return socket.send(responseBuffer);
       }
@@ -101,6 +108,7 @@ export class WsApi {
         transport: 'ws',
         dataStream: requestDataStream,
       };
+
       const { jsonRpcResponse } = await jsonRpcApi.handle(
         dwnRequest,
         requestContext,
@@ -140,9 +148,7 @@ export class WsApi {
 
   #setupWebSocket(): void {
     this.#wsServer.on('connection', this.#handleConnection.bind(this));
-
     const heartbeatInterval = this.#setupHeartbeat();
-
     this.#wsServer.on('close', function close() {
       clearInterval(heartbeatInterval);
     });

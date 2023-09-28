@@ -2,7 +2,6 @@ import type { Dwn, SubscriptionFilter } from '@tbd54566975/dwn-sdk-js';
 import type { EventMessage, PermissionsGrant } from '@tbd54566975/dwn-sdk-js';
 
 import type { JsonRpcSuccessResponse } from './lib/json-rpc.js';
-import type { MessageStore } from '@tbd54566975/dwn-sdk-js';
 import { SubscriptionRequest } from '@tbd54566975/dwn-sdk-js';
 import type { SubscriptionRequestReply } from '@tbd54566975/dwn-sdk-js';
 import type WebSocket from 'ws';
@@ -46,7 +45,6 @@ export type defaultSubscriptionChannel = 'event';
 export type SubscriptionManagerOptions = {
   wss?: WebSocketServer;
   dwn: Dwn;
-  messageStore: MessageStore;
   tenant: string;
 };
 
@@ -54,7 +52,6 @@ export class SubscriptionManager {
   private wss: WebSocketServer;
   private dwn: Dwn;
   private connections: Map<string, Subscription>;
-  private messageStore: MessageStore;
   private tenant: string;
   options: SubscriptionManagerOptions;
   #open: boolean;
@@ -62,13 +59,14 @@ export class SubscriptionManager {
   constructor(options?: SubscriptionManagerOptions) {
     this.wss = options?.wss || new WebSocketServer();
     this.connections = new Map();
-    this.messageStore = options?.messageStore;
     this.tenant = options?.tenant;
     this.dwn = options?.dwn;
     this.options = options;
 
     this.wss.on('connection', (socket: WebSocket) => {
-      socket.on('subscribe', async (data) => {
+      console.log('connected');
+      socket.on('message', async (data) => {
+        console.log('got message...');
         await this.handleSubscribe(socket, data);
       });
     });

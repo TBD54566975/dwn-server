@@ -1,112 +1,120 @@
 import http from 'node:http';
+import type { AddressInfo } from 'ws';
 import { WebSocket, type WebSocketServer } from 'ws';
+import { v4 as uuidv4 } from 'uuid';
 
-import {
-  DataStoreLevel,
-  DidKeyResolver,
-  Dwn,
-  EventLogLevel,
-  MessageStoreLevel,
-  SubscriptionRequest,
-} from '@tbd54566975/dwn-sdk-js';
+import { DidKeyResolver, SubscriptionRequest } from '@tbd54566975/dwn-sdk-js';
 
 import { Jws } from '@tbd54566975/dwn-sdk-js';
-import type { SubscriptionController } from '../src/subscription-manager.js';
-import { SubscriptionManager } from '../src/subscription-manager.js';
 import { assert } from 'chai';
 import { createProfile } from './utils.js';
 import type { Profile } from './utils.js';
 import { WsApi } from '../src/ws-api.js';
+import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
+import { clear as clearDwn, dwn } from './test-dwn.js';
 
 describe('Subscription Manager Test', async () => {
-  let subscriptionManager: SubscriptionController;
-  let wsServer: WebSocketServer;
   let server: http.Server;
-  let dataStore: DataStoreLevel;
-  let eventLog: EventLogLevel;
-  let messageStore: MessageStoreLevel;
+  let wsServer: WebSocketServer;
   let alice: Profile;
-  let dwn: Dwn;
   let socket: WebSocket;
 
   before(async () => {
-    // Setup data stores...
-    dataStore = new DataStoreLevel({
-      blockstoreLocation: 'data/DATASTORE',
-    });
-    eventLog = new EventLogLevel({ location: 'data/EVENTLOG' });
-    messageStore = new MessageStoreLevel({
-      blockstoreLocation: 'data/MESSAGESTORE',
-      indexLocation: 'data/INDEX',
-    });
-
-    // create profile
-    alice = await createProfile();
-    // create Dwn
-    dwn = await Dwn.create({ eventLog, dataStore, messageStore });
-
     // create listeners...
     server = http.createServer();
     server.listen(9002, '127.0.0.1');
+
     const wsApi = new WsApi(server, dwn);
     wsServer = wsApi.start();
-
+    alice = await createProfile();
+    // starts the ws server
     // create subscription manager...
-    subscriptionManager = new SubscriptionManager({
-      dwn: dwn,
-      messageStore: messageStore,
-      tenant: alice.did,
-      wss: wsServer,
-    });
     return;
   });
 
   // before each, clear the subscriptions
   beforeEach(async () => {
-    subscriptionManager.clear();
-    await dataStore.clear();
-    await eventLog.clear();
-    await messageStore.clear();
+    // subscriptionManager.clear();
+  });
+
+  afterEach(async () => {
+    await clearDwn();
   });
 
   // close at the end
   after(async () => {
-    await subscriptionManager.close();
+    //await subscriptionManager.close();
     wsServer.close();
     server.close();
     server.closeAllConnections();
-    socket.close();
+    if (socket) {
+      socket.close();
+    }
   });
 
   it('test subscription manager registration', async () => {
     try {
       const signer = await DidKeyResolver.generate();
-
-      // create a subscription request
       const req = await SubscriptionRequest.create({
         signer: Jws.createSigner(signer),
       });
 
-      // setup a socket connection to wsServer
-      const socket = new WebSocket(wsServer.address.toString());
-      socket.onopen = async (): Promise<void> => {
-        console.log('sending req', req);
-        // send a subscription request
-        // const subscription = await subscriptionManager.subscribe({
-        //   from: alice.did,
-        //   subscriptionRequestMessage: req,
-        //   permissionGrant: 'asdf',
-        // });
-        socket.send('subscription request');
-        return;
-      };
+      const port = (wsServer.address() as AddressInfo).port;
+      const ip = (wsServer.address() as AddressInfo).address;
+      const addr = `ws://${ip}:${port}`;
+      const socket = new WebSocket(addr);
 
-      socket.onmessage = (event): Promise<void> => {
-        console.log('got message', event);
-        return;
-      };
+      const socketPromise = new Promise<any>((resolve, reject) => {
+        // set up lisetner...
+        socket.onmessage = (event): Promise<void> => {
+          try {
+            console.log('got message');
+            resolve(event);
+            return;
+          } catch (error) {
+            reject(error);
+          }
+        };
+
+        socket.onerror = (error): void => {
+          reject(error); // Reject the promise if there's an error with the socket
+        };
+
+        socket.onclose = (event): void => {
+          if (event.wasClean) {
+            console.log(
+              `Connection closed cleanly, code=${event.code}, reason=${event.reason}`,
+            );
+          } else {
+            console.error(`Connection abruptly closed`);
+          }
+          reject(new Error(`Connection closed: ${event.reason}`)); // Reject the promise on socket close
+        };
+
+        socket.onopen = async (): Promise<void> => {
+          const requestId = uuidv4();
+          const dwnRequest = createJsonRpcRequest(
+            requestId,
+            'dwn.processMessage',
+            {
+              message: req.toJSON(),
+              target: alice.did,
+            },
+          );
+          try {
+            if (socket.readyState !== WebSocket.OPEN) {
+              reject(new Error('socket not open'));
+            }
+            socket.send(JSON.stringify(dwnRequest));
+          } catch (error) {
+            reject(error);
+          }
+          return;
+        };
+      });
+      await socketPromise;
     } catch (error) {
-      assert.fail(error, undefined, 'failed to register subscription');
+      assert.fail(error, undefined, 'failed to register subscription' + error);
     }
   });
 });

@@ -1,13 +1,15 @@
 import {
-  Dwn,
   DataStoreLevel,
+  Dwn,
   EventLogLevel,
   MessageStoreLevel,
 } from '@tbd54566975/dwn-sdk-js';
 
-const dataStore = new DataStoreLevel({ blockstoreLocation: 'data/DATASTORE' });
+export const dataStore = new DataStoreLevel({
+  blockstoreLocation: 'data/DATASTORE',
+});
 const eventLog = new EventLogLevel({ location: 'data/EVENTLOG' });
-const messageStore = new MessageStoreLevel({
+export const messageStore = new MessageStoreLevel({
   blockstoreLocation: 'data/MESSAGESTORE',
   indexLocation: 'data/INDEX',
 });
