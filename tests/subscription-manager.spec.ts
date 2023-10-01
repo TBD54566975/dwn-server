@@ -68,7 +68,10 @@ describe('Subscription Manager Test', async () => {
         // set up lisetner...
         socket.onmessage = (event): Promise<void> => {
           try {
-            console.log('got message');
+            const resp = JSON.parse(event.data.toString());
+            if (resp.error) {
+              throw new Error(resp.error.message);
+            }
             resolve(event);
             return;
           } catch (error) {
@@ -92,6 +95,7 @@ describe('Subscription Manager Test', async () => {
         };
 
         socket.onopen = async (): Promise<void> => {
+          // on open
           const requestId = uuidv4();
           const dwnRequest = createJsonRpcRequest(
             requestId,
@@ -101,6 +105,7 @@ describe('Subscription Manager Test', async () => {
               target: alice.did,
             },
           );
+
           try {
             if (socket.readyState !== WebSocket.OPEN) {
               reject(new Error('socket not open'));

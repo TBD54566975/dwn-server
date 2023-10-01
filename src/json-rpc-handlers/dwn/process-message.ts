@@ -1,4 +1,14 @@
-import { DwnInterfaceName, DwnMethodName } from '@tbd54566975/dwn-sdk-js';
+import { v4 as uuidv4 } from 'uuid';
+import type { Readable as IsomorphicReadable } from 'readable-stream';
+import type {
+  RecordsReadReply,
+  SubscriptionRequestReply,
+} from '@tbd54566975/dwn-sdk-js';
+import {
+  DwnInterfaceName,
+  DwnMethodName,
+  SubscriptionRequest,
+} from '@tbd54566975/dwn-sdk-js';
 import type {
   HandlerResponse,
   JsonRpcHandler,
@@ -9,11 +19,6 @@ import {
   createJsonRpcSuccessResponse,
 } from '../../lib/json-rpc.js';
 
-import type { Readable as IsomorphicReadable } from 'readable-stream';
-import type { RecordsReadReply } from '@tbd54566975/dwn-sdk-js';
-import type { SubscriptionRequestReply } from '@tbd54566975/dwn-sdk-js';
-import { v4 as uuidv4 } from 'uuid';
-
 export const handleDwnProcessMessage: JsonRpcHandler = async (
   dwnRequest,
   context,
@@ -21,16 +26,12 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
   const { dwn, dataStream } = context;
   const { target, message } = dwnRequest.params;
   const requestId = dwnRequest.id ?? uuidv4();
-
   try {
-    let reply;
+    let reply: any;
+
     const messageType =
       message?.descriptor?.interface + message?.descriptor?.method;
 
-    // When a record is deleted via `RecordsDelete`, the initial RecordsWrite is kept as a tombstone _in addition_
-    // to the RecordsDelete message. the data associated to that initial RecordsWrite is deleted. If a record was written
-    // _and_ deleted before it ever got to dwn-server, we end up in a situation where we still need to process the tombstone
-    // so that we can process the RecordsDelete.
     if (
       messageType === DwnInterfaceName.Records + DwnMethodName.Write &&
       !dataStream
@@ -44,18 +45,25 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
         target,
         message,
       )) as SubscriptionRequestReply;
-      if (!context.subscriptionManager || context.socket) {
+      if (!context.subscriptionManager || !context.socket) {
         throw new Error(
           'setup failure. improper context provided for subscription',
         );
       }
+
+      // FIXME: How to handle subscription requests?
+      const request = await SubscriptionRequest.create({});
       const req = {
         socket: context.socket,
-        from: dwnRequest.params?.descriptor,
-        request: {},
+        from: message.descriptor.author,
+        request: request,
       };
-      const subscription = await context.subscriptionManager.subscribe(req);
-      console.log(subscription);
+      reply = await context.subscriptionManager.subscribe(req);
+      const jsonRpcResponse = createJsonRpcSuccessResponse(requestId, {
+        reply,
+      });
+      const responsePayload: HandlerResponse = { jsonRpcResponse };
+      return responsePayload;
     } else {
       reply = (await dwn.processMessage(
         target,
@@ -63,7 +71,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
         dataStream as IsomorphicReadable,
       )) as RecordsReadReply;
     }
-    // RecordsRead messages return record data as a stream to for accommodate large amounts of data
+
     let recordDataStream;
     if (reply?.record?.data !== undefined) {
       recordDataStream = reply.record.data;
@@ -83,7 +91,6 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       JsonRpcErrorCodes.InternalError,
       e.message,
     );
-
     return { jsonRpcResponse } as HandlerResponse;
   }
 };

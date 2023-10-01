@@ -50,6 +50,7 @@ export class WsApi {
    */
   #handleConnection(socket: WebSocket, _request: IncomingMessage): void {
     const dwn = this.dwn;
+    const subscriptionManager = this.#subscriptionManager;
 
     socket[SOCKET_ISALIVE_SYMBOL] = true;
 
@@ -107,6 +108,8 @@ export class WsApi {
         dwn,
         transport: 'ws',
         dataStream: requestDataStream,
+        subscriptionManager: subscriptionManager,
+        socket: socket,
       };
 
       const { jsonRpcResponse } = await jsonRpcApi.handle(

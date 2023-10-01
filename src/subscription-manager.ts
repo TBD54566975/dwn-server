@@ -28,15 +28,15 @@ export interface SubscriptionController {
 }
 
 export type RegisterSubscriptionRequest = {
-  from: string;
-  socket: WebSocket;
-  filters?: SubscriptionFilter[];
-  permissionGrant?: PermissionsGrant;
-  request: SubscriptionRequest;
+  from: string; // from connection
+  socket: WebSocket; // socket connection
+  filters?: SubscriptionFilter[]; // filters, if applicable
+  permissionGrant?: PermissionsGrant; //permission grant, if applicable
+  request: SubscriptionRequest; // subscription request
 };
 
 export type RegisterSubscriptionReply = {
-  reply: SubscriptionRequestReply;
+  reply?: SubscriptionRequestReply;
   subscriptionId?: string;
 };
 
@@ -52,21 +52,17 @@ export class SubscriptionManager {
   private wss: WebSocketServer;
   private dwn: Dwn;
   private connections: Map<string, Subscription>;
-  private tenant: string;
   options: SubscriptionManagerOptions;
   #open: boolean;
 
   constructor(options?: SubscriptionManagerOptions) {
     this.wss = options?.wss || new WebSocketServer();
     this.connections = new Map();
-    this.tenant = options?.tenant;
     this.dwn = options?.dwn;
     this.options = options;
 
     this.wss.on('connection', (socket: WebSocket) => {
-      console.log('connected');
       socket.on('message', async (data) => {
-        console.log('got message...');
         await this.handleSubscribe(socket, data);
       });
     });
@@ -132,7 +128,7 @@ export class SubscriptionManager {
     req: RegisterSubscriptionRequest,
   ): Promise<RegisterSubscriptionReply> {
     const subscriptionReply = await this.dwn.handleSubscriptionRequest(
-      this.tenant,
+      req.from,
       req.request.message,
     );
     if (subscriptionReply.status.code !== 200) {
@@ -148,6 +144,10 @@ export class SubscriptionManager {
         return req.socket.send(Buffer.from(str));
       },
     );
+    return {
+      reply: subscriptionReply,
+      subscriptionId: subscription?.subscriptionId,
+    } as RegisterSubscriptionReply;
   }
 
   private async registerSubscription(
