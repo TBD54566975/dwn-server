@@ -2,7 +2,7 @@ import type { Dwn, SubscriptionFilter } from '@tbd54566975/dwn-sdk-js';
 import type { EventMessage, PermissionsGrant } from '@tbd54566975/dwn-sdk-js';
 
 import type { JsonRpcSuccessResponse } from './lib/json-rpc.js';
-import { SubscriptionRequest } from '@tbd54566975/dwn-sdk-js';
+import type { SubscriptionRequest } from '@tbd54566975/dwn-sdk-js';
 import type { SubscriptionRequestReply } from '@tbd54566975/dwn-sdk-js';
 import type WebSocket from 'ws';
 import { WebSocketServer } from 'ws';
@@ -60,12 +60,6 @@ export class SubscriptionManager {
     this.connections = new Map();
     this.dwn = options?.dwn;
     this.options = options;
-
-    this.wss.on('connection', (socket: WebSocket) => {
-      socket.on('message', async (data) => {
-        await this.handleSubscribe(socket, data);
-      });
-    });
   }
 
   async clear(): Promise<void> {
@@ -102,20 +96,6 @@ export class SubscriptionManager {
     };
   }
 
-  async handleSubscribe(
-    socket: WebSocket,
-    data: any,
-  ): Promise<RegisterSubscriptionReply> {
-    // parse message
-    const req = await SubscriptionRequest.parse(data);
-
-    return await this.subscribe({
-      request: req,
-      socket: socket,
-      from: req.author,
-    });
-  }
-
   createJSONRPCEvent(e: EventMessage): JsonRpcSuccessResponse {
     return {
       id: uuidv4(),
@@ -137,10 +117,8 @@ export class SubscriptionManager {
     const subscription = await this.createSubscription(req.from, req);
     this.registerSubscription(subscription);
     // set up forwarding.
-    //  console.log('---------', subscriptionReply.subscription.emitter);
     subscriptionReply.subscription.emitter.on(
       async (e: EventMessage): Promise<void> => {
-        // console.log('got a record', e);
         const jsonRpcResponse = this.createJSONRPCEvent(e);
         const str = JSON.stringify(jsonRpcResponse);
         return req.socket.send(Buffer.from(str));
