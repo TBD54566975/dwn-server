@@ -36,6 +36,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       messageType === DwnInterfaceName.Records + DwnMethodName.Write &&
       !dataStream
     ) {
+      console.log('sending');
       reply = await dwn.synchronizePrunedInitialRecordsWrite(target, message);
     } else if (
       messageType ===

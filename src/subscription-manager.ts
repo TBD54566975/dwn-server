@@ -137,8 +137,10 @@ export class SubscriptionManager {
     const subscription = await this.createSubscription(req.from, req);
     this.registerSubscription(subscription);
     // set up forwarding.
+    //  console.log('---------', subscriptionReply.subscription.emitter);
     subscriptionReply.subscription.emitter.on(
       async (e: EventMessage): Promise<void> => {
+        // console.log('got a record', e);
         const jsonRpcResponse = this.createJSONRPCEvent(e);
         const str = JSON.stringify(jsonRpcResponse);
         return req.socket.send(Buffer.from(str));
