@@ -53,6 +53,7 @@
     "@types/ws": "8.5.4",
     "@typescript-eslint/eslint-plugin": "5.59.0",
     "@typescript-eslint/parser": "5.59.0",
+    "c8": "8.0.1",
     "chai": "4.3.6",
     "chai-as-promised": "7.1.1",
     "esbuild": "0.16.17",
@@ -77,7 +78,7 @@
     "lint": "eslint . --ext .ts --max-warnings 0",
     "lint:fix": "eslint . --ext .ts --fix",
     "prettier:fix": "prettier . --write  --ignore-unknown",
-    "test": "npm run build:esm && cp -R tests/fixtures dist/esm/tests && mocha dist/esm/tests/*.spec.js",
+    "test": "npm run build:esm && cp -R tests/fixtures dist/esm/tests && c8 mocha",
     "server": "npm run build:esm && node dist/esm/src/main.js",
     "prepare": "husky install"
   },

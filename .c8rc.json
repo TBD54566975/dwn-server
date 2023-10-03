@@ -1,0 +1,8 @@
+{
+  "all": true,
+  "cache": false,
+  "extension": [".js"],
+  "include": ["dist/esm/src/**"],
+  "exclude": ["dist/esm/src/types/**"],
+  "reporter": ["text", "cobertura"]
+}
