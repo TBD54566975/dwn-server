@@ -22,6 +22,11 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
   const { target, message } = dwnRequest.params;
   const requestId = dwnRequest.id ?? uuidv4();
 
+  console.log(
+    message?.descriptor?.interface + '.' + message?.descriptor?.method,
+    JSON.stringify(dwnRequest.params),
+  );
+
   try {
     let reply;
     const messageType =

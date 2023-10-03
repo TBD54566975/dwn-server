@@ -80,7 +80,8 @@
     "prettier:fix": "prettier . --write  --ignore-unknown",
     "test": "npm run build:esm && cp -R tests/fixtures dist/esm/tests && c8 mocha",
     "server": "npm run build:esm && node dist/esm/src/main.js",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "loadtest": "tsc --moduleResolution nodenext --module nodenext loadtest.ts && node loadtest.js"
   },
   "husky": {
     "hooks": {
