@@ -7,13 +7,23 @@ if (!globalThis.crypto) {
 }
 
 import type { Signer } from '@tbd54566975/dwn-sdk-js';
-import { DidKeyResolver, Jws, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
+import {
+  DidKeyResolver,
+  Jws,
+  RecordsWrite,
+  RecordsRead,
+} from '@tbd54566975/dwn-sdk-js';
 
 const DWN_SERVER = 'http://localhost:3000';
 
 class response {
   status: number;
   time: number;
+
+  constructor(status: number, time: number) {
+    this.status = status;
+    this.time = time;
+  }
 }
 const responses: response[] = [];
 let running = true;
@@ -70,28 +80,6 @@ async function doAll(iterations: number, vuCount: number): Promise<void> {
   }
 }
 
-async function rpcRequest(method: string, params): Promise<void> {
-  const req = {
-    jsonrpc: '2.0',
-    id: randomUUID(),
-    method: method,
-    params: params,
-  };
-
-  const start = Date.now();
-  const resp = await fetch(DWN_SERVER, {
-    method: 'POST',
-    headers: { 'dwn-request': JSON.stringify(req) },
-  });
-
-  const time = Date.now() - start;
-
-  responses.push({
-    status: resp.status,
-    time: time,
-  });
-}
-
 async function doTest(
   iterations: number,
   did: string,
@@ -114,7 +102,37 @@ async function doTest(
       target: did,
       message: recordsWriteMessage,
     });
+
+    const { message: recordsReadMessage } = await RecordsRead.create({
+      filter: {
+        recordId: recordsWriteMessage.recordId,
+      },
+      authorizationSigner,
+    });
+    await rpcRequest('dwn.processMessage', {
+      target: did,
+      message: recordsReadMessage,
+    });
   }
+}
+
+async function rpcRequest(method: string, params: any): Promise<void> {
+  const req = {
+    jsonrpc: '2.0',
+    id: randomUUID(),
+    method: method,
+    params: params,
+  };
+
+  const start = Date.now();
+  const resp = await fetch(DWN_SERVER, {
+    method: 'POST',
+    headers: { 'dwn-request': JSON.stringify(req) },
+  });
+
+  const time = Date.now() - start;
+
+  responses.push(new response(resp.status, time));
 }
 
 async function writeProgress(): Promise<void> {
@@ -132,4 +150,4 @@ async function writeProgress(): Promise<void> {
   process.stdout.write('\n');
 }
 
-doAll(100, 100);
+doAll(100, 10);
