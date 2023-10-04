@@ -53,16 +53,11 @@ We take our open-source community seriously. Please adhere to our [Code of Condu
   - This is run via CI whenever a pull request is opened, or a commit is pushed to a branch that has an open PR.
 - Make sure to cover added code with tests, if it should be tested
 
-### Test Coverage Expectations
-
-To maintain the robustness and reliability of the codebase, we highly value test coverage.
+### Test Coverage
 
 - [Codecov](https://app.codecov.io/github/TBD54566975/dwn-server) is used to track
   the coverage of our tests and will automatically comment on every pull request
   showing the impact to overall coverage.
-- We have a strong expectation for every pull request to strive for 100% test
-  coverage. This means that all new code you contribute should be fully covered
-  by tests, and it should not decrease the overall test coverage of the project.
 - If your pull request introduces new features or changes existing logic, please
   ensure you include comprehensive tests that cover edge-cases and failure
   scenarios. This ensures that your contributions are of the highest quality and
