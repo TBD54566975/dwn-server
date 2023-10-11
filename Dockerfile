@@ -15,6 +15,9 @@ COPY src ./src
 RUN npm install
 RUN npm run build:esm
 
+COPY loadtest.ts .
+RUN node_modules/.bin/tsc --moduleResolution nodenext --module nodenext --strict loadtest.ts
+
 VOLUME /dwn-server/data
 
 ENTRYPOINT [ "/dwn-server/entrypoint.sh" ]
