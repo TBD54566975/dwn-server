@@ -1,6 +1,6 @@
-import fetch from 'node-fetch';
-
 import { RecordsRead } from '@tbd54566975/dwn-sdk-js';
+
+import fetch from 'node-fetch';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createJsonRpcRequest } from '../../dist/src/lib/json-rpc.js';

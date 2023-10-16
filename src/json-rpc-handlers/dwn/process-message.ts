@@ -1,13 +1,13 @@
-import type { Readable as IsomorphicReadable } from 'readable-stream';
 import type { RecordsReadReply } from '@tbd54566975/dwn-sdk-js';
+import { DwnInterfaceName, DwnMethodName } from '@tbd54566975/dwn-sdk-js';
+
+import type { Readable as IsomorphicReadable } from 'readable-stream';
+import { v4 as uuidv4 } from 'uuid';
+
 import type {
   HandlerResponse,
   JsonRpcHandler,
 } from '../../lib/json-rpc-router.js';
-
-import { v4 as uuidv4 } from 'uuid';
-import { DwnInterfaceName, DwnMethodName } from '@tbd54566975/dwn-sdk-js';
-
 import {
   createJsonRpcErrorResponse,
   createJsonRpcSuccessResponse,

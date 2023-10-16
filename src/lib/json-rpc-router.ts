@@ -1,5 +1,7 @@
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+
 import type { Readable } from 'node:stream';
+
 import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
 
 export type RequestContext = {

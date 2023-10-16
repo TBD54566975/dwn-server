@@ -1,17 +1,17 @@
-import http from 'node:http';
-
-import { base64url } from 'multiformats/bases/base64';
 import { DataStream } from '@tbd54566975/dwn-sdk-js';
+
 import { expect } from 'chai';
+import { base64url } from 'multiformats/bases/base64';
+import http from 'node:http';
 import { v4 as uuidv4 } from 'uuid';
 import { type WebSocketServer } from 'ws';
 
-import { WsApi } from '../src/ws-api.js';
-import { clear as clearDwn, dwn } from './test-dwn.js';
 import {
   createJsonRpcRequest,
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
+import { WsApi } from '../src/ws-api.js';
+import { clear as clearDwn, dwn } from './test-dwn.js';
 import {
   createProfile,
   createRecordsWriteMessage,

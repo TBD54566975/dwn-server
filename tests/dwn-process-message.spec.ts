@@ -1,9 +1,9 @@
-import type { RequestContext } from '../src/lib/json-rpc-router.js';
-
-import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { expect } from 'chai';
-import { handleDwnProcessMessage } from '../src/json-rpc-handlers/dwn/process-message.js';
 import { v4 as uuidv4 } from 'uuid';
+
+import { handleDwnProcessMessage } from '../src/json-rpc-handlers/dwn/process-message.js';
+import type { RequestContext } from '../src/lib/json-rpc-router.js';
+import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { clear as clearDwn, dwn } from './test-dwn.js';
 import { createProfile, createRecordsWriteMessage } from './utils.js';
 

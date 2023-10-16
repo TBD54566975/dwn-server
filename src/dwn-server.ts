@@ -1,15 +1,17 @@
 import { Dwn } from '@tbd54566975/dwn-sdk-js';
+
+import type { Server } from 'http';
 import log from 'loglevel';
 import prefix from 'loglevel-plugin-prefix';
-import type { Server } from 'http';
 import { type WebSocketServer } from 'ws';
 
-import { getDWNConfig } from './storage.js';
-import { HttpApi } from './http-api.js';
 import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
-import { setProcessHandlers } from './process-handlers.js';
-import { WsApi } from './ws-api.js';
+
 import { type Config, config as defaultConfig } from './config.js';
+import { HttpApi } from './http-api.js';
+import { setProcessHandlers } from './process-handlers.js';
+import { getDWNConfig } from './storage.js';
+import { WsApi } from './ws-api.js';
 
 export type DwnServerOptions = {
   dwn?: Dwn;
