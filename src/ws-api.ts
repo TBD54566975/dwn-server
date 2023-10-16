@@ -1,17 +1,19 @@
+import { DataStream, type Dwn } from '@tbd54566975/dwn-sdk-js';
+
+import type { IncomingMessage, Server } from 'http';
 import { base64url } from 'multiformats/bases/base64';
 import { v4 as uuidv4 } from 'uuid';
-import { DataStream, type Dwn } from '@tbd54566975/dwn-sdk-js';
-import type { IncomingMessage, Server } from 'http';
 import { type AddressInfo, type WebSocket, WebSocketServer } from 'ws';
 
-import { jsonRpcApi } from './json-rpc-api.js';
 import type { RequestContext } from './lib/json-rpc-router.js';
-import { requestCounter } from './metrics.js';
 import {
   createJsonRpcErrorResponse,
   JsonRpcErrorCodes,
   type JsonRpcResponse,
 } from './lib/json-rpc.js';
+
+import { jsonRpcApi } from './json-rpc-api.js';
+import { requestCounter } from './metrics.js';
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 const HEARTBEAT_INTERVAL = 30_000;

@@ -1,26 +1,26 @@
-import http from 'http';
 import {
   type Dwn,
   RecordsRead,
   type RecordsReadReply,
 } from '@tbd54566975/dwn-sdk-js';
-import type { Express, Request, Response } from 'express';
-
-import type { JsonRpcRequest } from './lib/json-rpc.js';
-import type { RequestContext } from './lib/json-rpc-router.js';
 
 import cors from 'cors';
+import type { Express, Request, Response } from 'express';
 import express from 'express';
+import http from 'http';
 import log from 'loglevel';
-import responseTime from 'response-time';
-
-import { jsonRpcApi } from './json-rpc-api.js';
 import { register } from 'prom-client';
+import responseTime from 'response-time';
 import { v4 as uuidv4 } from 'uuid';
+
+import type { RequestContext } from './lib/json-rpc-router.js';
+import type { JsonRpcRequest } from './lib/json-rpc.js';
 import {
   createJsonRpcErrorResponse,
   JsonRpcErrorCodes,
 } from './lib/json-rpc.js';
+
+import { jsonRpcApi } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
 
 export class HttpApi {

@@ -1,13 +1,4 @@
-import type { Readable } from 'readable-stream';
-import type { ReadStream } from 'node:fs';
 import type { PrivateJwk, PublicJwk, Signer } from '@tbd54566975/dwn-sdk-js';
-
-import fs from 'node:fs';
-import http from 'node:http';
-import path from 'path';
-
-import { fileURLToPath } from 'url';
-import { WebSocket } from 'ws';
 import {
   Cid,
   DataStream,
@@ -15,6 +6,14 @@ import {
   PrivateKeySigner,
   RecordsWrite,
 } from '@tbd54566975/dwn-sdk-js';
+
+import type { ReadStream } from 'node:fs';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'path';
+import type { Readable } from 'readable-stream';
+import { fileURLToPath } from 'url';
+import { WebSocket } from 'ws';
 
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);

@@ -1,8 +1,6 @@
 {
   "singleQuote": true,
-  "plugins": [
-    "@trivago/prettier-plugin-sort-imports"
-  ],
+  "plugins": ["@trivago/prettier-plugin-sort-imports"],
   "importOrder": [
     "^@tbd54566975/(.*)$",
     "<THIRD_PARTY_MODULES>",

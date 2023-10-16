@@ -1,5 +1,3 @@
-import type { Config } from './config.js';
-import type { Dialect } from '@tbd54566975/dwn-sql-store';
 import {
   DataStoreLevel,
   EventLogLevel,
@@ -11,12 +9,7 @@ import type {
   EventLog,
   MessageStore,
 } from '@tbd54566975/dwn-sdk-js';
-
-import Cursor from 'pg-cursor';
-import Database from 'better-sqlite3';
-import pg from 'pg';
-
-import { createPool as MySQLCreatePool } from 'mysql2';
+import type { Dialect } from '@tbd54566975/dwn-sql-store';
 import {
   DataStoreSql,
   EventLogSql,
@@ -25,6 +18,13 @@ import {
   PostgresDialect,
   SqliteDialect,
 } from '@tbd54566975/dwn-sql-store';
+
+import Database from 'better-sqlite3';
+import { createPool as MySQLCreatePool } from 'mysql2';
+import pg from 'pg';
+import Cursor from 'pg-cursor';
+
+import type { Config } from './config.js';
 
 export enum EStoreType {
   DataStore,
