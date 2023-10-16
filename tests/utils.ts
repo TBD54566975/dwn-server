@@ -182,7 +182,7 @@ export async function sendWsMessage(
     socket.onopen = (_event): void => {
       socket.onmessage = (event): void => {
         socket.terminate();
-        return resolve(<Buffer>event.data);
+        return resolve(event.data as Buffer);
       };
 
       socket.send(message);
