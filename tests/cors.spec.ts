@@ -42,9 +42,9 @@ class CorsProxySetup {
     const server = http.createServer((req, res) => {
       const [host] = req.headers.host.split(':', 2);
       if (host == 'dwn.localhost') {
-        proxy.web(req, res, { target: `http://localhost:${dwnPort}` });
+        proxy.web(req, res, { target: `http://127.0.0.1:${dwnPort}` });
       } else if (host == 'app.localhost') {
-        proxy.web(req, res, { target: `http://localhost:${this.karmaPort}` });
+        proxy.web(req, res, { target: `http://127.0.0.1:${this.karmaPort}` });
       } else {
         res.write('unexpected');
       }
@@ -122,7 +122,7 @@ async function karmaRun(proxy, specfile): Promise<void> {
           ChromeHeadless_with_proxy: {
             base: 'ChromeHeadless',
             flags: [
-              `--proxy-server=http=localhost:${proxy.proxyPort}`,
+              `--proxy-server=http=127.0.0.1:${proxy.proxyPort}`,
               '--proxy-bypass-list=<-loopback>',
             ],
           },
