@@ -41,6 +41,11 @@ export class DwnServer {
     callback?.();
   }
 
+  /**
+   * Handler for creating a DWN if none exists.
+   * Handler also starts an HTTP server.
+   * If `webSocketServerEnabled` is true, this handler also starts a WebSocketServer.
+   */
   async #setupServer(): Promise<void> {
     if (!this.dwn) {
       this.dwn = await Dwn.create(getDWNConfig(this.config));
