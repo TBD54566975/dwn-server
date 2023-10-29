@@ -27,7 +27,6 @@ export class WsApi {
     this.#wsServer = new WebSocketServer({ server });
   }
 
-  // TODO: github.com/TBD54566975/dwn-server/issues/49 Add code coverage tracker, similar to either dwn-sdk-js or to web5-js
   get address(): AddressInfo | string {
     return this.#wsServer.address();
   }
