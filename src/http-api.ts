@@ -1,6 +1,8 @@
 import {
   type Dwn,
   RecordsRead,
+  type RecordsQueryReply,
+  RecordsQuery,
   type RecordsReadReply,
 } from '@tbd54566975/dwn-sdk-js';
 
@@ -80,34 +82,6 @@ export class HttpApi {
       }
     });
 
-    this.#api.get('/:did/records/:id', async (req, res) => {
-      const record = await RecordsRead.create({
-        filter: { recordId: req.params.id },
-      });
-      const reply = (await this.dwn.processMessage(
-        req.params.did,
-        record.toJSON(),
-      )) as RecordsReadReply;
-
-      if (reply.status.code === 200) {
-        if (reply?.record?.data) {
-          const stream = reply.record.data;
-          delete reply.record.data;
-
-          res.setHeader('content-type', reply.record.descriptor.dataFormat);
-          res.setHeader('dwn-response', JSON.stringify(reply));
-
-          return stream.pipe(res);
-        } else {
-          return res.sendStatus(400);
-        }
-      } else if (reply.status.code === 401) {
-        return res.sendStatus(404);
-      } else {
-        return res.status(reply.status.code).send(reply);
-      }
-    });
-
     this.#api.get('/', (_req, res) => {
       // return a plain text string
       res.setHeader('content-type', 'text/plain');
@@ -180,6 +154,49 @@ export class HttpApi {
       } else {
         return res.json(jsonRpcResponse);
       }
+    });
+
+    this.#api.get('/dwn/:did/records/:id', async (req, res) => {
+      const record = await RecordsRead.create({
+        filter: { recordId: req.params.id },
+      });
+      const reply = (await this.dwn.processMessage(
+        req.params.did,
+        record.toJSON(),
+      )) as RecordsReadReply;
+
+      if (reply.status.code === 200) {
+        if (reply?.record?.data) {
+          const stream = reply.record.data;
+          delete reply.record.data;
+
+          res.setHeader('content-type', reply.record.descriptor.dataFormat);
+          res.setHeader('dwn-response', JSON.stringify(reply));
+
+          return stream.pipe(res);
+        } else {
+          return res.sendStatus(400);
+        }
+      } else if (reply.status.code === 401) {
+        return res.sendStatus(404);
+      } else {
+        return res.status(reply.status.code).send(reply);
+      }
+    });
+
+    this.#api.get('/dwn/:did/records', async (req: Request, res: Response) => {
+      const record = await RecordsQuery.create({
+        filter: {
+          protocol: req.query.protocol as string,
+          protocolPath: req.query.protocolPath as string,
+        },
+      });
+      const dwnReply = (await this.dwn.processMessage(
+        req.params.did,
+        record.toJSON(),
+      )) as RecordsQueryReply;
+
+      res.json(dwnReply.entries);
     });
   }
 
