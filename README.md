@@ -1,19 +1,19 @@
-# 🎉 **We're participating in Hacktoberfest 2023!** 🎉
+# :tada: **We're participating in Hacktoberfest 2023!** :tada:
 
 Want to contribute during Hacktoberfest? We'd love to have you! Dive in, and your contributions could earn you some exclusive rewards.
 
-The **first 20 contributors** to successfully merge a PR will secure exclusive swag of their choosing from our [TBD shop](https://www.tbd.shop/) — we're in the midst of uploading new swag! Keep an eye on our [leaderboard issue](https://github.com/TBD54566975/developer.tbd.website/issues/721) to see where you rank! ⭐️
+The **first 20 contributors** to successfully merge a PR will secure exclusive swag of their choosing from our [TBD shop](https://www.tbd.shop/) — we're in the midst of uploading new swag! Keep an eye on our [leaderboard issue](https://github.com/TBD54566975/developer.tbd.website/issues/721) to see where you rank! :star:
 
-🚀 **Gear up for a month packed with exciting events!** 🎉
+:rocket: **Gear up for a month packed with exciting events!** :tada:
 
-- Mark your calendars for our **Hacktoberfest Launch event on [October 2nd](https://discord.com/events/937858703112155166/1154126364484583465)**.
+- Mark your calendars for our **Hacktoberfest Launch event on [October 2nd on Discord](https://discord.com/events/937858703112155166/1154126364484583465)**.
 - Stay in the loop - keep an eye on our Discord calendar and pop into our [events-and-updates channel](https://discord.com/channels/937858703112155166/1151972299814215701) regularly! You won't want to miss out!
 
 ## **Hacktoberfest Guidelines:**
 
 - Ensure your contribution is meaningful and fits within the scope of our project, by reading an open issue in its entirety before diving in.
 - Check out our `good-first-issue` and `hacktoberfest` labels in the issues section.
-- Join our Discord: Connect with the community, stay up to date with Hacktoberfest events/prizes, and discuss Hacktoberfest contributions on our Discord server. Click [here](https://discord.com/channels/937858703112155166/1151216855957123104) to join.
+- Join our Discord: Connect with the community, stay up to date with Hacktoberfest events/prizes, and discuss Hacktoberfest contributions on our Discord server. [Join our Discord server](https://discord.com/channels/937858703112155166/1151216855957123104).
 - Always be respectful and follow our [code of conduct](https://developer.tbd.website/open-source/code-of-conduct).
 - If in doubt about what to contribute, reach out to maintainers by raising a question in the relevant issue or specified discord channel.
 - **Other participating TBD Repos:**
@@ -25,9 +25,9 @@ The **first 20 contributors** to successfully merge a PR will secure exclusive s
 
 Celebrate the 10th anniversary of Hacktoberfest this year! Hosted annually every October, Hacktoberfest is a month-long event sponsored by DigitalOcean, GitHub, and various other partners, championing open-source contributions.
 
-> ⭐️ If you're new to Hacktoberfest, you can learn more and register to participate [here](https://hacktoberfest.com/participation/). Registration is from **September 26th- October 31st**.
+> :star: If you're new to Hacktoberfest, you can learn more and register to participate [by heading to the Hacktoberfest website](https://hacktoberfest.com/participation/). Registration is from **September 26th- October 31st**.
 
-## **New Contributor? Welcome!** 🌟
+## **New Contributor? Welcome!** :star2:
 
 We wholeheartedly embrace new contributors to our community. Remember, every expert was once a beginner, and we understand the initial hurdles you might feel. Here’s how you can dive in:
 
@@ -40,9 +40,9 @@ We wholeheartedly embrace new contributors to our community. Remember, every exp
   - Mark your calendars for our **Hacktoberfest Launch event on [October 2nd](https://discord.com/events/937858703112155166/1154126364484583465)**.
   - Stay in the loop - keep an eye on our Discord calendar and pop into our [#events-and-updates channel](https://discord.com/channels/937858703112155166/1151972299814215701) regularly! You won't want to miss out!
 
-Your contribution, be it big or minuscule, carries immense value. We eagerly await to see the waves you'll make in our community! 🚀
+Your contribution, be it big or minuscule, carries immense value. We eagerly await to see the waves you'll make in our community! :rocket:
 
-Here's to a thrilling Hacktoberfest voyage with us! 🎉
+Here's to a thrilling Hacktoberfest voyage with us! :tada:
 
 # DWN Server <!-- omit in toc -->
 
@@ -68,10 +68,10 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
 
 # Supported DBs
 
-- LevelDB ✔️
-- SQLite ✔️
-- MySQL ✔️
-- PostgreSQL ✔️
+- LevelDB :heavy_check_mark:
+- SQLite :heavy_check_mark:
+- MySQL :heavy_check_mark:
+- PostgreSQL :heavy_check_mark:
 
 See more in [Storage Options](#storage-options)
 
@@ -79,7 +79,7 @@ See more in [Storage Options](#storage-options)
 
 Interested in contributing instantly? You can make your updates directly without cloning in the running CodeSandbox environment.
 
-[![Edit in CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/github/TBD54566975/dwn-server/main)
+[![Button to click and edit the code in CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/github/TBD54566975/dwn-server/main)
 
 # Installation
 
@@ -232,7 +232,7 @@ Used to send DWeb Messages to the server.
 - setting the `content-type` request header to `application/octet-stream`
 - sending binary data in the request body.
 
-> 💡 Examples can be found in the [`examples`](./examples) directory.
+> :bulb: Examples can be found in the [`examples`](./examples) directory.
 
 #### Receiving large amounts of data
 
@@ -243,7 +243,7 @@ Used to send DWeb Messages to the server.
 
 Examples can be found in the `examples` directory.
 
-> 💡 **TODO**: Add examples in `examples` directory
+> :bulb: **TODO**: Add examples in `examples` directory
 
 # Hosting your own DWN-server
 
