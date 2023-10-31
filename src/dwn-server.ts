@@ -41,6 +41,10 @@ export class DwnServer {
     callback?.();
   }
 
+  /**
+   * Function to setup the servers (HTTP and WebSocket)
+   * The DWN creation is secondary and only happens if it hasn't already been done.
+   */
   async #setupServer(): Promise<void> {
     if (!this.dwn) {
       this.dwn = await Dwn.create(getDWNConfig(this.config));

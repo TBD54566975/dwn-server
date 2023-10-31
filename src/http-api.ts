@@ -63,6 +63,8 @@ export class HttpApi {
     );
   }
 
+  /* setupRoutes configures the HTTP server's request handlers
+   */
   #setupRoutes(): void {
     this.#api.get('/health', (_req, res) => {
       // return 200 ok

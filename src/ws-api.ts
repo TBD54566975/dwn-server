@@ -27,7 +27,6 @@ export class WsApi {
     this.#wsServer = new WebSocketServer({ server });
   }
 
-  // TODO: github.com/TBD54566975/dwn-server/issues/49 Add code coverage tracker, similar to either dwn-sdk-js or to web5-js
   get address(): AddressInfo | string {
     return this.#wsServer.address();
   }
@@ -122,6 +121,10 @@ export class WsApi {
     });
   }
 
+  /**
+   * This handler returns an interval to ping clients' socket every 30s
+   * if a pong hasn't received from a socket by the next ping, the server will terminate the socket connection.
+   */
   #setupHeartbeat(): NodeJS.Timer {
     // Sometimes connections between client <-> server can get borked in such a way that
     // leaves both unaware of the borkage. ping messages can be used as a means to verify
@@ -140,6 +143,11 @@ export class WsApi {
     }, HEARTBEAT_INTERVAL);
   }
 
+  /**
+   * Handler for starting a WebSocket.
+   * Sets listeners for `connection`, `close` events.
+   * It clears `heartbeatInterval` when a `close` event is made.
+   */
   #setupWebSocket(): void {
     this.#wsServer.on('connection', this.#handleConnection.bind(this));
 
