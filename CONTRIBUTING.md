@@ -9,7 +9,7 @@ Given that we're still in early stages of development, this contribution guide w
   - [Working on the issue](#working-on-the-issue)
   - [Pull Requests](#pull-requests)
 - [Development](#development)
-  - [Running tests](#running-tests)
+  - [Running tests](#tests)
   - [Code Style](#code-style)
   - [Code Guidelines](#code-guidelines)
   - [Available NPM Commands](#available-npm-commands)
@@ -24,16 +24,16 @@ We take our open-source community seriously. Please adhere to our [Code of Condu
 
 - Feel free to open issues for any reason as long as you make it clear what the issue pertains to.
 - Before opening new issues, please search to check if there is an existing issue.
-- Existing issues with labels `bug`, `documentation`, `good first issue`, `help wanted` are excellent candidates for contribution and we'd be thrilled to get all the help we can get. You can take a look at all of the Issues that match the these labels [here](https://github.com/TBD54566975/dwn-server/issues?q=is%3Aopen+label%3A%22help+wanted%22%2C%22good+first+issue%22%2C%22documentation%22%2C%22bug%22+)
+- Existing issues with labels `bug`, `documentation`, `good first issue`, `help wanted` are excellent candidates for contribution, and we'd be thrilled to get all the help we can get. You can take a look at all the Issues that match the these labels [here](https://github.com/TBD54566975/dwn-server/issues?q=is%3Aopen+label%3A%22help+wanted%22%2C%22good+first+issue%22%2C%22documentation%22%2C%22bug%22+)
 - If planning to work on non-trivial issue involving major/significant changes please check with us first on the implementation approach
   - Leave explanation of the approach and tag both @adam4leos and @finn-tbd in the issue
-  - Good idea to also post link to the issue in our [dwn discord channel](https://discord.com/channels/937858703112155166/1068273971432280196) to initate discussion with more people
+  - Good idea to also post link to the issue in our [dwn discord channel](https://discord.com/channels/937858703112155166/1068273971432280196) to initiate discussion with more people
 
 ### Working on the issue
 
 - Check to see if anyone is already working on the issue by looking to see if the issue has a `WIP` tag.
 - Fork the repository
-- Create a branch named the issue number you're taking on (usally branch from `main`)
+- Create a branch named the issue number you're taking on (usually branch from `main`)
 - Push that branch and create a draft PR
 - Paste a link to the draft PR in the issue you're tackling
 - We'll add the `WIP` tag for you
