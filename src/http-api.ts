@@ -7,6 +7,7 @@ import {
 import cors from 'cors';
 import type { Express, Request, Response } from 'express';
 import express from 'express';
+import { readFileSync } from 'fs';
 import http from 'http';
 import log from 'loglevel';
 import { register } from 'prom-client';
@@ -20,18 +21,26 @@ import {
   JsonRpcErrorCodes,
 } from './lib/json-rpc.js';
 
+import { config } from './config.js';
 import { jsonRpcApi } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
+import type { TenantGate } from './tenant-gate.js';
+
+const packagejson = process.env.npm_package_json
+  ? JSON.parse(readFileSync(process.env.npm_package_json).toString())
+  : {};
 
 export class HttpApi {
   #api: Express;
   #server: http.Server;
+  tenantGate: TenantGate;
   dwn: Dwn;
 
-  constructor(dwn: Dwn) {
+  constructor(dwn: Dwn, tenantGate: TenantGate) {
     this.#api = express();
     this.#server = http.createServer(this.#api);
     this.dwn = dwn;
+    this.tenantGate = tenantGate;
 
     this.#setupMiddleware();
     this.#setupRoutes();
@@ -47,6 +56,7 @@ export class HttpApi {
 
   #setupMiddleware(): void {
     this.#api.use(cors({ exposedHeaders: 'dwn-response' }));
+    this.#api.use(express.json());
 
     this.#api.use(
       responseTime((req: Request, res: Response, time) => {
@@ -181,13 +191,39 @@ export class HttpApi {
         return res.json(jsonRpcResponse);
       }
     });
+
+    if (this.tenantGate) {
+      this.tenantGate.setupRoutes(this.#api);
+    }
+
+    this.#api.get('/info.json', (req, res) => {
+      res.setHeader('content-type', 'application/json');
+      const registrationRequirements: string[] = [];
+      if (config.registrationRequirementPow) {
+        registrationRequirements.push('proof-of-work-sha256-v0');
+      }
+      if (config.registrationRequirementTos) {
+        registrationRequirements.push('terms-of-service');
+      }
+
+      res.json({
+        server: process.env.npm_package_name,
+        maxFileSize: config.maxRecordDataSize,
+        registrationRequirements: registrationRequirements,
+        version: packagejson.version,
+        sdkVersion: packagejson.dependencies['@tbd54566975/dwn-sdk-js'],
+      });
+    });
   }
 
   #listen(port: number, callback?: () => void): void {
     this.#server.listen(port, callback);
   }
 
-  start(port: number, callback?: () => void): http.Server {
+  async start(port: number, callback?: () => void): Promise<http.Server> {
+    if (this.tenantGate) {
+      await this.tenantGate.initialize();
+    }
     this.#listen(port, callback);
     return this.#server;
   }

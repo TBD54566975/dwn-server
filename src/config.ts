@@ -20,6 +20,15 @@ export const config = {
   eventLog:
     process.env.DWN_STORAGE_EVENTS || process.env.DWN_STORAGE || 'level://data',
 
+  // require POW-based registration for new tenants
+  registrationRequirementPow: process.env.DWN_REGISTRATION_POW == 'true',
+  tenantRegistrationStore:
+    process.env.DWN_STORAGE_REGISTRATION ||
+    process.env.DWN_STORAGE ||
+    'sqlite://data/dwn.db',
+
+  registrationRequirementTos: process.env.DWN_REGISTRATION_TOS,
+
   // log level - trace/debug/info/warn/error
   logLevel: process.env.DWN_SERVER_LOG_LEVEL || 'INFO',
 };

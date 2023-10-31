@@ -25,6 +25,7 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 
 import type { Config } from './config.js';
+import type { TenantGate } from './tenant-gate.js';
 
 export enum EStoreType {
   DataStore,
@@ -41,7 +42,10 @@ export enum BackendTypes {
 
 export type StoreType = DataStore | EventLog | MessageStore;
 
-export function getDWNConfig(config: Config): DwnConfig {
+export function getDWNConfig(
+  config: Config,
+  tenantGate: TenantGate,
+): DwnConfig {
   const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
   const eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);
   const messageStore: MessageStore = getStore(
@@ -49,7 +53,7 @@ export function getDWNConfig(config: Config): DwnConfig {
     EStoreType.MessageStore,
   );
 
-  return { eventLog, dataStore, messageStore };
+  return { eventLog, dataStore, messageStore, tenantGate };
 }
 
 function getLevelStore(
@@ -113,14 +117,14 @@ function getStore(storeString: string, storeType: EStoreType): StoreType {
     case BackendTypes.SQLITE:
     case BackendTypes.MYSQL:
     case BackendTypes.POSTGRES:
-      return getDBStore(getDBFromURI(storeURI), storeType);
+      return getDBStore(getDialectFromURI(storeURI), storeType);
 
     default:
       throw invalidStorageSchemeMessage(storeURI.protocol);
   }
 }
 
-function getDBFromURI(u: URL): Dialect {
+export function getDialectFromURI(u: URL): Dialect {
   switch (u.protocol.slice(0, -1)) {
     case BackendTypes.SQLITE:
       return new SqliteDialect({

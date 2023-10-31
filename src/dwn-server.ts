@@ -1,5 +1,6 @@
 import { Dwn } from '@tbd54566975/dwn-sdk-js';
 
+import { readFileSync } from 'fs';
 import type { Server } from 'http';
 import log from 'loglevel';
 import prefix from 'loglevel-plugin-prefix';
@@ -10,7 +11,8 @@ import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js
 import { type Config, config as defaultConfig } from './config.js';
 import { HttpApi } from './http-api.js';
 import { setProcessHandlers } from './process-handlers.js';
-import { getDWNConfig } from './storage.js';
+import { getDWNConfig, getDialectFromURI } from './storage.js';
+import { TenantGate } from './tenant-gate.js';
 import { WsApi } from './ws-api.js';
 
 export type DwnServerOptions = {
@@ -46,12 +48,27 @@ export class DwnServer {
    * The DWN creation is secondary and only happens if it hasn't already been done.
    */
   async #setupServer(): Promise<void> {
+    let tenantGate: TenantGate;
     if (!this.dwn) {
-      this.dwn = await Dwn.create(getDWNConfig(this.config));
+      const tenantGateDB = getDialectFromURI(
+        new URL(this.config.tenantRegistrationStore),
+      );
+      const tos =
+        this.config.registrationRequirementTos !== undefined
+          ? readFileSync(this.config.registrationRequirementTos).toString()
+          : null;
+      tenantGate = new TenantGate(
+        tenantGateDB,
+        this.config.registrationRequirementPow,
+        this.config.registrationRequirementTos !== undefined,
+        tos,
+      );
+
+      this.dwn = await Dwn.create(getDWNConfig(this.config, tenantGate));
     }
 
-    this.#httpApi = new HttpApi(this.dwn);
-    this.#httpApi.start(this.config.port, () => {
+    this.#httpApi = new HttpApi(this.dwn, tenantGate);
+    await this.#httpApi.start(this.config.port, () => {
       log.info(`HttpServer listening on port ${this.config.port}`);
     });
 

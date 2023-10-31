@@ -7,6 +7,7 @@ import {
   RecordsWrite,
 } from '@tbd54566975/dwn-sdk-js';
 
+import { createHash } from 'crypto';
 import type { ReadStream } from 'node:fs';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -187,4 +188,29 @@ export async function sendWsMessage(
       socket.send(message);
     };
   });
+}
+
+const nonceChars =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+export function generateNonce(size: number): string {
+  let challenge = '';
+  while (challenge.length < size) {
+    challenge += nonceChars.charAt(
+      Math.floor(Math.random() * nonceChars.length),
+    );
+  }
+  return challenge;
+}
+
+export function checkNonce(
+  challenge: string,
+  nonce: string,
+  complexity: number,
+): boolean {
+  const hash = createHash('sha256');
+  hash.update(challenge);
+  hash.update(nonce);
+
+  return hash.digest('hex').startsWith('0'.repeat(complexity));
 }

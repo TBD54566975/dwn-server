@@ -1,21 +1,45 @@
+import { Dwn } from '@tbd54566975/dwn-sdk-js';
 import {
-  Dwn,
-  DataStoreLevel,
-  EventLogLevel,
-  MessageStoreLevel,
-} from '@tbd54566975/dwn-sdk-js';
+  DataStoreSql,
+  EventLogSql,
+  MessageStoreSql,
+} from '@tbd54566975/dwn-sql-store';
 
-const dataStore = new DataStoreLevel({ blockstoreLocation: 'data/DATASTORE' });
-const eventLog = new EventLogLevel({ location: 'data/EVENTLOG' });
-const messageStore = new MessageStoreLevel({
-  blockstoreLocation: 'data/MESSAGESTORE',
-  indexLocation: 'data/INDEX',
-});
+import { readFileSync } from 'node:fs';
 
-export const dwn = await Dwn.create({ eventLog, dataStore, messageStore });
+import { getDialectFromURI } from '../src/storage.js';
+import { TenantGate } from '../src/tenant-gate.js';
 
-export async function clear(): Promise<void> {
-  await dataStore.clear();
-  await eventLog.clear();
-  await messageStore.clear();
+export async function getTestDwn(
+  powRequired?: boolean,
+  tosRequired?: boolean,
+): Promise<{
+  dwn: Dwn;
+  tenantGate: TenantGate;
+}> {
+  const db = getDialectFromURI(new URL('sqlite://'));
+  const dataStore = new DataStoreSql(db);
+  const eventLog = new EventLogSql(db);
+  const messageStore = new MessageStoreSql(db);
+  const tenantGate = new TenantGate(
+    db,
+    powRequired,
+    tosRequired,
+    tosRequired ? readFileSync('./tests/fixtures/tos.txt').toString() : null,
+    true,
+  );
+
+  let dwn: Dwn;
+  try {
+    dwn = await Dwn.create({
+      eventLog,
+      dataStore,
+      messageStore,
+      tenantGate,
+    });
+  } catch (e) {
+    throw e;
+  }
+
+  return { dwn, tenantGate };
 }
