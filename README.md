@@ -1,49 +1,3 @@
-# :tada: **We're participating in Hacktoberfest 2023!** :tada:
-
-Want to contribute during Hacktoberfest? We'd love to have you! Dive in, and your contributions could earn you some exclusive rewards.
-
-The **first 20 contributors** to successfully merge a PR will secure exclusive swag of their choosing from our [TBD shop](https://www.tbd.shop/) — we're in the midst of uploading new swag! Keep an eye on our [leaderboard issue](https://github.com/TBD54566975/developer.tbd.website/issues/721) to see where you rank! :star:
-
-:rocket: **Gear up for a month packed with exciting events!** :tada:
-
-- Mark your calendars for our **Hacktoberfest Launch event on [October 2nd on Discord](https://discord.com/events/937858703112155166/1154126364484583465)**.
-- Stay in the loop - keep an eye on our Discord calendar and pop into our [events-and-updates channel](https://discord.com/channels/937858703112155166/1151972299814215701) regularly! You won't want to miss out!
-
-## **Hacktoberfest Guidelines:**
-
-- Ensure your contribution is meaningful and fits within the scope of our project, by reading an open issue in its entirety before diving in.
-- Check out our `good-first-issue` and `hacktoberfest` labels in the issues section.
-- Join our Discord: Connect with the community, stay up to date with Hacktoberfest events/prizes, and discuss Hacktoberfest contributions on our Discord server. [Join our Discord server](https://discord.com/channels/937858703112155166/1151216855957123104).
-- Always be respectful and follow our [code of conduct](https://developer.tbd.website/open-source/code-of-conduct).
-- If in doubt about what to contribute, reach out to maintainers by raising a question in the relevant issue or specified discord channel.
-- **Other participating TBD Repos:**
-  - [developer.tbd.website](https://github.com/TBD54566975/developer.tbd.website/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
-  - [DWN-SDK-JS](https://github.com/TBD54566975/dwn-sdk-js/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
-  - [Web5-js](https://github.com/TBD54566975/web5-js/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
-
-## **What is Hacktoberfest?**
-
-Celebrate the 10th anniversary of Hacktoberfest this year! Hosted annually every October, Hacktoberfest is a month-long event sponsored by DigitalOcean, GitHub, and various other partners, championing open-source contributions.
-
-> :star: If you're new to Hacktoberfest, you can learn more and register to participate [by heading to the Hacktoberfest website](https://hacktoberfest.com/participation/). Registration is from **September 26th- October 31st**.
-
-## **New Contributor? Welcome!** :star2:
-
-We wholeheartedly embrace new contributors to our community. Remember, every expert was once a beginner, and we understand the initial hurdles you might feel. Here’s how you can dive in:
-
-- **Join Our Discord Channel**:
-  - Once inside, check out the [`Hacktoberfest`](https://discord.com/channels/937858703112155166/) section. This has all you need: resources, guidelines, and a checklist to help you make your first hacktoberfest contribution.
-- **Feeling Anxious or Unsure? Find a Buddy!**:
-  - Head over to our [`hack-together`](https://discord.com/channels/937858703112155166/1151519449837482044) section on Discord. It's perfectly normal to feel a tad overwhelmed or even the imposter syndrome on your first go. In this space, you can partner with someone to collaborate, share thoughts, or jointly tackle an issue. You know what they say, two heads are better than one!
-- **Dive In**:
-  - Skim through our [open issues](https://github.com/TBD54566975/developer.tbd.website/edit/main/README.md#hacktoberfest-guidelines) and pick one you vibe with. And if you're on the fence about anything, don't hesitate to ask. Your new community is here to assist and walk with you every step of the way.
-  - Mark your calendars for our **Hacktoberfest Launch event on [October 2nd](https://discord.com/events/937858703112155166/1154126364484583465)**.
-  - Stay in the loop - keep an eye on our Discord calendar and pop into our [#events-and-updates channel](https://discord.com/channels/937858703112155166/1151972299814215701) regularly! You won't want to miss out!
-
-Your contribution, be it big or minuscule, carries immense value. We eagerly await to see the waves you'll make in our community! :rocket:
-
-Here's to a thrilling Hacktoberfest voyage with us! :tada:
-
 # DWN Server <!-- omit in toc -->
 
 Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API over `http:` and `ws:`
@@ -52,7 +6,6 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
 - [Installation](#installation)
 - [Package usage](#package-usage)
 - [Running The Server](#running-the-server)
-- [Hosted examples you can use:](#hosted-examples-you-can-use)
 - [JSON-RPC API](#json-rpc-api)
   - [Available Methods](#available-methods)
     - [`dwn.processMessage`](#dwnprocessmessage)
@@ -66,7 +19,7 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
 - [Configuration](#configuration)
   - [Storage Options](#storage-options)
 
-# Supported DBs
+## Supported DBs
 
 - LevelDB :heavy_check_mark:
 - SQLite :heavy_check_mark:
@@ -81,13 +34,13 @@ Interested in contributing instantly? You can make your updates directly without
 
 [![Button to click and edit the code in CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/github/TBD54566975/dwn-server/main)
 
-# Installation
+## Installation
 
 ```bash
 npm install @web5/dwn-server
 ```
 
-# Package usage
+## Package usage
 
 ```typescript
 import { DwnServer } from '@web5/dwn-server';
@@ -97,23 +50,23 @@ const server = new DwnServer();
 server.start();
 ```
 
-# Running the server
+## Running the server
 
-## Running via docker
+### Running via docker
 
 `docker run -p 3000:3000 -v myvolume:/dwn-server/data ghcr.io/tbd54566975/dwn-server:main`
 
 This can run on services like AWS, GCP, VPS, home server (with ngrok or cloudflare), fly.io, render.com etc.
 Ideally the volume is persistent so that data is kept (or has to be synced back from another DWN instance).
 
-## Running a specific version
+### Running a specific version
 
-Running the command above will run the latest version at the time the image is pulled. If you need to run a specific version (and in many cases this is recommended) you can see the list published images here: https://github.com/TBD54566975/dwn-server/pkgs/container/dwn-server/versions
+Running the command above will run the latest version at the time the image is pulled. If you need to run a specific version (and in many cases this is recommended) [you can see the list published images here](https://github.com/TBD54566975/dwn-server/pkgs/container/dwn-server/versions)
 
 To run a specific image:
 `docker pull ghcr.io/tbd54566975/dwn-server@sha256:870e0f0f12016e6607060a81ea31458443f7439522fab2688d7a6706ab366c58`
 
-## Running Locally for Development
+### Running Locally for Development
 
 ```bash
 git clone https://github.com/TBD54566975/dwn-server.git
@@ -122,12 +75,12 @@ npm install
 npm run server
 ```
 
-## Building a docker image locally
+### Building a docker image locally
 
 A docker image is continuously published from this repository, but if you want to build it locally run:
 `docker build -t dwn-server .`
 
-# JSON-RPC API
+## JSON-RPC API
 
 [JSON-RPC](https://www.jsonrpc.org/specification) is a lightweight remote procedure call (RPC) protocol that uses JSON as a data format for exchanging information between a client and a server over a network. JSON-RPC is language-independent and transport-agnostic which makes it usable in a variety of contexts (e.g. browser, server-side)
 
@@ -145,13 +98,13 @@ The response message contains:
 - the result of the method invocation (`result`)
 - an error message if the method invocation failed (`error`)
 
-## Available Methods
+### Available Methods
 
-### `dwn.processMessage`
+#### `dwn.processMessage`
 
 Used to send DWeb Messages to the server.
 
-#### Params
+##### Params
 
 | Property      | Required (Y/N) | Description                                                               |
 | ------------- | -------------- | ------------------------------------------------------------------------- |
@@ -159,7 +112,7 @@ Used to send DWeb Messages to the server.
 | `message`     | Y              | The DWeb Message                                                          |
 | `encodedData` | N              | Data associated to the message (e.g. data associated to a `RecordsWrite`) |
 
-#### Example Request Message
+##### Example Request Message
 
 ```json
 {
@@ -194,7 +147,7 @@ Used to send DWeb Messages to the server.
 }
 ```
 
-#### Example Success Response
+##### Example Success Response
 
 ```json
 {
@@ -211,7 +164,7 @@ Used to send DWeb Messages to the server.
 }
 ```
 
-#### Example Error Response
+##### Example Error Response
 
 ```json
 {
@@ -224,7 +177,7 @@ Used to send DWeb Messages to the server.
 }
 ```
 
-#### Transporting large amounts of data
+##### Transporting large amounts of data
 
 `RecordsWrite` data can be of any size. If needed, large amounts of data can be streamed to the server over http by:
 
@@ -234,7 +187,7 @@ Used to send DWeb Messages to the server.
 
 > :bulb: Examples can be found in the [`examples`](./examples) directory.
 
-#### Receiving large amounts of data
+##### Receiving large amounts of data
 
 `RecordsWrite` data can be of any size. `RecordsWrite` messages returned as the result of a `RecordsQuery` will include `encodedData` _if_ the `RecordsWrite` data is under `9.77KB`. Data larger than this will need to be fetched using `RecordsRead` which can be done over http. The response to a `RecordsRead` includes:
 
@@ -245,7 +198,7 @@ Examples can be found in the `examples` directory.
 
 > :bulb: **TODO**: Add examples in `examples` directory
 
-# Hosting your own DWN-server
+## Hosting your own DWN-server
 
 By default, when you call `web5.connect()` there will be some bootstrap DWN nodes included which allow people to reach you via your DID.
 
@@ -255,7 +208,7 @@ DWNs can be as simple as a docker image or a node process running somewhere.
 DWN-servers can run anywhere you can run node.js or docker. http and websocket need to be available to the DWN server.
 See below for some suggestions.
 
-## Running on render.com
+### Running on render.com
 
 You can run an instance on the render.com service:
 
@@ -267,11 +220,11 @@ You can run an instance on the render.com service:
 - Choose the "starter" size instance
 - Create a 1GB (or larger) disk, and mount it on /dwn-server/data
 
-## Running with ngrok
+### Running with ngrok
 
 You can run a DWN-server on your local machine or home server and expose it to the internet using ngrok.
 
-First, install ngrok: https://ngrok.com/download
+First, install [ngrok](https://ngrok.com/download)
 
 Then run:
 
@@ -284,10 +237,10 @@ ngrok http 3000
 
 Note the resulting publicly addressable https url for your DWN instance.
 
-## Running with cloudflared
+### Running with cloudflared
 
 Cloudflare has a tunnel service that you can use to expose your DWN server to the internet, if you run it on a server at home.
-With https://github.com/cloudflare/cloudflared installed, run the following commands:
+With [cloudflared](https://github.com/cloudflare/cloudflared) installed, run the following commands:
 
 ```bash
 git clone https://github.com/TBD54566975/dwn-server.git
@@ -300,12 +253,12 @@ npm run server
 cloudflared tunnel --url http://localhost:3000
 ```
 
-## Running on GCP
+### Running on GCP
 
 ... check back soon ...
 (enterprising people I am sure can work it out)
 
-# `npm` scripts
+## `npm` scripts
 
 | Script                 | Description                                                        |
 | ---------------------- | ------------------------------------------------------------------ |
@@ -320,7 +273,7 @@ cloudflared tunnel --url http://localhost:3000
 | `npm run server`       | starts server                                                      |
 | `npm run prepare`      | prepares husky for pre-commit hooks (auto-runs with `npm install`) |
 
-# Configuration
+## Configuration
 
 Configuration can be set using environment variables
 
@@ -334,7 +287,7 @@ Configuration can be set using environment variables
 | `DWN_STORAGE_DATA`        | URL to use for data storage                                                            | value of `DWN_STORAGE` |
 | `DWN_STORAGE_EVENTS`      | URL to use for event storage                                                           | value of `DWN_STORAGE` |
 
-## Storage Options
+### Storage Options
 
 Several storage formats are supported, and may be configured with the `DWN_STORAGE_*` environment variables:
 
