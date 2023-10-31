@@ -10,7 +10,7 @@ Installing this chart requires [having helm installed locally](https://helm.sh/d
 
 Once Kubernetes and Helm are ready:
 
-```
+```bash
 git clone https://github.com/TBD54566975/dwn-server.git
 cd dwn-server/charts
 helm upgrade --install --namespace dwn-server dwn-server .
@@ -20,17 +20,17 @@ By default, the dwn-server that's deployed is only accessible from with the Kube
 
 To access the dwn-server from within the cluster:
 
-```
+```bash
 kubectl port-forward -n dwn-server service/dwn-server 3000:80
 ```
 
 You can then, in another terminal window, confirm everything is working by running:
 
-```
+```bash
 curl localhost:3000
 ```
 
-Which should return the message "please use a web5 client, for example: https://github.com/TBD54566975/web5-js"
+Which should return the message "please use a web5 client"
 
 ## Chart Values
 

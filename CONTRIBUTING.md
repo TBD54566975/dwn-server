@@ -9,7 +9,7 @@ Given that we're still in early stages of development, this contribution guide w
   - [Working on the issue](#working-on-the-issue)
   - [Pull Requests](#pull-requests)
 - [Development](#development)
-  - [Running tests](#running-tests)
+  - [Running tests](#tests)
   - [Code Style](#code-style)
   - [Code Guidelines](#code-guidelines)
   - [Available NPM Commands](#available-npm-commands)

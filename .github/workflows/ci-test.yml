@@ -21,9 +21,6 @@ jobs:
       - name: Run tests
         run: npm run test
 
-      - name: Run linter
-        run: npm run lint
-
       - name: Upload test coverage to Codecov
         uses: codecov/codecov-action@v3
         env:
@@ -35,3 +32,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
       - run: docker build .
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: DavidAnson/markdownlint-cli2-action@v13
+        with:
+          globs: '**/*.md'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
