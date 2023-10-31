@@ -63,8 +63,7 @@ export class HttpApi {
     );
   }
 
-  /* Handler for setting up Express API routes
-   * API routes for `/`, `/health`, `/metrics`, `/:did/records/:id`
+  /* setupRoutes configures the HTTP server's request handlers
    */
   #setupRoutes(): void {
     this.#api.get('/health', (_req, res) => {
