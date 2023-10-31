@@ -247,7 +247,7 @@ Examples can be found in the `examples` directory.
 
 # Hosting your own DWN-server
 
-By default when you call `web5.connect()` there will be some bootstrap DWN nodes included which allow people to reach you via your DID.
+By default, when you call `web5.connect()` there will be some bootstrap DWN nodes included which allow people to reach you via your DID.
 
 You may want to run a DWN server just for you, or as a public service for you and your friends and family.
 DWNs can be as simple as a docker image or a node process running somewhere.
@@ -263,7 +263,7 @@ You can run an instance on the render.com service:
 - Fork this repo
 - Upgrade your render.com account to a paid account
 - Create a new "Web service" type application
-- Choose the forked repo to run (or you can point to to the main repo)
+- Choose the forked repo to run (or you can point to the main repo)
 - Choose the "starter" size instance
 - Create a 1GB (or larger) disk, and mount it on /dwn-server/data
 
