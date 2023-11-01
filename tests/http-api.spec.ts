@@ -515,6 +515,10 @@ describe('http api', function () {
         dataSize: size,
         published: true,
       });
+      console.log(recordsWrite.message.descriptor);
+      recordsWrite.message.descriptor.protocolPath = 'image';
+      recordsWrite.message.descriptor.protocol = 'image';
+      recordsWrite.message.contextId = 'what is this field';
       const requestId = uuidv4();
       const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: recordsWrite.toJSON(),
@@ -532,9 +536,10 @@ describe('http api', function () {
       expect(body.id).to.equal(requestId);
       expect(body.error).to.not.exist;
       const { reply } = body.result;
+      console.log(reply);
       expect(reply.status.code).to.equal(202);
       response = await fetch(
-        `http://localhost:3000/dwn/${alice.did}/records?protocolPath=photo`,
+        `http://localhost:3000/dwn/${alice.did}/records?protocolPath=image`,
       );
       console.log(await response.json());
       const blob = await response.blob();
