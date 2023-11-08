@@ -77,7 +77,7 @@ export async function createRecordsWriteMessage(
   const recordsWrite = await RecordsWrite.create({
     ...overrides,
     dataFormat: 'application/json',
-    authorizationSigner: signer.signer,
+    signer: signer.signer,
   });
 
   let dataStream: Readable | undefined;
