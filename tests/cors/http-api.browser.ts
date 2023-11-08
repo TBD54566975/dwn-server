@@ -21,7 +21,7 @@ describe('http-api', () => {
         data,
         dataFormat: 'text/plalin',
         published: true,
-        authorizationSigner: Jws.createSigner(alice),
+        signer: Jws.createSigner(alice),
       })
     ).toJSON();
     const recordsRead = (
@@ -29,7 +29,7 @@ describe('http-api', () => {
         filter: {
           recordId: recordsWrite.recordId,
         },
-        authorizationSigner: Jws.createSigner(alice),
+        signer: Jws.createSigner(alice),
       })
     ).toJSON();
 
