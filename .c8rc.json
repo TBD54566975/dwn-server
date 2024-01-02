@@ -4,5 +4,5 @@
   "extension": [".js"],
   "include": ["dist/esm/src/**"],
   "exclude": ["dist/esm/src/types/**"],
-  "reporter": ["text", "cobertura"]
+  "reporter": ["text", "cobertura", "html"]
 }
