@@ -5,11 +5,17 @@ import {
   MessageStoreLevel,
 } from '@tbd54566975/dwn-sdk-js';
 
-const dataStore = new DataStoreLevel({ blockstoreLocation: 'data/DATASTORE' });
-const eventLog = new EventLogLevel({ location: 'data/EVENTLOG' });
+const testDwnDataDirectory = 'data-test';
+
+const dataStore = new DataStoreLevel({
+  blockstoreLocation: `${testDwnDataDirectory}/DATASTORE`,
+});
+const eventLog = new EventLogLevel({
+  location: `${testDwnDataDirectory}/EVENTLOG`,
+});
 const messageStore = new MessageStoreLevel({
-  blockstoreLocation: 'data/MESSAGESTORE',
-  indexLocation: 'data/INDEX',
+  blockstoreLocation: `${testDwnDataDirectory}/MESSAGESTORE`,
+  indexLocation: `${testDwnDataDirectory}/INDEX`,
 });
 
 export const dwn = await Dwn.create({ eventLog, dataStore, messageStore });

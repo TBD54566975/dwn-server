@@ -1,7 +1,13 @@
 .DS_STORE
 browser-test
 dist
+
+# location of levelDB data storage for DWN
 data
+
+# location of levelDB data storage for DWN created by tests
+data-test
+
 etc
 node_modules
 tmp
