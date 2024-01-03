@@ -1,4 +1,4 @@
-import { DataStream } from '@tbd54566975/dwn-sdk-js';
+import { DataStream, DidKeyResolver } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
 import { base64url } from 'multiformats/bases/base64';
@@ -12,11 +12,7 @@ import {
 } from '../src/lib/json-rpc.js';
 import { WsApi } from '../src/ws-api.js';
 import { clear as clearDwn, dwn } from './test-dwn.js';
-import {
-  createProfile,
-  createRecordsWriteMessage,
-  sendWsMessage,
-} from './utils.js';
+import { createRecordsWriteMessage, sendWsMessage } from './utils.js';
 
 let server: http.Server;
 let wsServer: WebSocketServer;
@@ -60,7 +56,7 @@ describe('websocket api', function () {
   });
 
   it('handles RecordsWrite messages', async function () {
-    const alice = await createProfile();
+    const alice = await DidKeyResolver.generate();
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
     const dataBytes = await DataStream.toBytes(dataStream);
     const encodedData = base64url.baseEncode(dataBytes);

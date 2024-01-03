@@ -1,16 +1,15 @@
-import { RecordsRead } from '@tbd54566975/dwn-sdk-js';
+import { RecordsRead, DidKeyResolver } from '@tbd54566975/dwn-sdk-js';
 
 import fetch from 'node-fetch';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createJsonRpcRequest } from '../../dist/src/lib/json-rpc.js';
 import {
-  createProfile,
   createRecordsWriteMessage,
   getFileAsReadStream,
 } from '../../dist/tests/utils.js';
 
-const alice = await createProfile();
+const alice = await DidKeyResolver();
 const { stream, size, cid } = await getFileAsReadStream('fixtures/test.jpeg');
 const { recordsWrite } = await createRecordsWriteMessage(alice, {
   dataCid: cid,
