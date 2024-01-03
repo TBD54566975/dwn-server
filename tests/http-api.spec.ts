@@ -2,6 +2,7 @@
 import {
   Cid,
   DataStream,
+  DidKeyResolver,
   RecordsQuery,
   RecordsRead,
 } from '@tbd54566975/dwn-sdk-js';
@@ -24,7 +25,6 @@ import {
 } from '../src/lib/json-rpc.js';
 import { clear as clearDwn, dwn } from './test-dwn.js';
 import {
-  createProfile,
   createRecordsWriteMessage,
   getFileAsReadStream,
   streamHttpRequest,
@@ -77,7 +77,7 @@ describe('http api', function () {
   });
 
   it('responds with a 2XX HTTP status if JSON RPC handler returns 4XX/5XX DWN status code', async function () {
-    const alice = await createProfile();
+    const alice = await DidKeyResolver.generate();
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
 
     // Intentionally delete a required property to produce an invalid RecordsWrite message.
@@ -135,7 +135,7 @@ describe('http api', function () {
   });
 
   it('works fine when no request body is provided', async function () {
-    const alice = await createProfile();
+    const alice = await DidKeyResolver.generate();
     const recordsQuery = await RecordsQuery.create({
       filter: {
         schema: 'woosa',
@@ -165,7 +165,7 @@ describe('http api', function () {
       const filePath = './fixtures/test.jpeg';
       const { cid, size, stream } = await getFileAsReadStream(filePath);
 
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
       const { recordsWrite } = await createRecordsWriteMessage(alice, {
         dataCid: cid,
         dataSize: size,
@@ -200,7 +200,7 @@ describe('http api', function () {
     });
 
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
 
       // First RecordsWrite that creates the record.
       const { recordsWrite: initialWrite, dataStream } =
@@ -258,7 +258,7 @@ describe('http api', function () {
     });
 
     it('handles a RecordsWrite tombstone', async function () {
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
       const { recordsWrite: tombstone } =
         await createRecordsWriteMessage(alice);
 
@@ -306,7 +306,7 @@ describe('http api', function () {
         stream,
       } = await getFileAsReadStream(filePath);
 
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
       const { recordsWrite } = await createRecordsWriteMessage(alice, {
         dataCid: expectedCid,
         dataSize: size,
@@ -390,7 +390,7 @@ describe('http api', function () {
         stream,
       } = await getFileAsReadStream(filePath);
 
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
       const { recordsWrite } = await createRecordsWriteMessage(alice, {
         dataCid: expectedCid,
         dataSize: size,
@@ -436,7 +436,7 @@ describe('http api', function () {
         stream,
       } = await getFileAsReadStream(filePath);
 
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
       const { recordsWrite } = await createRecordsWriteMessage(alice, {
         dataCid: expectedCid,
         dataSize: size,
@@ -473,7 +473,7 @@ describe('http api', function () {
     });
 
     it('returns a 404 if record doesnt exist', async function () {
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
       const { recordsWrite } = await createRecordsWriteMessage(alice);
 
       const response = await fetch(
@@ -483,7 +483,7 @@ describe('http api', function () {
     });
 
     it('returns a 404 for invalid did', async function () {
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
       const { recordsWrite } = await createRecordsWriteMessage(alice);
 
       const response = await fetch(
@@ -493,7 +493,7 @@ describe('http api', function () {
     });
 
     it('returns a 404 for invalid record id', async function () {
-      const alice = await createProfile();
+      const alice = await DidKeyResolver.generate();
       const response = await fetch(
         `http://localhost:3000/${alice.did}/records/kaka`,
       );
