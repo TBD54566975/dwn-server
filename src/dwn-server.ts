@@ -11,8 +11,8 @@ import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js
 import { type Config, config as defaultConfig } from './config.js';
 import { HttpApi } from './http-api.js';
 import { setProcessHandlers } from './process-handlers.js';
+import { RegisteredTenantGate } from './registered-tenant-gate.js';
 import { getDWNConfig, getDialectFromURI } from './storage.js';
-import { TenantGate } from './tenant-gate.js';
 import { WsApi } from './ws-api.js';
 
 export type DwnServerOptions = {
@@ -48,20 +48,22 @@ export class DwnServer {
    * The DWN creation is secondary and only happens if it hasn't already been done.
    */
   async #setupServer(): Promise<void> {
-    let tenantGate: TenantGate;
+    let tenantGate: RegisteredTenantGate;
     if (!this.dwn) {
       const tenantGateDB = getDialectFromURI(
         new URL(this.config.tenantRegistrationStore),
       );
-      const tos =
-        this.config.registrationRequirementTos !== undefined
-          ? readFileSync(this.config.registrationRequirementTos).toString()
-          : null;
-      tenantGate = new TenantGate(
+
+      // Load terms of service if given the path.
+      const termsOfService =
+        this.config.termsOfServiceFilePath !== undefined
+          ? readFileSync(this.config.termsOfServiceFilePath).toString()
+          : undefined;
+
+      tenantGate = new RegisteredTenantGate(
         tenantGateDB,
         this.config.registrationRequirementPow,
-        this.config.registrationRequirementTos !== undefined,
-        tos,
+        termsOfService,
       );
 
       this.dwn = await Dwn.create(getDWNConfig(this.config, tenantGate));

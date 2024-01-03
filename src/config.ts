@@ -27,7 +27,7 @@ export const config = {
     process.env.DWN_STORAGE ||
     'sqlite://data/dwn.db',
 
-  registrationRequirementTos: process.env.DWN_REGISTRATION_TOS,
+  termsOfServiceFilePath: process.env.DWN_TERMS_OF_SERVICE_FILE_PATH,
 
   // log level - trace/debug/info/warn/error
   logLevel: process.env.DWN_SERVER_LOG_LEVEL || 'INFO',

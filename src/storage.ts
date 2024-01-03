@@ -25,7 +25,7 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 
 import type { Config } from './config.js';
-import type { TenantGate } from './tenant-gate.js';
+import type { RegisteredTenantGate } from './registered-tenant-gate.js';
 
 export enum EStoreType {
   DataStore,
@@ -44,7 +44,7 @@ export type StoreType = DataStore | EventLog | MessageStore;
 
 export function getDWNConfig(
   config: Config,
-  tenantGate: TenantGate,
+  tenantGate: RegisteredTenantGate,
 ): DwnConfig {
   const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
   const eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);

@@ -28,7 +28,7 @@ import {
   createJsonRpcRequest,
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
-import type { TenantGate } from '../src/tenant-gate.js';
+import type { RegisteredTenantGate } from '../src/registered-tenant-gate.js';
 import { getTestDwn } from './test-dwn.js';
 import type { Profile } from './utils.js';
 import {
@@ -49,7 +49,7 @@ describe('http api', function () {
   let httpApi: HttpApi;
   let server: Server;
   let profile: Profile;
-  let tenantGate: TenantGate;
+  let tenantGate: RegisteredTenantGate;
   let dwn: Dwn;
   let clock;
 
@@ -57,17 +57,17 @@ describe('http api', function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
 
     config.registrationRequirementPow = true;
-    config.registrationRequirementTos = './tests/fixtures/tos.txt';
-    const testdwn = await getTestDwn(true, true);
-    dwn = testdwn.dwn;
-    tenantGate = testdwn.tenantGate;
+    config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
+    const testDwn = await getTestDwn(true, true);
+    dwn = testDwn.dwn;
+    tenantGate = testDwn.tenantGate;
 
     httpApi = new HttpApi(dwn, tenantGate);
 
     await tenantGate.initialize();
     profile = await createProfile();
     await tenantGate.authorizeTenantPOW(profile.did);
-    await tenantGate.authorizeTenantTOS(profile.did);
+    await tenantGate.authorizeTenantTermsOfService(profile.did);
   });
 
   beforeEach(async function () {
@@ -126,7 +126,7 @@ describe('http api', function () {
 
       expect(submitResponse.status).to.equal(200);
 
-      await tenantGate.authorizeTenantTOS(p.did);
+      await tenantGate.authorizeTenantTermsOfService(p.did);
 
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -300,7 +300,7 @@ describe('http api', function () {
       expect(submitResponse.status).to.equal(401);
     });
 
-    it('rejects tenants that have not accepted the TOS and have not completed POW', async function () {
+    it('rejects tenants that have not accepted the terms of use and have not completed POW', async function () {
       const unauthorized = await createProfile();
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -323,9 +323,9 @@ describe('http api', function () {
       expect(response.body.result.reply.status.code).to.equal(401);
     });
 
-    it('rejects tenants that have accepted the TOS but not completed POW', async function () {
+    it('rejects tenants that have accepted the terms of use but not completed POW', async function () {
       const unauthorized = await createProfile();
-      await tenantGate.authorizeTenantTOS(unauthorized.did);
+      await tenantGate.authorizeTenantTermsOfService(unauthorized.did);
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
         signer: unauthorized.signer,
@@ -348,15 +348,17 @@ describe('http api', function () {
     });
   });
 
-  describe('/register/tos', function () {
+  describe('/register/terms-of-service', function () {
     it('allow tenant that after accepting the terms of service', async function () {
-      const response = await fetch('http://localhost:3000/register/tos');
+      const response = await fetch(
+        'http://localhost:3000/register/terms-of-service',
+      );
       expect(response.status).to.equal(200);
 
       const terms = await response.text();
 
       expect(terms).to.equal(
-        readFileSync('./tests/fixtures/tos.txt').toString(),
+        readFileSync('./tests/fixtures/terms-of-service.txt').toString(),
       );
 
       const hash = createHash('sha256');
@@ -364,14 +366,17 @@ describe('http api', function () {
 
       const p = await createProfile();
 
-      const acceptResponse = await fetch('http://localhost:3000/register/tos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          did: p.did,
-          tosHash: hash.digest('hex'),
-        }),
-      });
+      const acceptResponse = await fetch(
+        'http://localhost:3000/register/terms-of-service',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            did: p.did,
+            termsOfServiceHash: hash.digest('hex'),
+          }),
+        },
+      );
       expect(acceptResponse.status).to.equal(200);
       await tenantGate.authorizeTenantPOW(p.did);
 
@@ -397,7 +402,7 @@ describe('http api', function () {
       expect(rpcResponse.body.result.reply.status.code).to.equal(200);
     });
 
-    it('rejects tenants that have completed POW but have not accepted the TOS', async function () {
+    it('rejects tenants that have completed POW but have not accepted the terms of use', async function () {
       const unauthorized = await createProfile();
       await tenantGate.authorizeTenantPOW(unauthorized.did);
       const recordsQuery = await RecordsQuery.create({
@@ -421,20 +426,23 @@ describe('http api', function () {
       expect(response.body.result.reply.status.code).to.equal(401);
     });
 
-    it('rejects TOS acceptance with incorrect hash', async function () {
+    it('rejects terms of use acceptance with incorrect hash', async function () {
       const hash = createHash('sha256');
       hash.update('i do not agree');
 
       const p = await createProfile();
 
-      const acceptResponse = await fetch('http://localhost:3000/register/tos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          did: p.did,
-          tosHash: hash.digest('hex'),
-        }),
-      });
+      const acceptResponse = await fetch(
+        'http://localhost:3000/register/terms-of-service',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            did: p.did,
+            termsOfServiceHash: hash.digest('hex'),
+          }),
+        },
+      );
       expect(acceptResponse.status).to.equal(400);
       await tenantGate.authorizeTenantPOW(p.did);
 
@@ -612,7 +620,7 @@ describe('http api', function () {
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
       const p = await createProfile();
       await tenantGate.authorizeTenantPOW(p.did);
-      await tenantGate.authorizeTenantTOS(p.did);
+      await tenantGate.authorizeTenantTermsOfService(p.did);
 
       // First RecordsWrite that creates the record.
       const { recordsWrite: initialWrite, dataStream } =

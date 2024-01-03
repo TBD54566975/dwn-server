@@ -9,31 +9,26 @@ const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // challenges are valid this long after
 const COMPLEXITY_LOOKBACK = 5 * 60 * 1000; // complexity is based on number of successful registrations in this timeframe
 const COMPLEXITY_MINIMUM = 5;
 
-export class TenantGate {
+export class RegisteredTenantGate {
   #db: Kysely<TenantRegistrationDatabase>;
-  #powRequired: boolean;
-  #tosRequired: boolean;
-  #tos?: string;
-  #tosHash?: string;
-  #logRejections: boolean;
+  #proofOfWorkRequired: boolean;
+  #termsOfService?: string;
+  #termsOfServiceHash?: string;
 
   constructor(
     dialect: Dialect,
-    powRequired: boolean,
-    tosRequired: boolean,
-    currentTOS?: string,
-    logRejections?: boolean,
+    proofOfWorkRequired: boolean,
+    termsOfService?: string,
   ) {
     this.#db = new Kysely<TenantRegistrationDatabase>({ dialect: dialect });
-    this.#powRequired = powRequired;
-    this.#tosRequired = tosRequired;
-    if (tosRequired) {
-      this.#tos = currentTOS;
-      const tosHash = createHash('sha256');
-      tosHash.update(currentTOS);
-      this.#tosHash = tosHash.digest('hex');
+    this.#proofOfWorkRequired = proofOfWorkRequired;
+
+    if (termsOfService) {
+      const termsOfServiceHash = createHash('sha256');
+      termsOfServiceHash.update(termsOfService);
+      this.#termsOfServiceHash = termsOfServiceHash.digest('hex');
+      this.#termsOfService = termsOfService;
     }
-    this.#logRejections = logRejections || false;
   }
 
   async initialize(): Promise<void> {
@@ -53,12 +48,12 @@ export class TenantGate {
       .ifNotExists()
       .addColumn('did', 'text', (column) => column.primaryKey())
       .addColumn('powTime', 'timestamp')
-      .addColumn('tos', 'boolean')
+      .addColumn('termsOfServiceHash', 'boolean')
       .execute();
   }
 
   setupRoutes(server: Express): void {
-    if (this.#powRequired) {
+    if (this.#proofOfWorkRequired) {
       server.get('/register/pow', (req: Request, res: Response) =>
         this.getProofOfWorkChallenge(req, res),
       );
@@ -66,25 +61,25 @@ export class TenantGate {
         this.verifyProofOfWorkChallenge(req, res),
       );
     }
-    if (this.#tosRequired) {
-      server.get('/register/tos', (req: Request, res: Response) =>
-        res.send(this.#tos),
+    if (this.#termsOfService) {
+      server.get('/register/terms-of-service', (req: Request, res: Response) =>
+        res.send(this.#termsOfService),
       );
-      server.post('/register/tos', (req: Request, res: Response) =>
-        this.acceptTOS(req, res),
+      server.post('/register/terms-of-service', (req: Request, res: Response) =>
+        this.acceptTermsOfService(req, res),
       );
     }
   }
 
   async isTenant(tenant: string): Promise<boolean> {
-    if (!this.#powRequired && !this.#tosRequired) {
+    if (!this.#proofOfWorkRequired && !this.#termsOfService) {
       return true;
     }
 
     const result = await this.#db
       .selectFrom('authorizedTenants')
       .select('powTime')
-      .select('tos')
+      .select('termsOfServiceHash')
       .where('did', '=', tenant)
       .execute();
 
@@ -95,17 +90,20 @@ export class TenantGate {
 
     const row = result[0];
 
-    if (this.#powRequired && row.powTime == undefined) {
+    if (this.#proofOfWorkRequired && row.powTime == undefined) {
       console.log('rejecting tenant that has not completed the proof of work', {
         tenant,
       });
       return false;
     }
 
-    if (this.#tosRequired && row.tos != this.#tosHash) {
+    if (
+      this.#termsOfService &&
+      row.termsOfServiceHash != this.#termsOfServiceHash
+    ) {
       console.log(
         'rejecting tenant that has not accepted the current terms of service',
-        { row, tenant, expected: this.#tosHash },
+        { row, tenant, expected: this.#termsOfServiceHash },
       );
       return false;
     }
@@ -205,46 +203,49 @@ export class TenantGate {
     return complexity;
   }
 
-  private async acceptTOS(req: Request, res: Response): Promise<void> {
+  private async acceptTermsOfService(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
     const body: {
       did: string;
-      tosHash: string;
+      termsOfServiceHash: string;
     } = req.body;
 
-    if (body.tosHash != this.#tosHash) {
+    if (body.termsOfServiceHash != this.#termsOfServiceHash) {
       res.status(400).json({
         success: false,
-        reason: 'incorrect TOS hash',
+        reason: 'incorrect terms of service hash',
       });
     }
 
-    console.log('accepting tos', body);
+    console.log('accepting terms of service', body);
 
     await this.#db
       .insertInto('authorizedTenants')
       .values({
         did: body.did,
-        tos: body.tosHash,
+        termsOfServiceHash: body.termsOfServiceHash,
       })
       .onConflict((oc) =>
         oc.column('did').doUpdateSet((eb) => ({
-          tos: eb.ref('excluded.tos'),
+          termsOfServiceHash: eb.ref('excluded.termsOfServiceHash'),
         })),
       )
       .executeTakeFirstOrThrow();
     res.status(200).json({ success: true });
   }
 
-  async authorizeTenantTOS(tenant: string): Promise<void> {
+  async authorizeTenantTermsOfService(tenant: string): Promise<void> {
     await this.#db
       .insertInto('authorizedTenants')
       .values({
         did: tenant,
-        tos: this.#tosHash,
+        termsOfServiceHash: this.#termsOfServiceHash,
       })
       .onConflict((oc) =>
         oc.column('did').doUpdateSet((eb) => ({
-          tos: eb.ref('excluded.tos'),
+          termsOfServiceHash: eb.ref('excluded.termsOfServiceHash'),
         })),
       )
       .executeTakeFirst();
@@ -253,7 +254,7 @@ export class TenantGate {
 
 interface AuthorizedTenants {
   did: string;
-  tos: string;
+  termsOfServiceHash: string;
   powTime: number;
 }
 

@@ -24,19 +24,19 @@ import {
 import { config } from './config.js';
 import { jsonRpcApi } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
-import type { TenantGate } from './tenant-gate.js';
+import type { RegisteredTenantGate } from './registered-tenant-gate.js';
 
-const packagejson = process.env.npm_package_json
+const packageJson = process.env.npm_package_json
   ? JSON.parse(readFileSync(process.env.npm_package_json).toString())
   : {};
 
 export class HttpApi {
   #api: Express;
   #server: http.Server;
-  tenantGate: TenantGate;
+  tenantGate: RegisteredTenantGate;
   dwn: Dwn;
 
-  constructor(dwn: Dwn, tenantGate: TenantGate) {
+  constructor(dwn: Dwn, tenantGate: RegisteredTenantGate) {
     this.#api = express();
     this.#server = http.createServer(this.#api);
     this.dwn = dwn;
@@ -202,7 +202,7 @@ export class HttpApi {
       if (config.registrationRequirementPow) {
         registrationRequirements.push('proof-of-work-sha256-v0');
       }
-      if (config.registrationRequirementTos) {
+      if (config.termsOfServiceFilePath !== undefined) {
         registrationRequirements.push('terms-of-service');
       }
 
@@ -210,8 +210,8 @@ export class HttpApi {
         server: process.env.npm_package_name,
         maxFileSize: config.maxRecordDataSize,
         registrationRequirements: registrationRequirements,
-        version: packagejson.version,
-        sdkVersion: packagejson.dependencies['@tbd54566975/dwn-sdk-js'],
+        version: packageJson.version,
+        sdkVersion: packageJson.dependencies['@tbd54566975/dwn-sdk-js'],
       });
     });
   }
