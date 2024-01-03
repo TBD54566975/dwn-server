@@ -1,3 +1,5 @@
+import { DidKeyResolver } from '@tbd54566975/dwn-sdk-js';
+
 import { expect } from 'chai';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -5,11 +7,11 @@ import { handleDwnProcessMessage } from '../src/json-rpc-handlers/dwn/process-me
 import type { RequestContext } from '../src/lib/json-rpc-router.js';
 import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { getTestDwn } from './test-dwn.js';
-import { createProfile, createRecordsWriteMessage } from './utils.js';
+import { createRecordsWriteMessage } from './utils.js';
 
 describe('handleDwnProcessMessage', function () {
   it('returns a JSON RPC Success Response when DWN returns a 2XX status code', async function () {
-    const alice = await createProfile();
+    const alice = await DidKeyResolver.generate();
 
     // Construct a well-formed DWN Request that will be successfully processed.
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);

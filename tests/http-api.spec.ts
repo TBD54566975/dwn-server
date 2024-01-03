@@ -2,6 +2,7 @@
 import {
   Cid,
   DataStream,
+  DidKeyResolver,
   RecordsQuery,
   RecordsRead,
   Time,
@@ -32,7 +33,6 @@ import type { RegisteredTenantGate } from '../src/registered-tenant-gate.js';
 import { getTestDwn } from './test-dwn.js';
 import type { Profile } from './utils.js';
 import {
-  createProfile,
   createRecordsWriteMessage,
   getFileAsReadStream,
   streamHttpRequest,
@@ -65,7 +65,7 @@ describe('http api', function () {
     httpApi = new HttpApi(dwn, tenantGate);
 
     await tenantGate.initialize();
-    profile = await createProfile();
+    profile = await DidKeyResolver.generate();
     await tenantGate.authorizeTenantPOW(profile.did);
     await tenantGate.authorizeTenantTermsOfService(profile.did);
   });
@@ -113,7 +113,7 @@ describe('http api', function () {
         response = generateNonce(5);
       }
 
-      const p = await createProfile();
+      const p = await DidKeyResolver.generate();
       const submitResponse = await fetch('http://localhost:3000/register/pow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,7 +171,7 @@ describe('http api', function () {
         response = generateNonce(5);
       }
 
-      const p = await createProfile();
+      const p = await DidKeyResolver.generate();
       const submitResponse = await fetch('http://localhost:3000/register/pow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,10 +187,10 @@ describe('http api', function () {
 
     it('increase complexity as more challenges are completed', async function () {
       for (let i = 1; i <= 60; i++) {
-        tenantGate.authorizeTenantPOW((await createProfile()).did);
+        tenantGate.authorizeTenantPOW((await DidKeyResolver.generate()).did);
       }
 
-      const p = await createProfile();
+      const p = await DidKeyResolver.generate();
       const challengeResponse = await fetch(
         'http://localhost:3000/register/pow',
       );
@@ -263,7 +263,7 @@ describe('http api', function () {
         response = generateNonce(5);
       }
 
-      const p = await createProfile();
+      const p = await DidKeyResolver.generate();
       const submitResponse = await fetch('http://localhost:3000/register/pow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -286,7 +286,7 @@ describe('http api', function () {
         response = generateNonce(5);
       }
 
-      const p = await createProfile();
+      const p = await DidKeyResolver.generate();
       const submitResponse = await fetch('http://localhost:3000/register/pow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -301,7 +301,7 @@ describe('http api', function () {
     });
 
     it('rejects tenants that have not accepted the terms of use and have not completed POW', async function () {
-      const unauthorized = await createProfile();
+      const unauthorized = await DidKeyResolver.generate();
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
         signer: unauthorized.signer,
@@ -324,7 +324,7 @@ describe('http api', function () {
     });
 
     it('rejects tenants that have accepted the terms of use but not completed POW', async function () {
-      const unauthorized = await createProfile();
+      const unauthorized = await DidKeyResolver.generate();
       await tenantGate.authorizeTenantTermsOfService(unauthorized.did);
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -364,7 +364,7 @@ describe('http api', function () {
       const hash = createHash('sha256');
       hash.update(terms);
 
-      const p = await createProfile();
+      const p = await DidKeyResolver.generate();
 
       const acceptResponse = await fetch(
         'http://localhost:3000/register/terms-of-service',
@@ -403,7 +403,7 @@ describe('http api', function () {
     });
 
     it('rejects tenants that have completed POW but have not accepted the terms of use', async function () {
-      const unauthorized = await createProfile();
+      const unauthorized = await DidKeyResolver.generate();
       await tenantGate.authorizeTenantPOW(unauthorized.did);
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -430,7 +430,7 @@ describe('http api', function () {
       const hash = createHash('sha256');
       hash.update('i do not agree');
 
-      const p = await createProfile();
+      const p = await DidKeyResolver.generate();
 
       const acceptResponse = await fetch(
         'http://localhost:3000/register/terms-of-service',
@@ -618,7 +618,7 @@ describe('http api', function () {
     });
 
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
-      const p = await createProfile();
+      const p = await DidKeyResolver.generate();
       await tenantGate.authorizeTenantPOW(p.did);
       await tenantGate.authorizeTenantTermsOfService(p.did);
 
@@ -899,7 +899,7 @@ describe('http api', function () {
     });
 
     it('returns a 404 for invalid or unauthorized did', async function () {
-      const unauthorized = await createProfile();
+      const unauthorized = await DidKeyResolver.generate();
       const { recordsWrite } = await createRecordsWriteMessage(unauthorized);
 
       const response = await fetch(

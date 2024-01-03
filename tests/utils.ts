@@ -1,11 +1,5 @@
 import type { PrivateJwk, PublicJwk, Signer } from '@tbd54566975/dwn-sdk-js';
-import {
-  Cid,
-  DataStream,
-  DidKeyResolver,
-  PrivateKeySigner,
-  RecordsWrite,
-} from '@tbd54566975/dwn-sdk-js';
+import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import { createHash } from 'crypto';
 import type { ReadStream } from 'node:fs';
@@ -28,23 +22,6 @@ export type Profile = {
   };
   signer: Signer;
 };
-
-export async function createProfile(): Promise<Profile> {
-  const { did, keyPair, keyId } = await DidKeyResolver.generate();
-
-  // signer is required by all dwn message classes. it's used to sign messages
-  const signer = new PrivateKeySigner({
-    privateJwk: keyPair.privateJwk,
-    algorithm: keyPair.privateJwk.alg,
-    keyId: `${did}#${keyId}`,
-  });
-
-  return {
-    did,
-    keyPair,
-    signer,
-  };
-}
 
 export type CreateRecordsWriteOverrides =
   | ({
