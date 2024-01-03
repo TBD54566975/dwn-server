@@ -4,6 +4,7 @@ import {
   DataStream,
   RecordsQuery,
   RecordsRead,
+  Time,
 } from '@tbd54566975/dwn-sdk-js';
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
 
@@ -632,6 +633,9 @@ describe('http api', function () {
       });
 
       expect(responseInitialWrite.status).to.equal(200);
+
+      // Waiting for minimal time to make sure subsequent RecordsWrite has a later timestamp.
+      await Time.minimalSleep();
 
       // Subsequent RecordsWrite that mutates the published property of the record.
       const { recordsWrite: overWrite } = await createRecordsWriteMessage(p, {

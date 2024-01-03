@@ -17,6 +17,18 @@ export async function getTestDwn(
   dwn: Dwn;
   tenantGate: TenantGate;
 }> {
+  // const testDwnDataDirectory = 'data-test';
+  // const dataStore = new DataStoreLevel({
+  //   blockstoreLocation: `${testDwnDataDirectory}/DATASTORE`,
+  // });
+  // const eventLog = new EventLogLevel({
+  //   location: `${testDwnDataDirectory}/EVENTLOG`,
+  // });
+  // const messageStore = new MessageStoreLevel({
+  //   blockstoreLocation: `${testDwnDataDirectory}/MESSAGESTORE`,
+  //   indexLocation: `${testDwnDataDirectory}/INDEX`,
+  // });
+
   const db = getDialectFromURI(new URL('sqlite://'));
   const dataStore = new DataStoreSql(db);
   const eventLog = new EventLogSql(db);
