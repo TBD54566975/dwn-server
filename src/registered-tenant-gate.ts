@@ -1,3 +1,5 @@
+import type { TenantGate } from '@tbd54566975/dwn-sdk-js';
+
 import { createHash, randomBytes } from 'crypto';
 import type { Request, Response } from 'express';
 import type { Express } from 'express';
@@ -6,10 +8,10 @@ import { Kysely } from 'kysely';
 
 const recentChallenges: { [challenge: string]: number } = {};
 const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // challenges are valid this long after issuance
-const COMPLEXITY_LOOKBACK = 5 * 60 * 1000; // complexity is based on number of successful registrations in this timeframe
+const COMPLEXITY_LOOKBACK = 5 * 60 * 1000; // complexity is based on number of successful registrations in this time frame
 const COMPLEXITY_MINIMUM = 5;
 
-export class RegisteredTenantGate {
+export class RegisteredTenantGate implements TenantGate {
   #db: Kysely<TenantRegistrationDatabase>;
   #proofOfWorkRequired: boolean;
   #termsOfService?: string;
@@ -66,7 +68,7 @@ export class RegisteredTenantGate {
         res.send(this.#termsOfService),
       );
       server.post('/register/terms-of-service', (req: Request, res: Response) =>
-        this.acceptTermsOfService(req, res),
+        this.handleTermsOfServicePost(req, res),
       );
     }
   }
@@ -203,7 +205,7 @@ export class RegisteredTenantGate {
     return complexity;
   }
 
-  private async acceptTermsOfService(
+  private async handleTermsOfServicePost(
     req: Request,
     res: Response,
   ): Promise<void> {
@@ -227,12 +229,18 @@ export class RegisteredTenantGate {
         did: body.did,
         termsOfServiceHash: body.termsOfServiceHash,
       })
-      .onConflict((oc) =>
-        oc.column('did').doUpdateSet((eb) => ({
-          termsOfServiceHash: eb.ref('excluded.termsOfServiceHash'),
+      // If a row with the same `did` already exists, it updates the `termsOfServiceHash` of the existing row
+      // to the `termsOfServiceHash` of the row that was attempted to be inserted (`excluded.termsOfServiceHash`).
+      .onConflict((onConflictBuilder) =>
+        onConflictBuilder.column('did').doUpdateSet((expressionBuilder) => ({
+          termsOfServiceHash: expressionBuilder.ref(
+            'excluded.termsOfServiceHash',
+          ),
         })),
       )
+      // Executes the query. If the query doesn’t affect any rows (ie. if the insert or update didn’t change anything), it throws an error.
       .executeTakeFirstOrThrow();
+
     res.status(200).json({ success: true });
   }
 
@@ -243,11 +251,14 @@ export class RegisteredTenantGate {
         did: tenant,
         termsOfServiceHash: this.#termsOfServiceHash,
       })
-      .onConflict((oc) =>
-        oc.column('did').doUpdateSet((eb) => ({
-          termsOfServiceHash: eb.ref('excluded.termsOfServiceHash'),
+      .onConflict((onConflictBuilder) =>
+        onConflictBuilder.column('did').doUpdateSet((expressionBuilder) => ({
+          termsOfServiceHash: expressionBuilder.ref(
+            'excluded.termsOfServiceHash',
+          ),
         })),
       )
+      // Executes the query. No error is thrown if the query doesn’t affect any rows (ie. if the insert or update didn’t change anything).
       .executeTakeFirst();
   }
 }
