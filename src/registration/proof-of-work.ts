@@ -23,7 +23,7 @@ export class ProofOfWork {
     requiredLeadingZerosInResultingHash: number;
     challenge: string;
     responseNonce: string;
-    requestData: string;
+    requestData?: string;
   }): void {
     const computedHash = this.computeHash(input);
 

@@ -6,6 +6,10 @@ import type { Express } from 'express';
 import type { Dialect } from 'kysely';
 import { Kysely } from 'kysely';
 
+import type { DwnServerError } from './dwn-error.js';
+import { DwnServerErrorCode } from './dwn-error.js';
+import { ProofOfWork } from './registration/proof-of-work.js';
+
 const recentChallenges: { [challenge: string]: number } = {};
 const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // challenges are valid this long after issuance
 const COMPLEXITY_LOOKBACK = 5 * 60 * 1000; // complexity is based on number of successful registrations in this time frame
@@ -161,19 +165,26 @@ export class RegisteredTenantGate implements TenantGate {
       return;
     }
 
-    const hash = createHash('sha256');
-    hash.update(body.challenge);
-    hash.update(body.response);
-
-    const complexity = await this.getComplexity();
-    const digest = hash.digest('hex');
-    if (!digest.startsWith('0'.repeat(complexity))) {
-      res.status(401).json({
-        success: false,
-        reason: 'insufficiently complex',
-        requiredComplexity: complexity,
+    try {
+      ProofOfWork.verifyChallengeResponse({
+        challenge: body.challenge,
+        responseNonce: body.response,
+        requiredLeadingZerosInResultingHash: await this.getComplexity(),
       });
-      return;
+    } catch (error) {
+      const dwnServerError = error as DwnServerError;
+
+      if (
+        dwnServerError.code ===
+        DwnServerErrorCode.ProofOfWorkInsufficientLeadingZeros
+      ) {
+        res.status(401).json({
+          success: false,
+          reason: dwnServerError.message,
+        });
+
+        return;
+      }
     }
 
     try {
