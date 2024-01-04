@@ -10,7 +10,7 @@ export const config = {
   // whether to enable 'ws:'
   webSocketServerEnabled:
     { on: true, off: false }[process.env.DS_WEBSOCKET_SERVER] ?? true,
-  // where to store persistant data
+  // where to store persistent data
   messageStore:
     process.env.DWN_STORAGE_MESSAGES ||
     process.env.DWN_STORAGE ||
@@ -19,9 +19,8 @@ export const config = {
     process.env.DWN_STORAGE_DATA || process.env.DWN_STORAGE || 'level://data',
   eventLog:
     process.env.DWN_STORAGE_EVENTS || process.env.DWN_STORAGE || 'level://data',
-
-  // require POW-based registration for new tenants
-  registrationRequirementPow: process.env.DWN_REGISTRATION_POW == 'true',
+  registrationProofOfWorkEnabled:
+    process.env.DWN_REGISTRATION_PROOF_OF_WORK_ENABLED === 'true',
   tenantRegistrationStore:
     process.env.DWN_STORAGE_REGISTRATION ||
     process.env.DWN_STORAGE ||

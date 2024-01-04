@@ -56,7 +56,7 @@ describe('http api', function () {
   before(async function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
 
-    config.registrationRequirementPow = true;
+    config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
     const testDwn = await getTestDwn(true, true);
     dwn = testDwn.dwn;
@@ -66,7 +66,7 @@ describe('http api', function () {
 
     await tenantGate.initialize();
     profile = await DidKeyResolver.generate();
-    await tenantGate.authorizeTenantPOW(profile.did);
+    await tenantGate.authorizeTenantProofOfWork(profile.did);
     await tenantGate.authorizeTenantTermsOfService(profile.did);
   });
 
@@ -83,9 +83,11 @@ describe('http api', function () {
     clock.restore();
   });
 
-  describe('/register/pow', function () {
+  describe('/register/proof-of-work', function () {
+    const proofOfWorkUrl = 'http://localhost:3000/register/proof-of-work';
+
     it('returns a register challenge', async function () {
-      const response = await fetch('http://localhost:3000/register/pow');
+      const response = await fetch(proofOfWorkUrl);
       expect(response.status).to.equal(200);
       const body = (await response.json()) as {
         challenge: string;
@@ -96,9 +98,7 @@ describe('http api', function () {
     });
 
     it('accepts a correct registration challenge', async function () {
-      const challengeResponse = await fetch(
-        'http://localhost:3000/register/pow',
-      );
+      const challengeResponse = await fetch(proofOfWorkUrl);
       expect(challengeResponse.status).to.equal(200);
       const body = (await challengeResponse.json()) as {
         challenge: string;
@@ -114,7 +114,7 @@ describe('http api', function () {
       }
 
       const p = await DidKeyResolver.generate();
-      const submitResponse = await fetch('http://localhost:3000/register/pow', {
+      const submitResponse = await fetch(proofOfWorkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,9 +151,7 @@ describe('http api', function () {
     }).timeout(30000);
 
     it('rejects a registration challenge 5 minutes after it was issued', async function () {
-      const challengeResponse = await fetch(
-        'http://localhost:3000/register/pow',
-      );
+      const challengeResponse = await fetch(proofOfWorkUrl);
       expect(challengeResponse.status).to.equal(200);
       const body = (await challengeResponse.json()) as {
         challenge: string;
@@ -172,7 +170,7 @@ describe('http api', function () {
       }
 
       const p = await DidKeyResolver.generate();
-      const submitResponse = await fetch('http://localhost:3000/register/pow', {
+      const submitResponse = await fetch(proofOfWorkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -187,13 +185,13 @@ describe('http api', function () {
 
     it('increase complexity as more challenges are completed', async function () {
       for (let i = 1; i <= 60; i++) {
-        tenantGate.authorizeTenantPOW((await DidKeyResolver.generate()).did);
+        tenantGate.authorizeTenantProofOfWork(
+          (await DidKeyResolver.generate()).did,
+        );
       }
 
       const p = await DidKeyResolver.generate();
-      const challengeResponse = await fetch(
-        'http://localhost:3000/register/pow',
-      );
+      const challengeResponse = await fetch(proofOfWorkUrl);
       expect(challengeResponse.status).to.equal(200);
       const body = (await challengeResponse.json()) as {
         challenge: string;
@@ -231,7 +229,7 @@ describe('http api', function () {
         'ms',
       );
 
-      const submitResponse = await fetch('http://localhost:3000/register/pow', {
+      const submitResponse = await fetch(proofOfWorkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -245,9 +243,7 @@ describe('http api', function () {
     }).timeout(120000);
 
     it('rejects an invalid nonce', async function () {
-      const challengeResponse = await fetch(
-        'http://localhost:3000/register/pow',
-      );
+      const challengeResponse = await fetch(proofOfWorkUrl);
       expect(challengeResponse.status).to.equal(200);
       const body = (await challengeResponse.json()) as {
         challenge: string;
@@ -264,7 +260,7 @@ describe('http api', function () {
       }
 
       const p = await DidKeyResolver.generate();
-      const submitResponse = await fetch('http://localhost:3000/register/pow', {
+      const submitResponse = await fetch(proofOfWorkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -287,7 +283,7 @@ describe('http api', function () {
       }
 
       const p = await DidKeyResolver.generate();
-      const submitResponse = await fetch('http://localhost:3000/register/pow', {
+      const submitResponse = await fetch(proofOfWorkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -300,7 +296,7 @@ describe('http api', function () {
       expect(submitResponse.status).to.equal(401);
     });
 
-    it('rejects tenants that have not accepted the terms of use and have not completed POW', async function () {
+    it('rejects tenants that have not accepted the terms of use and have not completed proof-of-work', async function () {
       const unauthorized = await DidKeyResolver.generate();
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -323,7 +319,7 @@ describe('http api', function () {
       expect(response.body.result.reply.status.code).to.equal(401);
     });
 
-    it('rejects tenants that have accepted the terms of use but not completed POW', async function () {
+    it('rejects tenants that have accepted the terms of use but not completed proof-of-work', async function () {
       const unauthorized = await DidKeyResolver.generate();
       await tenantGate.authorizeTenantTermsOfService(unauthorized.did);
       const recordsQuery = await RecordsQuery.create({
@@ -378,7 +374,7 @@ describe('http api', function () {
         },
       );
       expect(acceptResponse.status).to.equal(200);
-      await tenantGate.authorizeTenantPOW(p.did);
+      await tenantGate.authorizeTenantProofOfWork(p.did);
 
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -402,9 +398,9 @@ describe('http api', function () {
       expect(rpcResponse.body.result.reply.status.code).to.equal(200);
     });
 
-    it('rejects tenants that have completed POW but have not accepted the terms of use', async function () {
+    it('rejects tenants that have completed proof-of-work but have not accepted the terms of use', async function () {
       const unauthorized = await DidKeyResolver.generate();
-      await tenantGate.authorizeTenantPOW(unauthorized.did);
+      await tenantGate.authorizeTenantProofOfWork(unauthorized.did);
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
         signer: unauthorized.signer,
@@ -444,7 +440,7 @@ describe('http api', function () {
         },
       );
       expect(acceptResponse.status).to.equal(400);
-      await tenantGate.authorizeTenantPOW(p.did);
+      await tenantGate.authorizeTenantProofOfWork(p.did);
 
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -619,7 +615,7 @@ describe('http api', function () {
 
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
       const p = await DidKeyResolver.generate();
-      await tenantGate.authorizeTenantPOW(p.did);
+      await tenantGate.authorizeTenantProofOfWork(p.did);
       await tenantGate.authorizeTenantTermsOfService(p.did);
 
       // First RecordsWrite that creates the record.

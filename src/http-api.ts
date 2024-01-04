@@ -199,7 +199,7 @@ export class HttpApi {
     this.#api.get('/info.json', (req, res) => {
       res.setHeader('content-type', 'application/json');
       const registrationRequirements: string[] = [];
-      if (config.registrationRequirementPow) {
+      if (config.registrationProofOfWorkEnabled) {
         registrationRequirements.push('proof-of-work-sha256-v0');
       }
       if (config.termsOfServiceFilePath !== undefined) {

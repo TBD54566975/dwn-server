@@ -62,7 +62,7 @@ export class DwnServer {
 
       tenantGate = new RegisteredTenantGate(
         tenantGateDB,
-        this.config.registrationRequirementPow,
+        this.config.registrationProofOfWorkEnabled,
         termsOfService,
       );
 

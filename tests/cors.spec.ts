@@ -30,7 +30,7 @@ class CorsProxySetup {
       config: {
         ...defaultConfig,
         port: 0, // UNSPEC to obtain test specific free port
-        registrationRequirementPow: false,
+        registrationProofOfWorkEnabled: false,
       },
     });
     await dwnServer.start();

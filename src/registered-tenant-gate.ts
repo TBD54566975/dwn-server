@@ -49,17 +49,17 @@ export class RegisteredTenantGate implements TenantGate {
       .createTable('authorizedTenants')
       .ifNotExists()
       .addColumn('did', 'text', (column) => column.primaryKey())
-      .addColumn('powTime', 'timestamp')
+      .addColumn('proofOfWorkTime', 'timestamp')
       .addColumn('termsOfServiceHash', 'boolean')
       .execute();
   }
 
   setupRoutes(server: Express): void {
     if (this.#proofOfWorkRequired) {
-      server.get('/register/pow', (req: Request, res: Response) =>
+      server.get('/register/proof-of-work', (req: Request, res: Response) =>
         this.getProofOfWorkChallenge(req, res),
       );
-      server.post('/register/pow', (req: Request, res: Response) =>
+      server.post('/register/proof-of-work', (req: Request, res: Response) =>
         this.verifyProofOfWorkChallenge(req, res),
       );
     }
@@ -80,7 +80,7 @@ export class RegisteredTenantGate implements TenantGate {
 
     const result = await this.#db
       .selectFrom('authorizedTenants')
-      .select('powTime')
+      .select('proofOfWorkTime')
       .select('termsOfServiceHash')
       .where('did', '=', tenant)
       .execute();
@@ -92,7 +92,7 @@ export class RegisteredTenantGate implements TenantGate {
 
     const row = result[0];
 
-    if (this.#proofOfWorkRequired && row.powTime == undefined) {
+    if (this.#proofOfWorkRequired && row.proofOfWorkTime == undefined) {
       console.log('rejecting tenant that has not completed the proof of work', {
         tenant,
       });
@@ -113,16 +113,16 @@ export class RegisteredTenantGate implements TenantGate {
     return true;
   }
 
-  async authorizeTenantPOW(tenant: string): Promise<void> {
+  async authorizeTenantProofOfWork(tenant: string): Promise<void> {
     await this.#db
       .insertInto('authorizedTenants')
       .values({
         did: tenant,
-        powTime: Date.now(),
+        proofOfWorkTime: Date.now(),
       })
       .onConflict((oc) =>
         oc.column('did').doUpdateSet((eb) => ({
-          powTime: eb.ref('excluded.powTime'),
+          proofOfWorkTime: eb.ref('excluded.proofOfWorkTime'),
         })),
       )
       .executeTakeFirst();
@@ -177,7 +177,7 @@ export class RegisteredTenantGate implements TenantGate {
     }
 
     try {
-      await this.authorizeTenantPOW(body.did);
+      await this.authorizeTenantProofOfWork(body.did);
     } catch (e) {
       console.log('error inserting did', e);
       res.status(500).json({ success: false });
@@ -189,7 +189,7 @@ export class RegisteredTenantGate implements TenantGate {
   private async getComplexity(): Promise<number> {
     const result = await this.#db
       .selectFrom('authorizedTenants')
-      .where('powTime', '>', Date.now() - COMPLEXITY_LOOKBACK)
+      .where('proofOfWorkTime', '>', Date.now() - COMPLEXITY_LOOKBACK)
       .select((eb) => eb.fn.countAll().as('recent_reg_count'))
       .executeTakeFirstOrThrow();
     const recent = result.recent_reg_count as number;
@@ -266,7 +266,7 @@ export class RegisteredTenantGate implements TenantGate {
 interface AuthorizedTenants {
   did: string;
   termsOfServiceHash: string;
-  powTime: number;
+  proofOfWorkTime: number;
 }
 
 interface TenantRegistrationDatabase {
