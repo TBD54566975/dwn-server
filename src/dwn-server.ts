@@ -69,7 +69,7 @@ export class DwnServer {
       this.dwn = await Dwn.create(getDWNConfig(this.config, tenantGate));
     }
 
-    this.#httpApi = new HttpApi(this.dwn, tenantGate);
+    this.#httpApi = new HttpApi(this.config, this.dwn, tenantGate);
     await this.#httpApi.start(this.config.port, () => {
       log.info(`HttpServer listening on port ${this.config.port}`);
     });

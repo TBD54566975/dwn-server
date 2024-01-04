@@ -61,7 +61,7 @@ describe('http api', function () {
     dwn = testDwn.dwn;
     tenantGate = testDwn.tenantGate;
 
-    httpApi = new HttpApi(dwn, tenantGate);
+    httpApi = new HttpApi(config, dwn, tenantGate);
 
     await tenantGate.initialize();
     profile = await DidKeyResolver.generate();

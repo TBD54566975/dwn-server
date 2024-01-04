@@ -6,7 +6,6 @@ module.exports = {
   },
   plugins: [
     '@typescript-eslint',
-    'prettier',
     'todo-plz', // for enforcing TODO formatting to require "github.com/TBD54566975/dwn-server/issues/"
   ],
   env: {
@@ -14,7 +13,7 @@ module.exports = {
     browser: true,
   },
   rules: {
-    'prettier/prettier': 'error',
+    'max-len': ['error', { code: 150, ignoreStrings: true }],
     curly: ['error', 'all'],
     'no-console': 'off',
     '@typescript-eslint/explicit-function-return-type': ['error'],
@@ -37,5 +36,4 @@ module.exports = {
       { commentPattern: '.*github.com/TBD54566975/dwn-server/issues/.*' },
     ],
   },
-  extends: ['prettier'],
 };

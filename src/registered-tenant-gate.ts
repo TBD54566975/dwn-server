@@ -1,12 +1,10 @@
 import type { TenantGate } from '@tbd54566975/dwn-sdk-js';
 
 import { createHash, randomBytes } from 'crypto';
-import type { Request, Response } from 'express';
-import type { Express } from 'express';
 import type { Dialect } from 'kysely';
 import { Kysely } from 'kysely';
 
-import type { DwnServerError } from './dwn-error.js';
+import { DwnServerError } from './dwn-error.js';
 import { DwnServerErrorCode } from './dwn-error.js';
 import { ProofOfWork } from './registration/proof-of-work.js';
 
@@ -15,17 +13,22 @@ const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // challenges are valid this long after
 const COMPLEXITY_LOOKBACK = 5 * 60 * 1000; // complexity is based on number of successful registrations in this time frame
 const COMPLEXITY_MINIMUM = 5;
 
+type ProofOfWorkChallengeModel = {
+  challenge: string;
+  complexity: number;
+};
+
 export class RegisteredTenantGate implements TenantGate {
   #db: Kysely<TenantRegistrationDatabase>;
   #proofOfWorkRequired: boolean;
-  #termsOfService?: string;
   #termsOfServiceHash?: string;
+  #termsOfService?: string;
 
-  constructor(
-    dialect: Dialect,
-    proofOfWorkRequired: boolean,
-    termsOfService?: string,
-  ) {
+  get termsOfService(): string {
+    return this.#termsOfService;
+  }
+
+  constructor(dialect: Dialect, proofOfWorkRequired: boolean, termsOfService?: string) {
     this.#db = new Kysely<TenantRegistrationDatabase>({ dialect: dialect });
     this.#proofOfWorkRequired = proofOfWorkRequired;
 
@@ -40,10 +43,7 @@ export class RegisteredTenantGate implements TenantGate {
   async initialize(): Promise<void> {
     setInterval(() => {
       for (const challenge of Object.keys(recentChallenges)) {
-        if (
-          recentChallenges[challenge] &&
-          Date.now() - recentChallenges[challenge] > CHALLENGE_TIMEOUT
-        ) {
+        if (recentChallenges[challenge] && Date.now() - recentChallenges[challenge] > CHALLENGE_TIMEOUT) {
           delete recentChallenges[challenge];
         }
       }
@@ -56,25 +56,6 @@ export class RegisteredTenantGate implements TenantGate {
       .addColumn('proofOfWorkTime', 'timestamp')
       .addColumn('termsOfServiceHash', 'boolean')
       .execute();
-  }
-
-  setupRoutes(server: Express): void {
-    if (this.#proofOfWorkRequired) {
-      server.get('/register/proof-of-work', (req: Request, res: Response) =>
-        this.getProofOfWorkChallenge(req, res),
-      );
-      server.post('/register/proof-of-work', (req: Request, res: Response) =>
-        this.verifyProofOfWorkChallenge(req, res),
-      );
-    }
-    if (this.#termsOfService) {
-      server.get('/register/terms-of-service', (req: Request, res: Response) =>
-        res.send(this.#termsOfService),
-      );
-      server.post('/register/terms-of-service', (req: Request, res: Response) =>
-        this.handleTermsOfServicePost(req, res),
-      );
-    }
   }
 
   async isTenant(tenant: string): Promise<boolean> {
@@ -103,14 +84,8 @@ export class RegisteredTenantGate implements TenantGate {
       return false;
     }
 
-    if (
-      this.#termsOfService &&
-      row.termsOfServiceHash != this.#termsOfServiceHash
-    ) {
-      console.log(
-        'rejecting tenant that has not accepted the current terms of service',
-        { row, tenant, expected: this.#termsOfServiceHash },
-      );
+    if (this.#termsOfService && row.termsOfServiceHash != this.#termsOfServiceHash) {
+      console.log('rejecting tenant that has not accepted the current terms of service', { row, tenant, expected: this.#termsOfServiceHash });
       return false;
     }
 
@@ -132,69 +107,29 @@ export class RegisteredTenantGate implements TenantGate {
       .executeTakeFirst();
   }
 
-  private async getProofOfWorkChallenge(
-    _req: Request,
-    res: Response,
-  ): Promise<void> {
+  async getProofOfWorkChallenge(): Promise<ProofOfWorkChallengeModel> {
     const challenge = randomBytes(10).toString('base64');
     recentChallenges[challenge] = Date.now();
-    res.json({
+    return {
       challenge: challenge,
       complexity: await this.getComplexity(),
-    });
+    };
   }
 
-  private async verifyProofOfWorkChallenge(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
-    const body: {
-      did: string;
-      challenge: string;
-      response: string;
-    } = req.body;
-
+  async handleProofOfWorkChallengePost(body: { did: string; challenge: string; response: string }): Promise<void> {
     const challengeIssued = recentChallenges[body.challenge];
-    if (
-      challengeIssued == undefined ||
-      Date.now() - challengeIssued > CHALLENGE_TIMEOUT
-    ) {
-      res
-        .status(401)
-        .json({ success: false, reason: 'challenge invalid or expired' });
-      return;
+
+    if (challengeIssued == undefined || Date.now() - challengeIssued > CHALLENGE_TIMEOUT) {
+      throw new DwnServerError(DwnServerErrorCode.ProofOfWorkInvalidOrExpiredChallenge, `Invalid or expired challenge: ${body.challenge}.`);
     }
 
-    try {
-      ProofOfWork.verifyChallengeResponse({
-        challenge: body.challenge,
-        responseNonce: body.response,
-        requiredLeadingZerosInResultingHash: await this.getComplexity(),
-      });
-    } catch (error) {
-      const dwnServerError = error as DwnServerError;
+    ProofOfWork.verifyChallengeResponse({
+      challenge: body.challenge,
+      responseNonce: body.response,
+      requiredLeadingZerosInResultingHash: await this.getComplexity(),
+    });
 
-      if (
-        dwnServerError.code ===
-        DwnServerErrorCode.ProofOfWorkInsufficientLeadingZeros
-      ) {
-        res.status(401).json({
-          success: false,
-          reason: dwnServerError.message,
-        });
-
-        return;
-      }
-    }
-
-    try {
-      await this.authorizeTenantProofOfWork(body.did);
-    } catch (e) {
-      console.log('error inserting did', e);
-      res.status(500).json({ success: false });
-      return;
-    }
-    res.json({ success: true });
+    await this.authorizeTenantProofOfWork(body.did);
   }
 
   private async getComplexity(): Promise<number> {
@@ -216,20 +151,13 @@ export class RegisteredTenantGate implements TenantGate {
     return complexity;
   }
 
-  private async handleTermsOfServicePost(
-    req: Request,
-    res: Response,
-  ): Promise<void> {
-    const body: {
-      did: string;
-      termsOfServiceHash: string;
-    } = req.body;
+  async handleTermsOfServicePost(body: {
+    did: string;
+    termsOfServiceHash: string;
+  }): Promise<void> {
 
     if (body.termsOfServiceHash != this.#termsOfServiceHash) {
-      res.status(400).json({
-        success: false,
-        reason: 'incorrect terms of service hash',
-      });
+      throw new DwnServerError(DwnServerErrorCode.TenantRegistrationOutdatedTermsOfService, `Outdated terms of service.`);
     }
 
     console.log('accepting terms of service', body);
@@ -244,15 +172,11 @@ export class RegisteredTenantGate implements TenantGate {
       // to the `termsOfServiceHash` of the row that was attempted to be inserted (`excluded.termsOfServiceHash`).
       .onConflict((onConflictBuilder) =>
         onConflictBuilder.column('did').doUpdateSet((expressionBuilder) => ({
-          termsOfServiceHash: expressionBuilder.ref(
-            'excluded.termsOfServiceHash',
-          ),
+          termsOfServiceHash: expressionBuilder.ref('excluded.termsOfServiceHash'),
         })),
       )
       // Executes the query. If the query doesn’t affect any rows (ie. if the insert or update didn’t change anything), it throws an error.
       .executeTakeFirstOrThrow();
-
-    res.status(200).json({ success: true });
   }
 
   async authorizeTenantTermsOfService(tenant: string): Promise<void> {
@@ -264,9 +188,7 @@ export class RegisteredTenantGate implements TenantGate {
       })
       .onConflict((onConflictBuilder) =>
         onConflictBuilder.column('did').doUpdateSet((expressionBuilder) => ({
-          termsOfServiceHash: expressionBuilder.ref(
-            'excluded.termsOfServiceHash',
-          ),
+          termsOfServiceHash: expressionBuilder.ref('excluded.termsOfServiceHash'),
         })),
       )
       // Executes the query. No error is thrown if the query doesn’t affect any rows (ie. if the insert or update didn’t change anything).

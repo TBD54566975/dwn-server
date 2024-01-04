@@ -17,4 +17,6 @@ export class DwnServerError extends Error {
  */
 export enum DwnServerErrorCode {
   ProofOfWorkInsufficientLeadingZeros = 'ProofOfWorkInsufficientLeadingZeros',
+  ProofOfWorkInvalidOrExpiredChallenge = 'ProofOfWorkInvalidOrExpiredChallenge',
+  TenantRegistrationOutdatedTermsOfService = 'TenantRegistrationOutdatedTermsOfService',
 }
