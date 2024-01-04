@@ -30,14 +30,13 @@ import {
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
 import type { RegisteredTenantGate } from '../src/registered-tenant-gate.js';
+import { ProofOfWork } from '../src/registration/proof-of-work.js';
 import { getTestDwn } from './test-dwn.js';
 import type { Profile } from './utils.js';
 import {
   createRecordsWriteMessage,
   getFileAsReadStream,
   streamHttpRequest,
-  checkNonce,
-  generateNonce,
 } from './utils.js';
 
 if (!globalThis.crypto) {
@@ -108,10 +107,10 @@ describe('http api', function () {
       expect(body.complexity).to.equal(5);
 
       // solve the challenge
-      let response = '';
-      while (!checkNonce(body.challenge, response, body.complexity)) {
-        response = generateNonce(5);
-      }
+      const qualifiedNonce = ProofOfWork.findQualifiedNonce({
+        challenge: body.challenge,
+        requiredLeadingZerosInResultingHash: body.complexity,
+      });
 
       const p = await DidKeyResolver.generate();
       const submitResponse = await fetch(proofOfWorkUrl, {
@@ -119,7 +118,7 @@ describe('http api', function () {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           challenge: body.challenge,
-          response: response,
+          response: qualifiedNonce,
           did: p.did,
         }),
       });
@@ -164,10 +163,10 @@ describe('http api', function () {
       clock.runToLast();
 
       // solve the challenge
-      let response = '';
-      while (!checkNonce(body.challenge, response, body.complexity)) {
-        response = generateNonce(5);
-      }
+      const qualifiedNonce = ProofOfWork.findQualifiedNonce({
+        challenge: body.challenge,
+        requiredLeadingZerosInResultingHash: body.complexity,
+      });
 
       const p = await DidKeyResolver.generate();
       const submitResponse = await fetch(proofOfWorkUrl, {
@@ -175,7 +174,7 @@ describe('http api', function () {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           challenge: body.challenge,
-          response: response,
+          response: qualifiedNonce,
           did: p.did,
         }),
       });
@@ -200,41 +199,17 @@ describe('http api', function () {
       expect(body.challenge.length).to.equal(16);
 
       // solve the challenge
-      let response = '';
-      let iterations = 0;
-      const start = Date.now();
-      while (!checkNonce(body.challenge, response, body.complexity)) {
-        response = generateNonce(5);
-        iterations++;
-        if (iterations % 10000000 == 0) {
-          console.log(
-            'complexity:',
-            body.complexity,
-            'iteration count:',
-            iterations,
-            'duration:',
-            Date.now() - start,
-            'ms',
-          );
-        }
-      }
-
-      console.log(
-        'complexity:',
-        body.complexity,
-        'iteration count:',
-        iterations,
-        'duration:',
-        Date.now() - start,
-        'ms',
-      );
+      const qualifiedNonce = ProofOfWork.findQualifiedNonce({
+        challenge: body.challenge,
+        requiredLeadingZerosInResultingHash: body.complexity,
+      });
 
       const submitResponse = await fetch(proofOfWorkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           challenge: body.challenge,
-          response: response,
+          response: qualifiedNonce,
           did: p.did,
         }),
       });
@@ -251,21 +226,13 @@ describe('http api', function () {
       };
       expect(body.challenge.length).to.equal(16);
 
-      // generate a nonce
-      let response = generateNonce(5);
-      // make sure the nonce is INVALID
-      // loop continues until checkNonce returns false, which is will probably do on the first iteration
-      while (checkNonce(body.challenge, response, body.complexity)) {
-        response = generateNonce(5);
-      }
-
       const p = await DidKeyResolver.generate();
       const submitResponse = await fetch(proofOfWorkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           challenge: body.challenge,
-          response: response,
+          response: 'insufficient-nonce',
           did: p.did,
         }),
       });
@@ -274,21 +241,21 @@ describe('http api', function () {
     });
 
     it('rejects a challenge it did not issue', async function () {
-      const challenge = generateNonce(10);
+      const unknownChallenge = 'unknown-challenge';
 
       // solve the challenge
-      let response = '';
-      while (!checkNonce(challenge, response, 2)) {
-        response = generateNonce(5);
-      }
+      const qualifiedNonce = ProofOfWork.findQualifiedNonce({
+        challenge: unknownChallenge,
+        requiredLeadingZerosInResultingHash: 1,
+      });
 
       const p = await DidKeyResolver.generate();
       const submitResponse = await fetch(proofOfWorkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          challenge: challenge,
-          response: response,
+          challenge: unknownChallenge,
+          response: qualifiedNonce,
           did: p.did,
         }),
       });
