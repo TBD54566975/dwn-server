@@ -20,40 +20,35 @@ export class ProofOfWork {
   }
 
   public static verifyChallengeResponse(input: {
-    requiredLeadingZerosInResultingHash: number;
+    maximumAllowedHashValue: bigint;
     challenge: string;
     responseNonce: string;
     requestData?: string;
   }): void {
     const computedHash = this.computeHash(input);
+    const computedHashAsBigInt = BigInt(`0x${computedHash}`);
 
-    const hasSufficientLeadingZeros = computedHash.startsWith(
-      '0'.repeat(input.requiredLeadingZerosInResultingHash),
-    );
-
-    if (!hasSufficientLeadingZeros) {
+    if (computedHashAsBigInt > input.maximumAllowedHashValue) {
       throw new DwnServerError(
-        DwnServerErrorCode.ProofOfWorkInsufficientLeadingZeros,
-        `Insufficient leading zeros for computed hash ${computedHash}, needs ${input.requiredLeadingZerosInResultingHash} zeros.`,
+        DwnServerErrorCode.ProofOfWorkInsufficientSolutionNonce,
+        `Insufficient computed hash ${computedHashAsBigInt}, needs to be <= ${input.maximumAllowedHashValue}.`,
       );
     }
   }
 
   public static findQualifiedNonce(input: {
-    requiredLeadingZerosInResultingHash: number;
+    maximumAllowedHashValue: string;
     challenge: string;
     requestData?: string;
   }): string {
     const startTime = Date.now();
 
-    const { requiredLeadingZerosInResultingHash, challenge, requestData } =
-      input;
-
-    const requiredHashPrefix = '0'.repeat(requiredLeadingZerosInResultingHash);
+    const { maximumAllowedHashValue, challenge, requestData } = input;
+    const maximumAllowedHashValueAsBigInt = BigInt(`0x${maximumAllowedHashValue}`);
 
     let iterations = 1;
     let randomNonce;
-    let hasSufficientLeadingZeros = false;
+    let qualifiedSolutionNonceFound = false;
     do {
       randomNonce = this.generateNonce();
       const computedHash = this.computeHash({
@@ -61,8 +56,9 @@ export class ProofOfWork {
         responseNonce: randomNonce,
         requestData,
       });
+      const computedHashAsBigInt = BigInt(`0x${computedHash}`);
 
-      hasSufficientLeadingZeros = computedHash.startsWith(requiredHashPrefix);
+      qualifiedSolutionNonceFound = computedHashAsBigInt <= maximumAllowedHashValueAsBigInt;
 
       iterations++;
 
@@ -74,7 +70,7 @@ export class ProofOfWork {
           } ms`,
         );
       }
-    } while (!hasSufficientLeadingZeros);
+    } while (!qualifiedSolutionNonceFound);
 
     // Log final/successful attempt.
     console.log(

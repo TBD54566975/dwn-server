@@ -1,3 +1,5 @@
+import { ProofOfWork } from "./proof-of-work.js";
+
 export class ProofOfWorkManager {
   private proofOfWorkOfLastMinute: Map<string, number> = new Map(); // proofOfWorkId -> timestamp of proof-of-work
   private currentMaximumHashValueAsBigInt: bigint;
@@ -32,6 +34,21 @@ export class ProofOfWorkManager {
     }
 
     return proofOfWorkManager;
+  }
+
+  public async verifyProofOfWork(proofOfWork: {
+    challenge: string;
+    responseNonce: string;
+    requestData: string;
+  }): Promise<void> {
+    // REMINDER: verify challenge is not expired
+
+    ProofOfWork.verifyChallengeResponse({
+      challenge: proofOfWork.challenge,
+      responseNonce: proofOfWork.responseNonce,
+      requestData: proofOfWork.requestData,
+      maximumAllowedHashValue: this.currentMaximumAllowedHashValue,
+    });
   }
 
   public start(): void {
@@ -70,7 +87,7 @@ export class ProofOfWorkManager {
    * The difficulty will never be lower than the initial difficulty.
    */
   private hashValueIncrementPerEvaluation = BigInt(1);
-  async refreshMaximumAllowedHashValue (): Promise<void> {
+  public async refreshMaximumAllowedHashValue (): Promise<void> {
     // Cleanup proof-of-work cache and update solve rate.
     this.removeProofOfWorkOlderThanOneMinute();
 

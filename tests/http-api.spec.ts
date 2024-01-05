@@ -38,6 +38,7 @@ import {
   getFileAsReadStream,
   streamHttpRequest,
 } from './utils.js';
+import type { ProofOfWorkChallengeModel } from '../src/registration/proof-of-work-types.js';
 
 if (!globalThis.crypto) {
   // @ts-ignore
@@ -93,23 +94,20 @@ describe('http api', function () {
         complexity: number;
       };
       expect(body.challenge.length).to.equal(16);
-      expect(body.complexity).to.equal(5);
+      expect(body.complexity).to.equal('00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
     });
 
     it('accepts a correct registration challenge', async function () {
       const challengeResponse = await fetch(proofOfWorkUrl);
       expect(challengeResponse.status).to.equal(200);
-      const body = (await challengeResponse.json()) as {
-        challenge: string;
-        complexity: number;
-      };
+      const body = await challengeResponse.json() as ProofOfWorkChallengeModel;
       expect(body.challenge.length).to.equal(16);
-      expect(body.complexity).to.equal(5);
+      expect(body.complexity).to.equal('00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 
       // solve the challenge
       const qualifiedNonce = ProofOfWork.findQualifiedNonce({
         challenge: body.challenge,
-        requiredLeadingZerosInResultingHash: body.complexity,
+        maximumAllowedHashValue: body.complexity,
       });
 
       const p = await DidKeyResolver.generate();
@@ -123,6 +121,8 @@ describe('http api', function () {
         }),
       });
 
+      const text = await submitResponse.text();
+      console.log(text);
       expect(submitResponse.status).to.equal(200);
 
       await tenantGate.authorizeTenantTermsOfService(p.did);
@@ -152,12 +152,9 @@ describe('http api', function () {
     it('rejects a registration challenge 5 minutes after it was issued', async function () {
       const challengeResponse = await fetch(proofOfWorkUrl);
       expect(challengeResponse.status).to.equal(200);
-      const body = (await challengeResponse.json()) as {
-        challenge: string;
-        complexity: number;
-      };
+      const body = await challengeResponse.json() as ProofOfWorkChallengeModel;
       expect(body.challenge.length).to.equal(16);
-      expect(body.complexity).to.equal(5);
+      expect(body.complexity).to.equal('00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 
       clock.tick(5 * 60 * 1000);
       clock.runToLast();
@@ -165,7 +162,7 @@ describe('http api', function () {
       // solve the challenge
       const qualifiedNonce = ProofOfWork.findQualifiedNonce({
         challenge: body.challenge,
-        requiredLeadingZerosInResultingHash: body.complexity,
+        maximumAllowedHashValue: body.complexity,
       });
 
       const p = await DidKeyResolver.generate();
@@ -192,16 +189,13 @@ describe('http api', function () {
       const p = await DidKeyResolver.generate();
       const challengeResponse = await fetch(proofOfWorkUrl);
       expect(challengeResponse.status).to.equal(200);
-      const body = (await challengeResponse.json()) as {
-        challenge: string;
-        complexity: number;
-      };
+      const body = await challengeResponse.json() as ProofOfWorkChallengeModel;
       expect(body.challenge.length).to.equal(16);
 
       // solve the challenge
       const qualifiedNonce = ProofOfWork.findQualifiedNonce({
         challenge: body.challenge,
-        requiredLeadingZerosInResultingHash: body.complexity,
+        maximumAllowedHashValue: body.complexity,
       });
 
       const submitResponse = await fetch(proofOfWorkUrl, {
@@ -246,7 +240,7 @@ describe('http api', function () {
       // solve the challenge
       const qualifiedNonce = ProofOfWork.findQualifiedNonce({
         challenge: unknownChallenge,
-        requiredLeadingZerosInResultingHash: 1,
+        maximumAllowedHashValue: '00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
       });
 
       const p = await DidKeyResolver.generate();

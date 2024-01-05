@@ -52,11 +52,6 @@ describe('ProofOfWorkManager', function () {
 
       for (let i = 0; i < 100; i++) {
         // Simulating no proof-of-work load for 100 seconds.
-
-        console.log(`iteration: ${i}`);
-        console.log(`maximumAllowedHashValue: ${proofOfWorkManager.currentMaximumAllowedHashValue}`);
-        console.log(`currentSolveCountPerMinute: ${proofOfWorkManager.currentSolveCountPerMinute}`);
-
         clock.tick(1000);
         await proofOfWorkManager.refreshMaximumAllowedHashValue();
 

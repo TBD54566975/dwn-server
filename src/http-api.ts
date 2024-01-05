@@ -20,6 +20,7 @@ import { type DwnServerError } from './dwn-error.js';
 import { jsonRpcApi } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
 import type { RegisteredTenantGate } from './registered-tenant-gate.js';
+import type { RegistrationManager } from './registration/registration-manager.js';
 
 const packageJson = process.env.npm_package_json ? JSON.parse(readFileSync(process.env.npm_package_json).toString()) : {};
 
@@ -28,6 +29,7 @@ export class HttpApi {
   #api: Express;
   #server: http.Server;
   tenantGate: RegisteredTenantGate;
+  registrationManager: RegistrationManager;
   dwn: Dwn;
 
   constructor(config: Config, dwn: Dwn, tenantGate: RegisteredTenantGate) {
@@ -237,6 +239,25 @@ export class HttpApi {
         }
       });
     }
+
+    this.#api.post('/registration', async (req: Request, res: Response) => {
+      try {
+        await this.registrationManager.handleRegistrationRequest(req.body);
+        res.status(200).json({ success: true });
+      } catch (error) {
+        const dwnServerError = error as DwnServerError;
+
+        if (dwnServerError.code !== undefined) {
+          res.status(400).json({
+            success : false,
+            reason  : dwnServerError.message,
+          });
+        } else {
+          console.log('Error handling registration request:', error);
+          res.status(500).json({ success: false });
+        }
+      }
+    });
   }
 
   async start(port: number, callback?: () => void): Promise<http.Server> {

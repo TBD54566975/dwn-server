@@ -7,16 +7,12 @@ import { Kysely } from 'kysely';
 import { DwnServerError } from './dwn-error.js';
 import { DwnServerErrorCode } from './dwn-error.js';
 import { ProofOfWork } from './registration/proof-of-work.js';
+import type { ProofOfWorkChallengeModel } from './registration/proof-of-work-types.js';
 
 const recentChallenges: { [challenge: string]: number } = {};
 const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // challenges are valid this long after issuance
 const COMPLEXITY_LOOKBACK = 5 * 60 * 1000; // complexity is based on number of successful registrations in this time frame
-const COMPLEXITY_MINIMUM = 5;
-
-type ProofOfWorkChallengeModel = {
-  challenge: string;
-  complexity: number;
-};
+const COMPLEXITY_MINIMUM = BigInt('0x00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 
 export class RegisteredTenantGate implements TenantGate {
   #db: Kysely<TenantRegistrationDatabase>;
@@ -105,8 +101,17 @@ export class RegisteredTenantGate implements TenantGate {
     recentChallenges[challenge] = Date.now();
     return {
       challenge: challenge,
-      complexity: await this.getComplexity(),
+      complexity: this.bigIntToHexString(await this.getComplexity()),
     };
+  }
+
+  private bigIntToHexString (int: BigInt): string {
+    let hex = int.toString(16).toUpperCase();
+    const stringLength = hex.length;
+    for (let pad = stringLength; pad < 64; pad++) {
+      hex = '0' + hex;
+    }
+    return hex;
   }
 
   async handleProofOfWorkChallengePost(body: { did: string; challenge: string; response: string }): Promise<void> {
@@ -119,24 +124,24 @@ export class RegisteredTenantGate implements TenantGate {
     ProofOfWork.verifyChallengeResponse({
       challenge: body.challenge,
       responseNonce: body.response,
-      requiredLeadingZerosInResultingHash: await this.getComplexity(),
+      maximumAllowedHashValue: await this.getComplexity(),
     });
 
     await this.authorizeTenantProofOfWork(body.did);
   }
 
-  private async getComplexity(): Promise<number> {
+  private async getComplexity(): Promise<bigint> {
     const result = await this.#db
       .selectFrom('authorizedTenants')
       .where('proofOfWorkTime', '>', Date.now() - COMPLEXITY_LOOKBACK)
       .select((eb) => eb.fn.countAll().as('recent_reg_count'))
       .executeTakeFirstOrThrow();
-    const recent = result.recent_reg_count as number;
-    if (recent == 0) {
+    const recentRegistrationCount = result.recent_reg_count as number;
+    if (recentRegistrationCount == 0) {
       return COMPLEXITY_MINIMUM;
     }
 
-    const complexity = Math.floor(recent / 10);
+    const complexity = COMPLEXITY_MINIMUM / BigInt(recentRegistrationCount);
     if (complexity < COMPLEXITY_MINIMUM) {
       return COMPLEXITY_MINIMUM;
     }
