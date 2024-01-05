@@ -286,28 +286,7 @@ describe('http api', function () {
       expect(response.body.result.reply.status.code).to.equal(401);
     });
 
-    it('rejects tenants that have accepted the terms of use but not completed proof-of-work', async function () {
-      const unauthorized = await DidKeyResolver.generate();
-      await tenantGate.authorizeTenantTermsOfService(unauthorized.did);
-      const recordsQuery = await RecordsQuery.create({
-        filter: { schema: 'woosa' },
-        signer: unauthorized.signer,
-      });
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsQuery.toJSON(),
-        target: unauthorized.did,
-      });
-
-      const response = await request(httpApi.api)
-        .post('/')
-        .set('dwn-request', JSON.stringify(dwnRequest))
-        .send();
-
-      expect(response.statusCode).to.equal(200);
-      expect(response.body.id).to.equal(requestId);
-      expect(response.body.result.reply.status.code).to.equal(401);
+    xit('rejects registration that have accepted the terms of use but not completed proof-of-work', async function () {
     });
   });
 

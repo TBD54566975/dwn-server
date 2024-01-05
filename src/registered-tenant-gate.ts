@@ -70,19 +70,12 @@ export class RegisteredTenantGate implements TenantGate {
       .where('did', '=', tenant)
       .execute();
 
-    if (result.length == 0) {
+    if (result.length === 0) {
       console.log('rejecting tenant that is not in the database', { tenant });
       return false;
     }
 
     const row = result[0];
-
-    if (this.#proofOfWorkRequired && row.proofOfWorkTime == undefined) {
-      console.log('rejecting tenant that has not completed the proof of work', {
-        tenant,
-      });
-      return false;
-    }
 
     if (this.#termsOfService && row.termsOfServiceHash != this.#termsOfServiceHash) {
       console.log('rejecting tenant that has not accepted the current terms of service', { row, tenant, expected: this.#termsOfServiceHash });
