@@ -10,7 +10,6 @@ import {
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
-import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import type { Server } from 'http';
 import fetch from 'node-fetch';
@@ -38,7 +37,8 @@ import {
   getFileAsReadStream,
   streamHttpRequest,
 } from './utils.js';
-import type { ProofOfWorkChallengeModel } from '../src/registration/proof-of-work-types.js';
+import { getDialectFromURI } from '../src/storage.js';
+import { RegistrationManager } from '../src/registration/registration-manager.js';
 
 if (!globalThis.crypto) {
   // @ts-ignore
@@ -50,6 +50,7 @@ describe('http api', function () {
   let server: Server;
   let profile: Profile;
   let tenantGate: RegisteredTenantGate;
+  let registrationManager: RegistrationManager;
   let dwn: Dwn;
   let clock;
 
@@ -62,11 +63,14 @@ describe('http api', function () {
     dwn = testDwn.dwn;
     tenantGate = testDwn.tenantGate;
 
-    httpApi = new HttpApi(config, dwn, tenantGate);
+    const sqlDialect = getDialectFromURI(new URL('sqlite://'));
+    const termsOfService = readFileSync(config.termsOfServiceFilePath).toString();
+    registrationManager = await RegistrationManager.create({ sqlDialect, termsOfService });
+
+    httpApi = new HttpApi(config, dwn, tenantGate, registrationManager);
 
     await tenantGate.initialize();
     profile = await DidKeyResolver.generate();
-    await tenantGate.authorizeTenantProofOfWork(profile.did);
     await tenantGate.authorizeTenantTermsOfService(profile.did);
   });
 
@@ -83,207 +87,6 @@ describe('http api', function () {
     clock.restore();
   });
 
-  describe('/register/proof-of-work', function () {
-    const proofOfWorkUrl = 'http://localhost:3000/register/proof-of-work';
-
-    it('returns a register challenge', async function () {
-      const response = await fetch(proofOfWorkUrl);
-      expect(response.status).to.equal(200);
-      const body = (await response.json()) as {
-        challenge: string;
-        complexity: number;
-      };
-      expect(body.challenge.length).to.equal(16);
-      expect(body.complexity).to.equal('00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
-    });
-
-    it('accepts a correct registration challenge', async function () {
-      const challengeResponse = await fetch(proofOfWorkUrl);
-      expect(challengeResponse.status).to.equal(200);
-      const body = await challengeResponse.json() as ProofOfWorkChallengeModel;
-      expect(body.challenge.length).to.equal(16);
-      expect(body.complexity).to.equal('00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
-
-      // solve the challenge
-      const qualifiedNonce = ProofOfWork.findQualifiedNonce({
-        challenge: body.challenge,
-        maximumAllowedHashValue: body.complexity,
-      });
-
-      const p = await DidKeyResolver.generate();
-      const submitResponse = await fetch(proofOfWorkUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          challenge: body.challenge,
-          response: qualifiedNonce,
-          did: p.did,
-        }),
-      });
-
-      const text = await submitResponse.text();
-      console.log(text);
-      expect(submitResponse.status).to.equal(200);
-
-      await tenantGate.authorizeTenantTermsOfService(p.did);
-
-      const recordsQuery = await RecordsQuery.create({
-        filter: { schema: 'woosa' },
-        signer: p.signer,
-      });
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsQuery.toJSON(),
-        target: p.did,
-      });
-
-      const rpcResponse = await request(httpApi.api)
-        .post('/')
-        .set('dwn-request', JSON.stringify(dwnRequest))
-        .send();
-
-      console.log(rpcResponse.body.result.reply.status);
-      expect(rpcResponse.statusCode).to.equal(200);
-      expect(rpcResponse.body.id).to.equal(requestId);
-      expect(rpcResponse.body.result.reply.status.code).to.equal(200);
-    }).timeout(30000);
-
-    it('rejects a registration challenge 5 minutes after it was issued', async function () {
-      const challengeResponse = await fetch(proofOfWorkUrl);
-      expect(challengeResponse.status).to.equal(200);
-      const body = await challengeResponse.json() as ProofOfWorkChallengeModel;
-      expect(body.challenge.length).to.equal(16);
-      expect(body.complexity).to.equal('00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
-
-      clock.tick(5 * 60 * 1000);
-      clock.runToLast();
-
-      // solve the challenge
-      const qualifiedNonce = ProofOfWork.findQualifiedNonce({
-        challenge: body.challenge,
-        maximumAllowedHashValue: body.complexity,
-      });
-
-      const p = await DidKeyResolver.generate();
-      const submitResponse = await fetch(proofOfWorkUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          challenge: body.challenge,
-          response: qualifiedNonce,
-          did: p.did,
-        }),
-      });
-
-      expect(submitResponse.status).to.equal(401);
-    }).timeout(30000);
-
-    it('increase complexity as more challenges are completed', async function () {
-      for (let i = 1; i <= 60; i++) {
-        tenantGate.authorizeTenantProofOfWork(
-          (await DidKeyResolver.generate()).did,
-        );
-      }
-
-      const p = await DidKeyResolver.generate();
-      const challengeResponse = await fetch(proofOfWorkUrl);
-      expect(challengeResponse.status).to.equal(200);
-      const body = await challengeResponse.json() as ProofOfWorkChallengeModel;
-      expect(body.challenge.length).to.equal(16);
-
-      // solve the challenge
-      const qualifiedNonce = ProofOfWork.findQualifiedNonce({
-        challenge: body.challenge,
-        maximumAllowedHashValue: body.complexity,
-      });
-
-      const submitResponse = await fetch(proofOfWorkUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          challenge: body.challenge,
-          response: qualifiedNonce,
-          did: p.did,
-        }),
-      });
-
-      expect(submitResponse.status).to.equal(200);
-    }).timeout(120000);
-
-    it('rejects an invalid nonce', async function () {
-      const challengeResponse = await fetch(proofOfWorkUrl);
-      expect(challengeResponse.status).to.equal(200);
-      const body = (await challengeResponse.json()) as {
-        challenge: string;
-        complexity: number;
-      };
-      expect(body.challenge.length).to.equal(16);
-
-      const p = await DidKeyResolver.generate();
-      const submitResponse = await fetch(proofOfWorkUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          challenge: body.challenge,
-          response: 'insufficient-nonce',
-          did: p.did,
-        }),
-      });
-
-      expect(submitResponse.status).to.equal(401);
-    });
-
-    it('rejects a challenge it did not issue', async function () {
-      const unknownChallenge = 'unknown-challenge';
-
-      // solve the challenge
-      const qualifiedNonce = ProofOfWork.findQualifiedNonce({
-        challenge: unknownChallenge,
-        maximumAllowedHashValue: '00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
-      });
-
-      const p = await DidKeyResolver.generate();
-      const submitResponse = await fetch(proofOfWorkUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          challenge: unknownChallenge,
-          response: qualifiedNonce,
-          did: p.did,
-        }),
-      });
-
-      expect(submitResponse.status).to.equal(401);
-    });
-
-    it('rejects tenants that have not accepted the terms of use and have not completed proof-of-work', async function () {
-      const unauthorized = await DidKeyResolver.generate();
-      const recordsQuery = await RecordsQuery.create({
-        filter: { schema: 'woosa' },
-        signer: unauthorized.signer,
-      });
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsQuery.toJSON(),
-        target: unauthorized.did,
-      });
-
-      const response = await request(httpApi.api)
-        .post('/')
-        .set('dwn-request', JSON.stringify(dwnRequest))
-        .send();
-
-      expect(response.statusCode).to.equal(200);
-      expect(response.body.id).to.equal(requestId);
-      expect(response.body.result.reply.status.code).to.equal(401);
-    });
-
-    xit('rejects registration that have accepted the terms of use but not completed proof-of-work', async function () {
-    });
-  });
-
   describe('/register/terms-of-service', function () {
     it('allow tenant that after accepting the terms of service', async function () {
       const response = await fetch(
@@ -297,8 +100,7 @@ describe('http api', function () {
         readFileSync('./tests/fixtures/terms-of-service.txt').toString(),
       );
 
-      const hash = createHash('sha256');
-      hash.update(terms);
+      const termsOfServiceHash = ProofOfWork.hashAsHexString([terms]);
 
       const p = await DidKeyResolver.generate();
 
@@ -309,12 +111,11 @@ describe('http api', function () {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             did: p.did,
-            termsOfServiceHash: hash.digest('hex'),
+            termsOfServiceHash
           }),
         },
       );
       expect(acceptResponse.status).to.equal(200);
-      await tenantGate.authorizeTenantProofOfWork(p.did);
 
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -340,7 +141,6 @@ describe('http api', function () {
 
     it('rejects tenants that have completed proof-of-work but have not accepted the terms of use', async function () {
       const unauthorized = await DidKeyResolver.generate();
-      await tenantGate.authorizeTenantProofOfWork(unauthorized.did);
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
         signer: unauthorized.signer,
@@ -363,8 +163,7 @@ describe('http api', function () {
     });
 
     it('rejects terms of use acceptance with incorrect hash', async function () {
-      const hash = createHash('sha256');
-      hash.update('i do not agree');
+      const termsOfServiceHash = ProofOfWork.hashAsHexString(['i do not agree']); // incorrect hash
 
       const p = await DidKeyResolver.generate();
 
@@ -375,12 +174,11 @@ describe('http api', function () {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             did: p.did,
-            termsOfServiceHash: hash.digest('hex'),
+            termsOfServiceHash
           }),
         },
       );
       expect(acceptResponse.status).to.equal(400);
-      await tenantGate.authorizeTenantProofOfWork(p.did);
 
       const recordsQuery = await RecordsQuery.create({
         filter: { schema: 'woosa' },
@@ -555,7 +353,6 @@ describe('http api', function () {
 
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
       const p = await DidKeyResolver.generate();
-      await tenantGate.authorizeTenantProofOfWork(p.did);
       await tenantGate.authorizeTenantTermsOfService(p.did);
 
       // First RecordsWrite that creates the record.

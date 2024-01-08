@@ -1,12 +1,16 @@
+import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
+import type { ProofOfWorkChallengeModel } from "./proof-of-work-types.js";
 import { ProofOfWork } from "./proof-of-work.js";
 
 export class ProofOfWorkManager {
+  private challengeNonces: { currentChallengeNonce: string, previousChallengeNonce?: string };
   private proofOfWorkOfLastMinute: Map<string, number> = new Map(); // proofOfWorkId -> timestamp of proof-of-work
   private currentMaximumHashValueAsBigInt: bigint;
   private initialMaximumHashValueAsBigInt: bigint;
   private desiredSolveCountPerMinute: number;
 
-  static readonly #difficultyReevaluationFrequencyInMilliseconds = 10000;
+  static readonly challengeRefreshFrequencyInMilliseconds = 10 * 60 * 1000; // 10 minutes
+  static readonly difficultyReevaluationFrequencyInMilliseconds = 10000;
 
   public get currentMaximumAllowedHashValue(): bigint {
     return this.currentMaximumHashValueAsBigInt;
@@ -17,41 +21,80 @@ export class ProofOfWorkManager {
   }
 
   private constructor (desiredSolveCountPerMinute: number, initialMaximumHashValue: string) {
+    this.challengeNonces = { currentChallengeNonce: ProofOfWork.generateNonce() };
     this.currentMaximumHashValueAsBigInt = BigInt(`0x${initialMaximumHashValue}`);
     this.initialMaximumHashValueAsBigInt = BigInt(`0x${initialMaximumHashValue}`);
     this.desiredSolveCountPerMinute = desiredSolveCountPerMinute;
   }
 
-  public static async create(
+  public static async create(input: {
     desiredSolveCountPerMinute: number,
     initialMaximumHashValue: string,
-    autoStart: boolean = false
-  ): Promise<ProofOfWorkManager> {
-    const proofOfWorkManager = new ProofOfWorkManager(desiredSolveCountPerMinute, initialMaximumHashValue);
+    autoStart: boolean,
+  }): Promise<ProofOfWorkManager> {
+    const proofOfWorkManager = new ProofOfWorkManager(input.desiredSolveCountPerMinute, input.initialMaximumHashValue);
 
-    if (autoStart) {
+    if (input.autoStart) {
       proofOfWorkManager.start();
     }
 
     return proofOfWorkManager;
   }
 
+  public getProofOfWorkChallenge(): ProofOfWorkChallengeModel {
+    return {
+      challengeNonce: this.challengeNonces.currentChallengeNonce,
+      maximumAllowedHashValue: ProofOfWorkManager.bigIntToHexString(this.currentMaximumAllowedHashValue),
+    };
+  }
+
+  /**
+   * Converts a BigInt to a 256 bit HEX string with padded preceding zeros (64 characters).
+   */
+  private static bigIntToHexString (int: BigInt): string {
+    let hex = int.toString(16).toUpperCase();
+    const stringLength = hex.length;
+    for (let pad = stringLength; pad < 64; pad++) {
+      hex = '0' + hex;
+    }
+    return hex;
+  }
+
+  public static isHexString(str: string): boolean {
+    const regexp = /^[0-9a-fA-F]+$/;
+    return regexp.test(str);
+  }
+
   public async verifyProofOfWork(proofOfWork: {
-    challenge: string;
+    challengeNonce: string;
     responseNonce: string;
     requestData: string;
   }): Promise<void> {
-    // REMINDER: verify challenge is not expired
+    const { challengeNonce, responseNonce, requestData } = proofOfWork;
 
-    ProofOfWork.verifyChallengeResponse({
-      challenge: proofOfWork.challenge,
-      responseNonce: proofOfWork.responseNonce,
-      requestData: proofOfWork.requestData,
-      maximumAllowedHashValue: this.currentMaximumAllowedHashValue,
-    });
+    // Verify response nonce is a HEX string that represents a 256 bit value.
+    if (!ProofOfWorkManager.isHexString(responseNonce) || responseNonce.length !== 64) {
+      throw new DwnServerError(
+        DwnServerErrorCode.ProofOfWorkManagerInvalidResponseNonceFormat,
+        `Response nonce not a HEX string representing a 256 bit value: ${responseNonce}.`
+      );
+    }
+
+    // Verify challenge nonce is valid.
+    if (challengeNonce !== this.challengeNonces.currentChallengeNonce &&
+        challengeNonce !== this.challengeNonces.previousChallengeNonce) {
+      throw new DwnServerError(
+        DwnServerErrorCode.ProofOfWorkManagerInvalidChallengeNonce,
+        `Unknown or expired challenge nonce: ${challengeNonce}.`
+      );
+    }
+
+    const maximumAllowedHashValue = this.currentMaximumAllowedHashValue;
+    ProofOfWork.verifyResponseNonce({ challengeNonce, responseNonce, requestData, maximumAllowedHashValue });
   }
 
   public start(): void {
+    this.periodicallyRefreshChallengeNonce();
     this.periodicallyRefreshProofOfWorkDifficulty();
   }
 
@@ -59,13 +102,24 @@ export class ProofOfWorkManager {
     this.proofOfWorkOfLastMinute.set(proofOfWorkId, Date.now());
   }
 
+  private periodicallyRefreshChallengeNonce (): void {
+    try {
+      this.challengeNonces.previousChallengeNonce = this.challengeNonces.currentChallengeNonce;
+      this.challengeNonces.currentChallengeNonce = ProofOfWork.generateNonce();
+    } catch (error) {
+      console.error(`Encountered error while refreshing challenge nonce: ${error}`);
+    } finally {
+      setTimeout(async () => this.periodicallyRefreshChallengeNonce(), ProofOfWorkManager.challengeRefreshFrequencyInMilliseconds);
+    }
+  }
+  
   private periodicallyRefreshProofOfWorkDifficulty (): void {
     try {
       this.refreshMaximumAllowedHashValue();
     } catch (error) {
       console.error(`Encountered error while updating proof of work difficulty: ${error}`);
     } finally {
-      setTimeout(async () => this.periodicallyRefreshProofOfWorkDifficulty(), ProofOfWorkManager.#difficultyReevaluationFrequencyInMilliseconds);
+      setTimeout(async () => this.periodicallyRefreshProofOfWorkDifficulty(), ProofOfWorkManager.difficultyReevaluationFrequencyInMilliseconds);
     }
   }
 
@@ -95,7 +149,7 @@ export class ProofOfWorkManager {
 
     // NOTE: bigint arithmetic does NOT work with decimals, so we work with "full numbers" by multiplying by a scale factor.
     const scaleFactor = 1_000_000;
-    const difficultyEvaluationsPerMinute = 60000 / ProofOfWorkManager.#difficultyReevaluationFrequencyInMilliseconds; // assumed to be >= 1;
+    const difficultyEvaluationsPerMinute = 60000 / ProofOfWorkManager.difficultyReevaluationFrequencyInMilliseconds; // assumed to be >= 1;
 
     // NOTE: easier difficulty is represented by a larger max allowed hash value
     //       and harder difficulty is represented by a smaller max allowed hash value.

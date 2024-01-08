@@ -16,6 +16,8 @@ describe('Process Handlers', function () {
     processExitStub = sinon.stub(process, 'exit');
   });
   afterEach(async function () {
+    dwnServer.stop(() => console.log('server stop in Process Handlers tests'));
+
     process.removeAllListeners('SIGINT');
     process.removeAllListeners('SIGTERM');
     process.removeAllListeners('uncaughtException');

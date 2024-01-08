@@ -1,43 +1,72 @@
+import type { Dialect } from "@tbd54566975/dwn-sql-store";
 import { ProofOfWorkManager } from "./proof-of-work-manager.js";
-
-type RegistrationRequest = {
-  proofOfWork: {
-    challenge: string;
-    responseNonce: string;
-  },
-  registrationData: {
-    did: string;
-    termsOfServiceHash: string;
-  }
-}
+import { ProofOfWork } from "./proof-of-work.js";
+import { RegistrationStore } from "./registration-store.js";
+import type { RegistrationRequest } from "./registration-types.js";
+import type { ProofOfWorkChallengeModel } from "./proof-of-work-types.js";
+import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 
 export class RegistrationManager {
   private proofOfWorkManager: ProofOfWorkManager;
+  private registrationStore: RegistrationStore;
 
-  private constructor () {
+  private termsOfServiceHash?: string;
+  private termsOfService?: string;
+
+  public getTermsOfService(): string {
+    return this.termsOfService;
   }
 
-  public static async create(
-  ): Promise<RegistrationManager> {
-    const proofOfWorkManager = new RegistrationManager();
-    proofOfWorkManager.proofOfWorkManager = await ProofOfWorkManager.create(10, '0FFFFFFFFFFFFFFF');
+  private constructor (termsOfService?: string) {
+    if (termsOfService) {
+      this.termsOfServiceHash = ProofOfWork.hashAsHexString([termsOfService]);
+      this.termsOfService = termsOfService;
+    }
+  }
+
+  public static async create(input: {
+    sqlDialect: Dialect,
+    termsOfService?: string
+  }): Promise<RegistrationManager> {
+    const { termsOfService, sqlDialect } = input;
+
+    // Initialize and start ProofOfWorkManager.
+    const proofOfWorkManager = new RegistrationManager(termsOfService);
+    proofOfWorkManager.proofOfWorkManager = await ProofOfWorkManager.create({
+      autoStart: true,
+      desiredSolveCountPerMinute: 10,
+      initialMaximumHashValue: '00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'
+    });
+
+    // Initialize RegistrationStore.
+    proofOfWorkManager.registrationStore = await RegistrationStore.create(sqlDialect);
 
     return proofOfWorkManager;
   }
 
+  public getProofOfWorkChallenge(): ProofOfWorkChallengeModel {
+    const proofOfWorkChallenge = this.proofOfWorkManager.getProofOfWorkChallenge();
+    return proofOfWorkChallenge;
+  }
+
+
   public async handleRegistrationRequest(registrationRequest: RegistrationRequest): Promise<void> {
-    this.proofOfWorkManager.verifyProofOfWork({
-      challenge: registrationRequest.proofOfWork.challenge,
-      responseNonce: registrationRequest.proofOfWork.responseNonce,
+    // Ensure the supplied terms of service hash matches the one we require.
+    if (registrationRequest.registrationData.termsOfServiceHash !== this.termsOfServiceHash) {
+      throw new DwnServerError(DwnServerErrorCode.RegistrationManagerInvalidOrOutdatedTermsOfServiceHash,
+        `Expecting terms-of-service hash ${this.termsOfServiceHash}, but got ${registrationRequest.registrationData.termsOfServiceHash}.`
+      );
+    }
+
+    const { challengeNonce, responseNonce } = registrationRequest.proofOfWork;
+
+    await this.proofOfWorkManager.verifyProofOfWork({
+      challengeNonce,
+      responseNonce,
       requestData: JSON.stringify(registrationRequest.registrationData),
     });
 
-    // Ensure the supplied terms of service hash matches the one we require.
-    if (registrationRequest.registrationData.termsOfServiceHash !== '') {
-      throw new Error('Invalid terms of service hash.');
-    }
-
     // Store tenant registration data in database.
-    // await this.tenantRegistrationStore.storeTenantRegistration(registrationRequest.registrationData);
+    await this.registrationStore.insertOrUpdateTenantRegistration(registrationRequest.registrationData);
   }
 }

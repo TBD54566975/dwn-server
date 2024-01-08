@@ -10,6 +10,16 @@ export class DwnServerError extends Error {
 
     this.name = 'DwnServerError';
   }
+
+  /**
+   * Called by `JSON.stringify(...)` automatically.
+   */
+  public toJSON(): { code: string, message: string } {
+    return {
+      code: this.code,
+      message: this.message,
+    };
+  }
 }
 
 /**
@@ -18,5 +28,8 @@ export class DwnServerError extends Error {
 export enum DwnServerErrorCode {
   ProofOfWorkInsufficientSolutionNonce = 'ProofOfWorkInsufficientSolutionNonce',
   ProofOfWorkInvalidOrExpiredChallenge = 'ProofOfWorkInvalidOrExpiredChallenge',
+  ProofOfWorkManagerInvalidChallengeNonce = 'ProofOfWorkManagerInvalidChallengeNonce',
+  ProofOfWorkManagerInvalidResponseNonceFormat = 'ProofOfWorkManagerInvalidResponseNonceFormat',
+  RegistrationManagerInvalidOrOutdatedTermsOfServiceHash = 'RegistrationManagerInvalidOrOutdatedTermsOfServiceHash',
   TenantRegistrationOutdatedTermsOfService = 'TenantRegistrationOutdatedTermsOfService',
 }

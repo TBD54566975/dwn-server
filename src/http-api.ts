@@ -32,12 +32,13 @@ export class HttpApi {
   registrationManager: RegistrationManager;
   dwn: Dwn;
 
-  constructor(config: Config, dwn: Dwn, tenantGate: RegisteredTenantGate) {
+  constructor(config: Config, dwn: Dwn, tenantGate: RegisteredTenantGate, registrationManager: RegistrationManager) {
     this.#config = config;
     this.#api = express();
     this.#server = http.createServer(this.#api);
     this.dwn = dwn;
     this.tenantGate = tenantGate;
+    this.registrationManager = registrationManager;
 
     this.#setupMiddleware();
     this.#setupRoutes();
@@ -195,27 +196,8 @@ export class HttpApi {
   #setupRegistrationRoutes(): void {
     if (this.#config.registrationProofOfWorkEnabled) {
       this.#api.get('/register/proof-of-work', async (_req: Request, res: Response) => {
-        const proofOfWorkChallenge = await this.tenantGate.getProofOfWorkChallenge();
+        const proofOfWorkChallenge = await this.registrationManager.getProofOfWorkChallenge();
         res.json(proofOfWorkChallenge);
-      });
-
-      this.#api.post('/register/proof-of-work', async (req: Request, res: Response) => {
-        try {
-          await this.tenantGate.handleProofOfWorkChallengePost(req.body);
-          res.json({ success: true });
-        } catch (error) {
-          const dwnServerError = error as DwnServerError;
-
-          if (dwnServerError.code !== undefined) {
-            res.status(401).json({
-              success : false,
-              reason  : dwnServerError.message,
-            });
-          } else {
-            console.log('Error handling proof-of-work POST:', error);
-            res.status(500).json({ success: false });
-          }
-        }
       });
     }
     if (this.#config.termsOfServiceFilePath !== undefined) {
@@ -248,10 +230,7 @@ export class HttpApi {
         const dwnServerError = error as DwnServerError;
 
         if (dwnServerError.code !== undefined) {
-          res.status(400).json({
-            success : false,
-            reason  : dwnServerError.message,
-          });
+          res.status(400).json(dwnServerError);
         } else {
           console.log('Error handling registration request:', error);
           res.status(500).json({ success: false });

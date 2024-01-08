@@ -26,12 +26,16 @@ describe('ProofOfWorkManager', function () {
   describe('complexity', function () {
 
     it('should become more complex as more successful proof-of-work is submitted', async function () {
-      const desiredSolveRatePerMinute = 10;
+      const desiredSolveCountPerMinute = 10;
       const initialMaximumHashValue = 'FFFFFFFF';
-      const proofOfWorkManager = await ProofOfWorkManager.create(desiredSolveRatePerMinute, initialMaximumHashValue);
+      const proofOfWorkManager = await ProofOfWorkManager.create({
+        autoStart: false,
+        desiredSolveCountPerMinute,
+        initialMaximumHashValue,
+      });
 
       // Load up desiredSolveRatePerMinute number of proof-of-work entries, so all future new entries will increase the complexity.
-      for (let i = 0; i < desiredSolveRatePerMinute; i++) {
+      for (let i = 0; i < desiredSolveCountPerMinute; i++) {
         await proofOfWorkManager.recordProofOfWork(uuidv4());
       }
 

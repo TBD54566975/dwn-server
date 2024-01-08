@@ -1,27 +1,34 @@
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 
 import { DwnServerError, DwnServerErrorCode } from '../dwn-error.js';
 
 export class ProofOfWork {
   public static computeHash(input: {
-    challenge: string;
+    challengeNonce: string;
     responseNonce: string;
     requestData?: string;
   }): string {
-    const hash = createHash('sha256');
-    hash.update(input.challenge);
-    hash.update(input.responseNonce);
+    const hashInput = [input.challengeNonce, input.responseNonce];
 
-    if (input.requestData !== undefined) {
-      hash.update(input.requestData);
+    if (input.requestData) {
+      hashInput.push(input.requestData);
+    }
+    
+    return this.hashAsHexString(hashInput);
+  }
+
+  public static hashAsHexString(input: string[]): string {
+    const hash = createHash('sha256');
+    for (const item of input) {
+      hash.update(item);
     }
 
     return hash.digest('hex');
   }
 
-  public static verifyChallengeResponse(input: {
+  public static verifyResponseNonce(input: {
     maximumAllowedHashValue: bigint;
-    challenge: string;
+    challengeNonce: string;
     responseNonce: string;
     requestData?: string;
   }): void {
@@ -36,14 +43,14 @@ export class ProofOfWork {
     }
   }
 
-  public static findQualifiedNonce(input: {
+  public static findQualifiedResponseNonce(input: {
     maximumAllowedHashValue: string;
-    challenge: string;
+    challengeNonce: string;
     requestData?: string;
   }): string {
     const startTime = Date.now();
 
-    const { maximumAllowedHashValue, challenge, requestData } = input;
+    const { maximumAllowedHashValue, challengeNonce, requestData } = input;
     const maximumAllowedHashValueAsBigInt = BigInt(`0x${maximumAllowedHashValue}`);
 
     let iterations = 1;
@@ -52,7 +59,7 @@ export class ProofOfWork {
     do {
       randomNonce = this.generateNonce();
       const computedHash = this.computeHash({
-        challenge,
+        challengeNonce,
         responseNonce: randomNonce,
         requestData,
       });
@@ -80,14 +87,11 @@ export class ProofOfWork {
     return randomNonce;
   }
 
-  public static generateNonce(size: number = 32): string {
-    const nonceChars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-    let nonce = '';
-    while (nonce.length < size) {
-      nonce += nonceChars.charAt(Math.floor(Math.random() * nonceChars.length));
-    }
-    return nonce;
+  /**
+   * Generates 32 random bytes expressed as a HEX string.
+   */
+  public static generateNonce(): string {
+    const hexString = randomBytes(32).toString('hex').toUpperCase();
+    return hexString;
   }
 }

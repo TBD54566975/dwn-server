@@ -1,15 +1,13 @@
 import type { TenantGate } from '@tbd54566975/dwn-sdk-js';
 
-import { createHash, randomBytes } from 'crypto';
 import type { Dialect } from 'kysely';
 import { Kysely } from 'kysely';
 
 import { DwnServerError } from './dwn-error.js';
 import { DwnServerErrorCode } from './dwn-error.js';
 import { ProofOfWork } from './registration/proof-of-work.js';
-import type { ProofOfWorkChallengeModel } from './registration/proof-of-work-types.js';
 
-const recentChallenges: { [challenge: string]: number } = {};
+const recentChallenges: { [challengeNonce: string]: number } = {};
 const CHALLENGE_TIMEOUT = 5 * 60 * 1000; // challenges are valid this long after issuance
 const COMPLEXITY_LOOKBACK = 5 * 60 * 1000; // complexity is based on number of successful registrations in this time frame
 const COMPLEXITY_MINIMUM = BigInt('0x00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
@@ -29,9 +27,7 @@ export class RegisteredTenantGate implements TenantGate {
     this.#proofOfWorkRequired = proofOfWorkRequired;
 
     if (termsOfService) {
-      const termsOfServiceHash = createHash('sha256');
-      termsOfServiceHash.update(termsOfService);
-      this.#termsOfServiceHash = termsOfServiceHash.digest('hex');
+      this.#termsOfServiceHash = ProofOfWork.hashAsHexString([termsOfService]);
       this.#termsOfService = termsOfService;
     }
   }
@@ -54,7 +50,7 @@ export class RegisteredTenantGate implements TenantGate {
       .execute();
   }
 
-  async isTenant(tenant: string): Promise<boolean> {
+  async isActiveTenant(tenant: string): Promise<boolean> {
     if (!this.#proofOfWorkRequired && !this.#termsOfService) {
       return true;
     }
@@ -79,55 +75,6 @@ export class RegisteredTenantGate implements TenantGate {
     }
 
     return true;
-  }
-
-  async authorizeTenantProofOfWork(tenant: string): Promise<void> {
-    await this.#db
-      .insertInto('authorizedTenants')
-      .values({
-        did: tenant,
-        proofOfWorkTime: Date.now(),
-      })
-      .onConflict((oc) =>
-        oc.column('did').doUpdateSet((eb) => ({
-          proofOfWorkTime: eb.ref('excluded.proofOfWorkTime'),
-        })),
-      )
-      .executeTakeFirst();
-  }
-
-  async getProofOfWorkChallenge(): Promise<ProofOfWorkChallengeModel> {
-    const challenge = randomBytes(10).toString('base64');
-    recentChallenges[challenge] = Date.now();
-    return {
-      challenge: challenge,
-      complexity: this.bigIntToHexString(await this.getComplexity()),
-    };
-  }
-
-  private bigIntToHexString (int: BigInt): string {
-    let hex = int.toString(16).toUpperCase();
-    const stringLength = hex.length;
-    for (let pad = stringLength; pad < 64; pad++) {
-      hex = '0' + hex;
-    }
-    return hex;
-  }
-
-  async handleProofOfWorkChallengePost(body: { did: string; challenge: string; response: string }): Promise<void> {
-    const challengeIssued = recentChallenges[body.challenge];
-
-    if (challengeIssued == undefined || Date.now() - challengeIssued > CHALLENGE_TIMEOUT) {
-      throw new DwnServerError(DwnServerErrorCode.ProofOfWorkInvalidOrExpiredChallenge, `Invalid or expired challenge: ${body.challenge}.`);
-    }
-
-    ProofOfWork.verifyChallengeResponse({
-      challenge: body.challenge,
-      responseNonce: body.response,
-      maximumAllowedHashValue: await this.getComplexity(),
-    });
-
-    await this.authorizeTenantProofOfWork(body.did);
   }
 
   private async getComplexity(): Promise<bigint> {

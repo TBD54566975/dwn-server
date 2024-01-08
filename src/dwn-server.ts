@@ -14,6 +14,7 @@ import { setProcessHandlers } from './process-handlers.js';
 import { RegisteredTenantGate } from './registered-tenant-gate.js';
 import { getDWNConfig, getDialectFromURI } from './storage.js';
 import { WsApi } from './ws-api.js';
+import { RegistrationManager } from './registration/registration-manager.js';
 
 export type DwnServerOptions = {
   dwn?: Dwn;
@@ -48,28 +49,32 @@ export class DwnServer {
    * The DWN creation is secondary and only happens if it hasn't already been done.
    */
   async #setupServer(): Promise<void> {
-    let tenantGate: RegisteredTenantGate;
-    if (!this.dwn) {
-      const tenantGateDB = getDialectFromURI(
-        new URL(this.config.tenantRegistrationStore),
-      );
+    // Load terms of service if given the path.
+    const termsOfService =
+      this.config.termsOfServiceFilePath !== undefined
+        ? readFileSync(this.config.termsOfServiceFilePath).toString()
+        : undefined;
 
-      // Load terms of service if given the path.
-      const termsOfService =
-        this.config.termsOfServiceFilePath !== undefined
-          ? readFileSync(this.config.termsOfServiceFilePath).toString()
-          : undefined;
+    const tenantGateDB = getDialectFromURI(
+      new URL(this.config.tenantRegistrationStore),
+    );
+
+    let tenantGate: RegisteredTenantGate;
+    let registrationManager: RegistrationManager;
+    if (!this.dwn) {
 
       tenantGate = new RegisteredTenantGate(
         tenantGateDB,
         this.config.registrationProofOfWorkEnabled,
         termsOfService,
       );
+      registrationManager = await RegistrationManager.create({ sqlDialect: tenantGateDB, termsOfService });
 
       this.dwn = await Dwn.create(getDWNConfig(this.config, tenantGate));
     }
 
-    this.#httpApi = new HttpApi(this.config, this.dwn, tenantGate);
+    this.#httpApi = new HttpApi(this.config, this.dwn, tenantGate, registrationManager);
+
     await this.#httpApi.start(this.config.port, () => {
       log.info(`HttpServer listening on port ${this.config.port}`);
     });
