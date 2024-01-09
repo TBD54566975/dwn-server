@@ -6,19 +6,13 @@ import type { RegistrationData, RegistrationRequest } from "./registration-types
 import type { ProofOfWorkChallengeModel } from "./proof-of-work-types.js";
 import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 import type { TenantGate } from "@tbd54566975/dwn-sdk-js";
-import { RegistrationTenantGate } from "./registration-tenant-gate.js";
 
-export class RegistrationManager {
-  private tenantGate: TenantGate;
+export class RegistrationManager implements TenantGate {
   private proofOfWorkManager: ProofOfWorkManager;
   private registrationStore: RegistrationStore;
 
   private termsOfServiceHash?: string;
   private termsOfService?: string;
-
-  public getTenantGate(): TenantGate {
-    return this.tenantGate;
-  }
 
   public getTermsOfService(): string {
     return this.termsOfService;
@@ -28,10 +22,17 @@ export class RegistrationManager {
     return this.termsOfServiceHash;
   }
 
+  /**
+   * Updates the terms-of-service. Exposed for testing purposes.
+   */
+  public updateTermsOfService(termsOfService: string): void {
+    this.termsOfServiceHash = ProofOfWork.hashAsHexString([termsOfService]);
+    this.termsOfService = termsOfService;
+  }
+
   private constructor (termsOfService?: string) {
     if (termsOfService) {
-      this.termsOfServiceHash = ProofOfWork.hashAsHexString([termsOfService]);
-      this.termsOfService = termsOfService;
+      this.updateTermsOfService(termsOfService);
     }
   }
 
@@ -52,7 +53,6 @@ export class RegistrationManager {
     // Initialize RegistrationStore.
     const registrationStore = await RegistrationStore.create(sqlDialect);
     registrationManager.registrationStore = registrationStore;
-    registrationManager.tenantGate = await RegistrationTenantGate.create(registrationStore, registrationManager.getTermsOfServiceHash());
     
     return registrationManager;
   }
@@ -89,5 +89,19 @@ export class RegistrationManager {
    */
   public async recordTenantRegistration(registrationData: RegistrationData): Promise<void> {
     await this.registrationStore.insertOrUpdateTenantRegistration(registrationData);
+  }
+
+  public async isActiveTenant(tenant: string): Promise<boolean> {
+    const tenantRegistration = await this.registrationStore.getTenantRegistration(tenant);
+
+    if (tenantRegistration === undefined) {
+      return false
+    }
+
+    if (tenantRegistration.termsOfServiceHash !== this.termsOfServiceHash) {
+      return false;
+    }
+
+    return true;
   }
 }

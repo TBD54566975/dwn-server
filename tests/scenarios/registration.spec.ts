@@ -63,7 +63,7 @@ describe('Registration scenarios', function () {
     const termsOfService = readFileSync(config.termsOfServiceFilePath).toString();
     registrationManager = await RegistrationManager.create({ sqlDialect, termsOfService });
 
-    dwn = await getTestDwn(registrationManager.getTenantGate());
+    dwn = await getTestDwn(registrationManager);
 
     httpApi = new HttpApi(config, dwn, registrationManager);
 
@@ -141,7 +141,7 @@ describe('Registration scenarios', function () {
     expect(registrationResponse.status).to.equal(200);
 
     // 6. Alice can now write to the DWN.
-    const { jsonRpcRequest, dataBytes } = await createRecordsWriteJsonRpcRequest(alice);
+    const { jsonRpcRequest, dataBytes } = await generateRecordsWriteJsonRpcRequest(alice);
     const writeResponse = await fetch(dwnMessageEndpoint, {
       method: 'POST',
       headers: {
@@ -155,7 +155,7 @@ describe('Registration scenarios', function () {
 
     // 7. Sanity test that another non-tenant is NOT authorized to write.
     const nonTenant = await DidKeyResolver.generate();
-    const nonTenantJsonRpcRequest = await createRecordsWriteJsonRpcRequest(nonTenant);
+    const nonTenantJsonRpcRequest = await generateRecordsWriteJsonRpcRequest(nonTenant);
     const nonTenantJsonRpcResponse = await fetch(dwnMessageEndpoint, {
       method: 'POST',
       headers: {
@@ -168,9 +168,7 @@ describe('Registration scenarios', function () {
     expect(nonTenantJsonRpcResponseBody.result.reply.status.code).to.equal(401);
   });
 
-
   it('should reject a registration request that has proof-or-work that does not meet the difficulty requirement.', async function () {
-
     // Scenario:
     // 0. Assume Alice fetched the terms-of-service and proof-of-work challenge.
     // 1. Alice computes the proof-of-work response nonce that is insufficient to meet the difficulty requirement.
@@ -347,9 +345,53 @@ describe('Registration scenarios', function () {
     expect(registrationResponse.status).to.equal(400);
     expect(registrationResponseBody.code).to.equal(DwnServerErrorCode.ProofOfWorkManagerInvalidChallengeNonce);
   });
+
+  it('should reject a DWN message for an existing tenant who agreed to an outdated terms-of-service.', async () => {
+    // Scenario:
+    // 1. Alice is a registered tenant and is able to write to the DWN.
+    // 2. DWN server administrator updates the terms-of-service.
+    // 3. Alice no longer can write to the DWN because she has not agreed to the new terms-of-service.
+
+
+    // 1. Alice is a registered tenant and is able to write to the DWN.
+    // Short-cut to register Alice.
+    registrationManager.recordTenantRegistration({
+      did: alice.did,
+      termsOfServiceHash: ProofOfWork.hashAsHexString([registrationManager.getTermsOfService()])
+    });
+
+    // Sanity test that Alice can write to the DWN after registration.
+    const write1 = await generateRecordsWriteJsonRpcRequest(alice);
+    const write1Response = await fetch(dwnMessageEndpoint, {
+      method: 'POST',
+      headers: {
+        'dwn-request': JSON.stringify(write1.jsonRpcRequest),
+      },
+      body: new Blob([write1.dataBytes]),
+    });
+    const write1ResponseBody = await write1Response.json() as JsonRpcResponse;
+    expect(write1Response.status).to.equal(200);
+    expect(write1ResponseBody.result.reply.status.code).to.equal(202);
+
+    // 2. DWN server administrator updates the terms-of-service.
+    registrationManager.updateTermsOfService('new terms of service');
+
+    // 3. Alice no longer can write to the DWN because she has not agreed to the new terms-of-service.
+    const write2 = await generateRecordsWriteJsonRpcRequest(alice);
+    const write2Response = await fetch(dwnMessageEndpoint, {
+      method: 'POST',
+      headers: {
+        'dwn-request': JSON.stringify(write2.jsonRpcRequest),
+      },
+      body: new Blob([write2.dataBytes]),
+    });
+    const write2ResponseBody = await write2Response.json() as JsonRpcResponse;
+    expect(write2Response.status).to.equal(200);
+    expect(write2ResponseBody.result.reply.status.code).to.equal(401);
+  });
 });
 
-async function createRecordsWriteJsonRpcRequest(persona: Persona): Promise<{ jsonRpcRequest: JsonRpcRequest, dataBytes: Uint8Array }> {
+async function generateRecordsWriteJsonRpcRequest(persona: Persona): Promise<{ jsonRpcRequest: JsonRpcRequest, dataBytes: Uint8Array }> {
   const { recordsWrite, dataStream } = await createRecordsWriteMessage(persona);
 
   const requestId = uuidv4();

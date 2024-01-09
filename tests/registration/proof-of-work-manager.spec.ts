@@ -1,10 +1,11 @@
 
 
+import sinon from 'sinon';
+
 import { expect } from 'chai';
 import { useFakeTimers } from 'sinon';
 import { v4 as uuidv4 } from 'uuid';
 import { ProofOfWorkManager } from '../..//src/registration/proof-of-work-manager.js';
-
 
 describe('ProofOfWorkManager', function () {
   let clock;
@@ -23,46 +24,115 @@ describe('ProofOfWorkManager', function () {
     clock.restore();
   });
 
-  describe('complexity', function () {
-
-    it('should become more complex as more successful proof-of-work is submitted', async function () {
-      const desiredSolveCountPerMinute = 10;
-      const initialMaximumHashValue = 'FFFFFFFF';
-      const proofOfWorkManager = await ProofOfWorkManager.create({
-        autoStart: false,
-        desiredSolveCountPerMinute,
-        initialMaximumHashValue,
-      });
-
-      // Load up desiredSolveRatePerMinute number of proof-of-work entries, so all future new entries will increase the complexity.
-      for (let i = 0; i < desiredSolveCountPerMinute; i++) {
-        await proofOfWorkManager.recordProofOfWork(uuidv4());
-      }
-
-      let lastMaximumAllowedHashValue = BigInt('0x' + initialMaximumHashValue);
-      for (let i = 0; i < 100; i++) {
-        // Simulating 1 proof-of-work per second which is ~60/min for 100 seconds.
-        clock.tick(1000);
-        await proofOfWorkManager.recordProofOfWork(uuidv4());
-        await proofOfWorkManager.refreshMaximumAllowedHashValue();
-
-        // The maximum allowed hash value should be decreasing as more proof-of-work is submitted.
-        expect(proofOfWorkManager.currentMaximumAllowedHashValue < lastMaximumAllowedHashValue).to.be.true;
-        lastMaximumAllowedHashValue = proofOfWorkManager.currentMaximumAllowedHashValue;
-      }
-
-      // Simulated 100 seconds has passed, so all proof-of-work entries should be removed.
-      clock.tick(100_000);
-
-      for (let i = 0; i < 100; i++) {
-        // Simulating no proof-of-work load for 100 seconds.
-        clock.tick(1000);
-        await proofOfWorkManager.refreshMaximumAllowedHashValue();
-
-        // The maximum allowed hash value should be increasing again.
-        expect(proofOfWorkManager.currentMaximumAllowedHashValue > lastMaximumAllowedHashValue).to.be.true;
-        lastMaximumAllowedHashValue = proofOfWorkManager.currentMaximumAllowedHashValue;
-      }
+  it('should periodically refresh the challenge nonce and proof-of-work difficulty', async function () {
+    const desiredSolveCountPerMinute = 10;
+    const initialMaximumHashValue = 'FFFFFFFF';
+    const proofOfWorkManager = await ProofOfWorkManager.create({
+      autoStart: true,
+      desiredSolveCountPerMinute,
+      initialMaximumHashValue,
     });
+
+    // stub that throws half the time
+    const stub = (): void => {
+      // Generate a random number between 0 and 1
+      const random = Math.random();
+    
+      // If the random number is less than 0.5, throw an error
+      if (random < 0.5) {
+        throw new Error('Random error');
+      }
+    };
+
+    const challengeNonceRefreshSpy = sinon.stub(proofOfWorkManager, 'refreshChallengeNonce').callsFake(stub);
+    const maximumAllowedHashValueRefreshSpy = sinon.stub(proofOfWorkManager, 'refreshMaximumAllowedHashValue').callsFake(stub);
+
+    // Simulated 1 hour has passed, so all proof-of-work entries should be removed.
+    clock.tick(60 * 60 * 1000);
+
+    // 1 hour divided by the challenge refresh frequency
+    const expectedChallengeNonceRefreshCount = 60 * 60 / proofOfWorkManager.challengeRefreshFrequencyInSeconds;
+
+    // 1 hour divided by the challenge refresh frequency
+    const expectedDifficultyReevaluationCount = 60 * 60 / proofOfWorkManager.difficultyReevaluationFrequencyInSeconds;
+
+    expect(challengeNonceRefreshSpy.callCount).to.greaterThanOrEqual(expectedChallengeNonceRefreshCount);
+    expect(maximumAllowedHashValueRefreshSpy.callCount).to.greaterThanOrEqual(expectedDifficultyReevaluationCount);
+  });
+
+  it('should increase difficulty if proof-of-work rate goes above desired rate and reduce difficulty as proof-of-work rate falls below desired rate.', async function () {
+    const desiredSolveCountPerMinute = 10;
+    const initialMaximumHashValue = 'FFFFFFFF';
+    const proofOfWorkManager = await ProofOfWorkManager.create({
+      autoStart: true,
+      desiredSolveCountPerMinute,
+      initialMaximumHashValue,
+    });
+
+    // Load up desiredSolveRatePerMinute number of proof-of-work entries, so all future new entries will increase the complexity.
+    for (let i = 0; i < desiredSolveCountPerMinute; i++) {
+      await proofOfWorkManager.recordProofOfWork(uuidv4());
+    }
+
+    let initialMaximumAllowedHashValue = proofOfWorkManager.currentMaximumAllowedHashValue;
+    let lastMaximumAllowedHashValue = BigInt('0x' + initialMaximumHashValue);
+    const lastSolveCountPerMinute = 0;
+    for (let i = 0; i < 100; i++) {
+      // Simulating 1 proof-of-work per second which for 100 seconds.
+      await proofOfWorkManager.recordProofOfWork(uuidv4());
+      expect(proofOfWorkManager.currentSolveCountPerMinute).to.be.greaterThanOrEqual(lastSolveCountPerMinute);
+      clock.tick(1000);
+
+      // The maximum allowed hash value should be monotonically decreasing as more proof-of-work is submitted.
+      expect(proofOfWorkManager.currentMaximumAllowedHashValue <= lastMaximumAllowedHashValue).to.be.true;
+      lastMaximumAllowedHashValue = proofOfWorkManager.currentMaximumAllowedHashValue;
+    }
+    expect(proofOfWorkManager.currentMaximumAllowedHashValue < initialMaximumAllowedHashValue).to.be.true;
+
+    // Simulated 100 seconds has passed, so all proof-of-work entries should be removed.
+    clock.tick(100_000);
+    clock.runToLast();
+
+    expect(proofOfWorkManager.currentSolveCountPerMinute).to.equal(0);
+
+    initialMaximumAllowedHashValue = proofOfWorkManager.currentMaximumAllowedHashValue;
+    for (let i = 0; i < 100; i++) {
+      // Simulating no proof-of-work load for 100 seconds.
+      clock.tick(1000);
+
+      // The maximum allowed hash value should be monotonically increasing again.
+      expect(proofOfWorkManager.currentMaximumAllowedHashValue >= lastMaximumAllowedHashValue).to.be.true;
+      lastMaximumAllowedHashValue = proofOfWorkManager.currentMaximumAllowedHashValue;
+    }
+    expect(proofOfWorkManager.currentMaximumAllowedHashValue > initialMaximumAllowedHashValue).to.be.true;
+  });
+
+  it('should reduce difficulty back to initial difficulty when proof-of-work rate is lower than desired rate for long enough', async function () {
+    const desiredSolveCountPerMinute = 10;
+    const initialMaximumHashValue = 'FFFFFFFF';
+    const initialMaximumHashValueAsBigInt = BigInt('0x' + initialMaximumHashValue);
+    const proofOfWorkManager = await ProofOfWorkManager.create({
+      autoStart: true,
+      desiredSolveCountPerMinute,
+      initialMaximumHashValue,
+    });
+
+    // Load up desiredSolveRatePerMinute number of proof-of-work entries, so all future new entries will increase the complexity.
+    for (let i = 0; i < desiredSolveCountPerMinute; i++) {
+      await proofOfWorkManager.recordProofOfWork(uuidv4());
+    }
+
+    // Simulating 1 proof-of-work per second which for 100 seconds to increase proof-of-work difficulty.
+    for (let i = 0; i < 100; i++) {
+      await proofOfWorkManager.recordProofOfWork(uuidv4());
+      clock.tick(1000);
+    }
+    expect(proofOfWorkManager.currentMaximumAllowedHashValue < initialMaximumHashValueAsBigInt).to.be.true;
+
+    // Simulated 1 hour has passed.
+    clock.tick(60 * 60 * 1000);
+    clock.runToLast();
+
+    expect(proofOfWorkManager.currentMaximumAllowedHashValue === initialMaximumHashValueAsBigInt).to.be.true;
   });
 });

@@ -56,13 +56,13 @@ describe('http api', function () {
 
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
-    
+
     // RegistrationManager creation
     const sqlDialect = getDialectFromURI(new URL('sqlite://'));
     const termsOfService = readFileSync(config.termsOfServiceFilePath).toString();
     registrationManager = await RegistrationManager.create({ sqlDialect, termsOfService });
 
-    dwn = await getTestDwn(registrationManager.getTenantGate());
+    dwn = await getTestDwn(registrationManager);
 
     httpApi = new HttpApi(config, dwn, registrationManager);
 

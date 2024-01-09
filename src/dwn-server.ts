@@ -62,7 +62,7 @@ export class DwnServer {
     if (!this.dwn) {
       registrationManager = await RegistrationManager.create({ sqlDialect: tenantGateDB, termsOfService });
 
-      this.dwn = await Dwn.create(getDWNConfig(this.config, registrationManager.getTenantGate()));
+      this.dwn = await Dwn.create(getDWNConfig(this.config, registrationManager));
     }
 
     this.#httpApi = new HttpApi(this.config, this.dwn, registrationManager);

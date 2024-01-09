@@ -68,18 +68,9 @@ export class ProofOfWork {
       qualifiedSolutionNonceFound = computedHashAsBigInt <= maximumAllowedHashValueAsBigInt;
 
       iterations++;
-
-      // Log every 1M iterations.
-      if (iterations % 1_000_000 === 0) {
-        console.log(
-          `iterations: ${iterations}, time lapsed: ${
-            Date.now() - startTime
-          } ms`,
-        );
-      }
     } while (!qualifiedSolutionNonceFound);
 
-    // Log final/successful attempt.
+    // Log final/successful iteration.
     console.log(
       `iterations: ${iterations}, time lapsed: ${Date.now() - startTime} ms`,
     );

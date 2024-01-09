@@ -9,8 +9,8 @@ export class ProofOfWorkManager {
   private initialMaximumHashValueAsBigInt: bigint;
   private desiredSolveCountPerMinute: number;
 
-  static readonly challengeRefreshFrequencyInMilliseconds = 10 * 60 * 1000; // 10 minutes
-  static readonly difficultyReevaluationFrequencyInMilliseconds = 10000;
+  public challengeRefreshFrequencyInSeconds: number;
+  public difficultyReevaluationFrequencyInSeconds: number;
 
   public get currentMaximumAllowedHashValue(): bigint {
     return this.currentMaximumHashValueAsBigInt;
@@ -20,19 +20,40 @@ export class ProofOfWorkManager {
     return this.proofOfWorkOfLastMinute.size;
   }
 
-  private constructor (desiredSolveCountPerMinute: number, initialMaximumHashValue: string) {
+  private constructor (input: {
+    desiredSolveCountPerMinute: number,
+    initialMaximumHashValue: string,
+    challengeRefreshFrequencyInSeconds: number,
+    difficultyReevaluationFrequencyInSeconds: number
+  }) {
+    const { desiredSolveCountPerMinute, initialMaximumHashValue } = input;
+
     this.challengeNonces = { currentChallengeNonce: ProofOfWork.generateNonce() };
     this.currentMaximumHashValueAsBigInt = BigInt(`0x${initialMaximumHashValue}`);
     this.initialMaximumHashValueAsBigInt = BigInt(`0x${initialMaximumHashValue}`);
     this.desiredSolveCountPerMinute = desiredSolveCountPerMinute;
+    this.challengeRefreshFrequencyInSeconds = input.challengeRefreshFrequencyInSeconds;
+    this.difficultyReevaluationFrequencyInSeconds = input.difficultyReevaluationFrequencyInSeconds;
   }
 
   public static async create(input: {
     desiredSolveCountPerMinute: number,
     initialMaximumHashValue: string,
     autoStart: boolean,
+    challengeRefreshFrequencyInSeconds?: number,
+    difficultyReevaluationFrequencyInSeconds?: number
   }): Promise<ProofOfWorkManager> {
-    const proofOfWorkManager = new ProofOfWorkManager(input.desiredSolveCountPerMinute, input.initialMaximumHashValue);
+    const { desiredSolveCountPerMinute, initialMaximumHashValue } = input;
+
+    const challengeRefreshFrequencyInSeconds = input.challengeRefreshFrequencyInSeconds ?? 10 * 60; // 10 minutes default
+    const difficultyReevaluationFrequencyInSeconds = input.difficultyReevaluationFrequencyInSeconds ?? 10; // 10 seconds default
+
+    const proofOfWorkManager = new ProofOfWorkManager({
+      desiredSolveCountPerMinute,
+      initialMaximumHashValue,
+      challengeRefreshFrequencyInSeconds,
+      difficultyReevaluationFrequencyInSeconds
+    });
 
     if (input.autoStart) {
       proofOfWorkManager.start();
@@ -104,12 +125,11 @@ export class ProofOfWorkManager {
 
   private periodicallyRefreshChallengeNonce (): void {
     try {
-      this.challengeNonces.previousChallengeNonce = this.challengeNonces.currentChallengeNonce;
-      this.challengeNonces.currentChallengeNonce = ProofOfWork.generateNonce();
+      this.refreshChallengeNonce();
     } catch (error) {
       console.error(`Encountered error while refreshing challenge nonce: ${error}`);
     } finally {
-      setTimeout(async () => this.periodicallyRefreshChallengeNonce(), ProofOfWorkManager.challengeRefreshFrequencyInMilliseconds);
+      setTimeout(async () => this.periodicallyRefreshChallengeNonce(), this.challengeRefreshFrequencyInSeconds * 1000);
     }
   }
   
@@ -119,7 +139,7 @@ export class ProofOfWorkManager {
     } catch (error) {
       console.error(`Encountered error while updating proof of work difficulty: ${error}`);
     } finally {
-      setTimeout(async () => this.periodicallyRefreshProofOfWorkDifficulty(), ProofOfWorkManager.difficultyReevaluationFrequencyInMilliseconds);
+      setTimeout(async () => this.periodicallyRefreshProofOfWorkDifficulty(), this.difficultyReevaluationFrequencyInSeconds * 1000);
     }
   }
 
@@ -130,6 +150,11 @@ export class ProofOfWorkManager {
         this.proofOfWorkOfLastMinute.delete(proofOfWorkId);
       }
     }
+  }
+
+  private refreshChallengeNonce(): void {
+    this.challengeNonces.previousChallengeNonce = this.challengeNonces.currentChallengeNonce;
+    this.challengeNonces.currentChallengeNonce = ProofOfWork.generateNonce();
   }
 
   /**
@@ -149,7 +174,7 @@ export class ProofOfWorkManager {
 
     // NOTE: bigint arithmetic does NOT work with decimals, so we work with "full numbers" by multiplying by a scale factor.
     const scaleFactor = 1_000_000;
-    const difficultyEvaluationsPerMinute = 60000 / ProofOfWorkManager.difficultyReevaluationFrequencyInMilliseconds; // assumed to be >= 1;
+    const difficultyEvaluationsPerMinute = 60000 / (this.difficultyReevaluationFrequencyInSeconds * 1000); // assumed to be >= 1;
 
     // NOTE: easier difficulty is represented by a larger max allowed hash value
     //       and harder difficulty is represented by a smaller max allowed hash value.
@@ -173,22 +198,14 @@ export class ProofOfWorkManager {
          = (this.currentMaximumHashValueAsBigInt - newMaximumHashValueAsBigIntPriorToMultiplierAdjustment) *
            (BigInt(Math.floor(increaseMultiplier * scaleFactor)) / BigInt(scaleFactor));
       
-      const hashValueDecreaseAmount
-        = hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment / BigInt(difficultyEvaluationsPerMinute);
+      const hashValueDecreaseAmount = hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment / BigInt(difficultyEvaluationsPerMinute);
 
-      let newMaximumHashValueAsBigInt = this.currentMaximumHashValueAsBigInt - hashValueDecreaseAmount;
-
-      if (newMaximumHashValueAsBigInt === BigInt(0)) {
-        // if newMaximumHashValueAsBigInt is 0, we use 1 instead because 0 cannot multiply another number
-        newMaximumHashValueAsBigInt = BigInt(1);
-      }
-
-      this.currentMaximumHashValueAsBigInt = newMaximumHashValueAsBigInt;
+      this.currentMaximumHashValueAsBigInt -= hashValueDecreaseAmount;
     } else {
       // if solve rate is lower than desired, make difficulty easier by making the max allowed hash value larger
 
       if (this.currentMaximumHashValueAsBigInt === this.initialMaximumHashValueAsBigInt) {
-        // if current difficulty is already at initial difficulty, don't make it any easier
+        // if current difficulty is already at initial difficulty, nothing to do
         return;
       }
 
@@ -199,7 +216,13 @@ export class ProofOfWorkManager {
           = differenceBetweenInitialAndCurrentDifficulty / BigInt(backToInitialDifficultyInMinutes * difficultyEvaluationsPerMinute);
       }
 
-      this.currentMaximumHashValueAsBigInt += this.hashValueIncrementPerEvaluation;
+      // if newly calculated difficulty is lower than initial difficulty, just use the initial difficulty
+      const newMaximumAllowedHashValueAsBigInt = this.currentMaximumHashValueAsBigInt + this.hashValueIncrementPerEvaluation;
+      if (newMaximumAllowedHashValueAsBigInt >= this.initialMaximumHashValueAsBigInt) {
+        this.currentMaximumHashValueAsBigInt = this.initialMaximumHashValueAsBigInt;
+      } else {
+        this.currentMaximumHashValueAsBigInt = newMaximumAllowedHashValueAsBigInt;
+      }
     }
   }
 }
