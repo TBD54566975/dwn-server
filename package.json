@@ -1,7 +1,7 @@
 {
   "name": "@web5/dwn-server",
   "type": "module",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "files": [
     "dist",
     "src"
@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@tbd54566975/dwn-sdk-js": "0.2.10",
-    "@tbd54566975/dwn-sql-store": "0.2.5",
+    "@tbd54566975/dwn-sql-store": "0.2.6",
     "better-sqlite3": "^8.5.0",
     "bytes": "3.1.2",
     "cors": "2.8.5",
