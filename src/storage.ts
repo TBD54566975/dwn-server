@@ -8,6 +8,7 @@ import type {
   DwnConfig,
   EventLog,
   MessageStore,
+  TenantGate,
 } from '@tbd54566975/dwn-sdk-js';
 import type { Dialect } from '@tbd54566975/dwn-sql-store';
 import {
@@ -25,7 +26,6 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 
 import type { Config } from './config.js';
-import type { RegisteredTenantGate } from './registered-tenant-gate.js';
 
 export enum EStoreType {
   DataStore,
@@ -44,7 +44,7 @@ export type StoreType = DataStore | EventLog | MessageStore;
 
 export function getDWNConfig(
   config: Config,
-  tenantGate: RegisteredTenantGate,
+  tenantGate: TenantGate,
 ): DwnConfig {
   const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
   const eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);

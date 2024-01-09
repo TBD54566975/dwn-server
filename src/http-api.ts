@@ -19,7 +19,6 @@ import { config } from './config.js';
 import { type DwnServerError } from './dwn-error.js';
 import { jsonRpcApi } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
-import type { RegisteredTenantGate } from './registered-tenant-gate.js';
 import type { RegistrationManager } from './registration/registration-manager.js';
 
 const packageJson = process.env.npm_package_json ? JSON.parse(readFileSync(process.env.npm_package_json).toString()) : {};
@@ -28,17 +27,18 @@ export class HttpApi {
   #config: Config;
   #api: Express;
   #server: http.Server;
-  tenantGate: RegisteredTenantGate;
   registrationManager: RegistrationManager;
   dwn: Dwn;
 
-  constructor(config: Config, dwn: Dwn, tenantGate: RegisteredTenantGate, registrationManager: RegistrationManager) {
+  constructor(config: Config, dwn: Dwn, registrationManager: RegistrationManager) {
     this.#config = config;
     this.#api = express();
     this.#server = http.createServer(this.#api);
     this.dwn = dwn;
-    this.tenantGate = tenantGate;
-    this.registrationManager = registrationManager;
+
+    if (registrationManager !== undefined) {
+      this.registrationManager = registrationManager;
+    }
 
     this.#setupMiddleware();
     this.#setupRoutes();
@@ -196,35 +196,21 @@ export class HttpApi {
   #setupRegistrationRoutes(): void {
     if (this.#config.registrationProofOfWorkEnabled) {
       this.#api.get('/register/proof-of-work', async (_req: Request, res: Response) => {
-        const proofOfWorkChallenge = await this.registrationManager.getProofOfWorkChallenge();
+        const proofOfWorkChallenge = this.registrationManager.getProofOfWorkChallenge();
         res.json(proofOfWorkChallenge);
       });
     }
-    if (this.#config.termsOfServiceFilePath !== undefined) {
-      this.#api.get('/register/terms-of-service', (_req: Request, res: Response) => res.send(this.tenantGate.termsOfService));
-      this.#api.post('/register/terms-of-service', async (req: Request, res: Response) => {
-        try {
-          await this.tenantGate.handleTermsOfServicePost(req.body);
-          res.status(200).json({ success: true });
-        } catch (error) {
-          const dwnServerError = error as DwnServerError;
 
-          if (dwnServerError.code !== undefined) {
-            res.status(400).json({
-              success : false,
-              reason  : dwnServerError.message,
-            });
-          } else {
-            console.log('Error handling terms-of-service POST:', error);
-            res.status(500).json({ success: false });
-          }
-        }
-      });
+    if (this.#config.termsOfServiceFilePath !== undefined) {
+      this.#api.get('/register/terms-of-service', (_req: Request, res: Response) => res.send(this.registrationManager.getTermsOfService()));
     }
 
     this.#api.post('/registration', async (req: Request, res: Response) => {
+      const requestBody = req.body;
+      console.log('Registration request:', requestBody);
+
       try {
-        await this.registrationManager.handleRegistrationRequest(req.body);
+        await this.registrationManager.handleRegistrationRequest(requestBody);
         res.status(200).json({ success: true });
       } catch (error) {
         const dwnServerError = error as DwnServerError;
@@ -240,9 +226,6 @@ export class HttpApi {
   }
 
   async start(port: number, callback?: () => void): Promise<http.Server> {
-    if (this.tenantGate) {
-      await this.tenantGate.initialize();
-    }
     this.#listen(port, callback);
     return this.#server;
   }

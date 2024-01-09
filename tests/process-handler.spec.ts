@@ -11,7 +11,7 @@ describe('Process Handlers', function () {
 
   beforeEach(async function () {
     const testdwn = await getTestDwn();
-    dwnServer = new DwnServer({ dwn: testdwn.dwn, config: config });
+    dwnServer = new DwnServer({ dwn: testdwn, config: config });
     await dwnServer.start();
     processExitStub = sinon.stub(process, 'exit');
   });

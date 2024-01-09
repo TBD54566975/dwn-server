@@ -7,8 +7,8 @@ import { getTestDwn } from './test-dwn.js';
 describe('DwnServer', function () {
   let dwnServer: DwnServer;
   before(async function () {
-    const testdwn = await getTestDwn();
-    dwnServer = new DwnServer({ dwn: testdwn.dwn, config: config });
+    const testDwn = await getTestDwn();
+    dwnServer = new DwnServer({ dwn: testDwn, config: config });
   });
   after(async function () {
     dwnServer.stop(() => console.log('server stop'));

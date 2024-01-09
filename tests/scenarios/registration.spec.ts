@@ -22,7 +22,6 @@ import type {
 import {
   createJsonRpcRequest,
 } from '../../src/lib/json-rpc.js';
-import type { RegisteredTenantGate } from '../../src/registered-tenant-gate.js';
 import { ProofOfWork } from '../../src/registration/proof-of-work.js';
 import { getTestDwn } from '../test-dwn.js';
 import {
@@ -49,7 +48,6 @@ describe('Registration scenarios', function () {
   let httpApi: HttpApi;
   let server: Server;
   let alice: Persona;
-  let tenantGate: RegisteredTenantGate;
   let registrationManager: RegistrationManager;
   let dwn: Dwn;
   let clock;
@@ -59,19 +57,17 @@ describe('Registration scenarios', function () {
 
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
-    const testDwn = await getTestDwn(true, true);
-    dwn = testDwn.dwn;
-    tenantGate = testDwn.tenantGate;
 
+    // RegistrationManager creation
     const sqlDialect = getDialectFromURI(new URL('sqlite://'));
     const termsOfService = readFileSync(config.termsOfServiceFilePath).toString();
     registrationManager = await RegistrationManager.create({ sqlDialect, termsOfService });
 
-    httpApi = new HttpApi(config, dwn, tenantGate, registrationManager);
+    dwn = await getTestDwn(registrationManager.getTenantGate());
 
-    await tenantGate.initialize();
+    httpApi = new HttpApi(config, dwn, registrationManager);
+
     alice = await DidKeyResolver.generate();
-    await tenantGate.authorizeTenantTermsOfService(alice.did);
   });
 
   beforeEach(async function () {
@@ -136,7 +132,7 @@ describe('Registration scenarios', function () {
         responseNonce,
       },
     };
-    
+
     const registrationResponse = await fetch(registrationEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

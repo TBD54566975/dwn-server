@@ -35,14 +35,29 @@ export class RegistrationStore {
           termsOfServiceHash: eb.ref('excluded.termsOfServiceHash'),
         })),
       )
+      // Executes the query. No error is thrown if the query doesn’t affect any rows (ie. if the insert or update didn’t change anything).
       .executeTakeFirst();
+  }
+
+  public async getTenantRegistration(tenantDid: string): Promise<RegistrationData | undefined> {
+    const result = await this.db
+      .selectFrom('authorizedTenants')
+      .select('did')
+      .select('termsOfServiceHash')
+      .where('did', '=', tenantDid)
+      .execute();
+
+    if (result.length === 0) {
+      return undefined;
+    }
+
+    return result[0];
   }
 }
 
 interface AuthorizedTenants {
   did: string;
   termsOfServiceHash: string;
-  proofOfWorkTime: number;
 }
 
 interface RegistrationDatabase {

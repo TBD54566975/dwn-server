@@ -24,9 +24,9 @@ class CorsProxySetup {
   proxyPort = 9875;
 
   public async start(): Promise<void> {
-    const testdwn = await getTestDwn();
+    const testDwn = await getTestDwn();
     const dwnServer = new DwnServer({
-      dwn: testdwn.dwn,
+      dwn: testDwn,
       config: {
         ...defaultConfig,
         port: 0, // UNSPEC to obtain test specific free port

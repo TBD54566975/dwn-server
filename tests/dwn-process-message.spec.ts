@@ -21,7 +21,7 @@ describe('handleDwnProcessMessage', function () {
       target: alice.did,
     });
 
-    const dwn = (await getTestDwn()).dwn;
+    const dwn = await getTestDwn();
     const context: RequestContext = { dwn, transport: 'http', dataStream };
 
     const { jsonRpcResponse } = await handleDwnProcessMessage(
@@ -46,7 +46,7 @@ describe('handleDwnProcessMessage', function () {
       target: 'did:key:abc1234',
     });
 
-    const dwn = (await getTestDwn()).dwn;
+    const dwn = await getTestDwn();
     const context: RequestContext = { dwn, transport: 'http' };
 
     const { jsonRpcResponse } = await handleDwnProcessMessage(

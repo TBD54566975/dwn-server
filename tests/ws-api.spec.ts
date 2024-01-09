@@ -22,8 +22,8 @@ describe('websocket api', function () {
     server = http.createServer();
     server.listen(9002, '127.0.0.1');
 
-    const testdwn = await getTestDwn();
-    const wsApi = new WsApi(server, testdwn.dwn);
+    const testDwn = await getTestDwn();
+    const wsApi = new WsApi(server, testDwn);
     wsServer = wsApi.start();
   });
 

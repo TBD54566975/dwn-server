@@ -11,7 +11,6 @@ import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js
 import { type Config, config as defaultConfig } from './config.js';
 import { HttpApi } from './http-api.js';
 import { setProcessHandlers } from './process-handlers.js';
-import { RegisteredTenantGate } from './registered-tenant-gate.js';
 import { getDWNConfig, getDialectFromURI } from './storage.js';
 import { WsApi } from './ws-api.js';
 import { RegistrationManager } from './registration/registration-manager.js';
@@ -59,21 +58,14 @@ export class DwnServer {
       new URL(this.config.tenantRegistrationStore),
     );
 
-    let tenantGate: RegisteredTenantGate;
     let registrationManager: RegistrationManager;
     if (!this.dwn) {
-
-      tenantGate = new RegisteredTenantGate(
-        tenantGateDB,
-        this.config.registrationProofOfWorkEnabled,
-        termsOfService,
-      );
       registrationManager = await RegistrationManager.create({ sqlDialect: tenantGateDB, termsOfService });
 
-      this.dwn = await Dwn.create(getDWNConfig(this.config, tenantGate));
+      this.dwn = await Dwn.create(getDWNConfig(this.config, registrationManager.getTenantGate()));
     }
 
-    this.#httpApi = new HttpApi(this.config, this.dwn, tenantGate, registrationManager);
+    this.#httpApi = new HttpApi(this.config, this.dwn, registrationManager);
 
     await this.#httpApi.start(this.config.port, () => {
       log.info(`HttpServer listening on port ${this.config.port}`);

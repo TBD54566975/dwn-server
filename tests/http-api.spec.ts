@@ -28,8 +28,6 @@ import {
   createJsonRpcRequest,
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
-import type { RegisteredTenantGate } from '../src/registered-tenant-gate.js';
-import { ProofOfWork } from '../src/registration/proof-of-work.js';
 import { getTestDwn } from './test-dwn.js';
 import type { Profile } from './utils.js';
 import {
@@ -49,7 +47,6 @@ describe('http api', function () {
   let httpApi: HttpApi;
   let server: Server;
   let profile: Profile;
-  let tenantGate: RegisteredTenantGate;
   let registrationManager: RegistrationManager;
   let dwn: Dwn;
   let clock;
@@ -59,19 +56,18 @@ describe('http api', function () {
 
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
-    const testDwn = await getTestDwn(true, true);
-    dwn = testDwn.dwn;
-    tenantGate = testDwn.tenantGate;
-
+    
+    // RegistrationManager creation
     const sqlDialect = getDialectFromURI(new URL('sqlite://'));
     const termsOfService = readFileSync(config.termsOfServiceFilePath).toString();
     registrationManager = await RegistrationManager.create({ sqlDialect, termsOfService });
 
-    httpApi = new HttpApi(config, dwn, tenantGate, registrationManager);
+    dwn = await getTestDwn(registrationManager.getTenantGate());
 
-    await tenantGate.initialize();
+    httpApi = new HttpApi(config, dwn, registrationManager);
+
     profile = await DidKeyResolver.generate();
-    await tenantGate.authorizeTenantTermsOfService(profile.did);
+    await registrationManager.recordTenantRegistration({ did: profile.did, termsOfServiceHash: registrationManager.getTermsOfServiceHash()});
   });
 
   beforeEach(async function () {
@@ -85,122 +81,6 @@ describe('http api', function () {
 
   after(function () {
     clock.restore();
-  });
-
-  describe('/register/terms-of-service', function () {
-    it('allow tenant that after accepting the terms of service', async function () {
-      const response = await fetch(
-        'http://localhost:3000/register/terms-of-service',
-      );
-      expect(response.status).to.equal(200);
-
-      const terms = await response.text();
-
-      expect(terms).to.equal(
-        readFileSync('./tests/fixtures/terms-of-service.txt').toString(),
-      );
-
-      const termsOfServiceHash = ProofOfWork.hashAsHexString([terms]);
-
-      const p = await DidKeyResolver.generate();
-
-      const acceptResponse = await fetch(
-        'http://localhost:3000/register/terms-of-service',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            did: p.did,
-            termsOfServiceHash
-          }),
-        },
-      );
-      expect(acceptResponse.status).to.equal(200);
-
-      const recordsQuery = await RecordsQuery.create({
-        filter: { schema: 'woosa' },
-        signer: p.signer,
-      });
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsQuery.toJSON(),
-        target: p.did,
-      });
-
-      const rpcResponse = await request(httpApi.api)
-        .post('/')
-        .set('dwn-request', JSON.stringify(dwnRequest))
-        .send();
-
-      console.log(rpcResponse.body.result.reply.status);
-      expect(rpcResponse.statusCode).to.equal(200);
-      expect(rpcResponse.body.id).to.equal(requestId);
-      expect(rpcResponse.body.result.reply.status.code).to.equal(200);
-    });
-
-    it('rejects tenants that have completed proof-of-work but have not accepted the terms of use', async function () {
-      const unauthorized = await DidKeyResolver.generate();
-      const recordsQuery = await RecordsQuery.create({
-        filter: { schema: 'woosa' },
-        signer: unauthorized.signer,
-      });
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsQuery.toJSON(),
-        target: unauthorized.did,
-      });
-
-      const response = await request(httpApi.api)
-        .post('/')
-        .set('dwn-request', JSON.stringify(dwnRequest))
-        .send();
-
-      expect(response.statusCode).to.equal(200);
-      expect(response.body.id).to.equal(requestId);
-      expect(response.body.result.reply.status.code).to.equal(401);
-    });
-
-    it('rejects terms of use acceptance with incorrect hash', async function () {
-      const termsOfServiceHash = ProofOfWork.hashAsHexString(['i do not agree']); // incorrect hash
-
-      const p = await DidKeyResolver.generate();
-
-      const acceptResponse = await fetch(
-        'http://localhost:3000/register/terms-of-service',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            did: p.did,
-            termsOfServiceHash
-          }),
-        },
-      );
-      expect(acceptResponse.status).to.equal(400);
-
-      const recordsQuery = await RecordsQuery.create({
-        filter: { schema: 'woosa' },
-        signer: p.signer,
-      });
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsQuery.toJSON(),
-        target: p.did,
-      });
-
-      const rpcResponse = await request(httpApi.api)
-        .post('/')
-        .set('dwn-request', JSON.stringify(dwnRequest))
-        .send();
-
-      console.log(rpcResponse.body.result.reply.status);
-      expect(rpcResponse.statusCode).to.equal(200);
-      expect(rpcResponse.body.id).to.equal(requestId);
-      expect(rpcResponse.body.result.reply.status.code).to.equal(401);
-    });
   });
 
   describe('/ (rpc)', function () {
@@ -352,17 +232,14 @@ describe('http api', function () {
     });
 
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
-      const p = await DidKeyResolver.generate();
-      await tenantGate.authorizeTenantTermsOfService(p.did);
-
       // First RecordsWrite that creates the record.
       const { recordsWrite: initialWrite, dataStream } =
-        await createRecordsWriteMessage(p);
+        await createRecordsWriteMessage(profile);
       const dataBytes = await DataStream.toBytes(dataStream);
       let requestId = uuidv4();
       let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: initialWrite.toJSON(),
-        target: p.did,
+        target: profile.did,
       });
 
       const responseInitialWrite = await fetch('http://localhost:3000', {
@@ -379,7 +256,7 @@ describe('http api', function () {
       await Time.minimalSleep();
 
       // Subsequent RecordsWrite that mutates the published property of the record.
-      const { recordsWrite: overWrite } = await createRecordsWriteMessage(p, {
+      const { recordsWrite: overWrite } = await createRecordsWriteMessage(profile, {
         recordId: initialWrite.message.recordId,
         dataCid: initialWrite.message.descriptor.dataCid,
         dataSize: initialWrite.message.descriptor.dataSize,
@@ -390,7 +267,7 @@ describe('http api', function () {
       requestId = uuidv4();
       dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: overWrite.toJSON(),
-        target: p.did,
+        target: profile.did,
       });
       const responseOverwrite = await fetch('http://localhost:3000', {
         method: 'POST',
