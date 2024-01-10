@@ -10,7 +10,6 @@ import {
 import type { Dwn } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
-import { readFileSync } from 'fs';
 import type { Server } from 'http';
 import fetch from 'node-fetch';
 import { webcrypto } from 'node:crypto';
@@ -35,7 +34,6 @@ import {
   getFileAsReadStream,
   streamHttpRequest,
 } from './utils.js';
-import { getDialectFromURI } from '../src/storage.js';
 import { RegistrationManager } from '../src/registration/registration-manager.js';
 
 if (!globalThis.crypto) {
@@ -54,13 +52,14 @@ describe('http api', function () {
   before(async function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
 
+    config.registrationStoreUrl = 'sqlite://';
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
 
     // RegistrationManager creation
-    const sqlDialect = getDialectFromURI(new URL('sqlite://'));
-    const termsOfService = readFileSync(config.termsOfServiceFilePath).toString();
-    registrationManager = await RegistrationManager.create({ sqlDialect, termsOfService });
+    const registrationStoreUrl = config.registrationStoreUrl;
+    const termsOfServiceFilePath = config.termsOfServiceFilePath;
+    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath });
 
     dwn = await getTestDwn(registrationManager);
 

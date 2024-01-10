@@ -10,8 +10,8 @@ describe('Process Handlers', function () {
   let processExitStub: sinon.SinonStub;
 
   beforeEach(async function () {
-    const testdwn = await getTestDwn();
-    dwnServer = new DwnServer({ dwn: testdwn, config: config });
+    const testDwn = await getTestDwn();
+    dwnServer = new DwnServer({ dwn: testDwn, config: config });
     await dwnServer.start();
     processExitStub = sinon.stub(process, 'exit');
   });

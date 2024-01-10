@@ -281,13 +281,13 @@ Configuration can be set using environment variables
 | `DS_PORT`                                | Port that the server listens on                                                         | `3000`                 |
 | `DS_MAX_RECORD_DATA_SIZE`                | Maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value               | `1gb`                  |
 | `DS_WEBSOCKET_SERVER`                    | Whether to enable listening over `ws:`. values: `on`,`off`                              | `on`                   |
+| `DWN_REGISTRATION_STORE_URL`             | URL to use for storage of registered DIDs                                               | `sqlite://data/dwn.db` |
 | `DWN_REGISTRATION_PROOF_OF_WORK_ENABLED` | Require new users to complete a proof-of-work challenge                                 | `false`                |
 | `DWN_TERMS_OF_SERVICE_FILE_PATH`         | Required terms of service agreement if set. Value is path to the terms of service file. | unset                  |
 | `DWN_STORAGE`                            | URL to use for storage by default. See [Storage Options](#storage-options) for details  | `level://data`         |
 | `DWN_STORAGE_MESSAGES`                   | URL to use for storage of messages.                                                     | value of `DWN_STORAGE` |
 | `DWN_STORAGE_DATA`                       | URL to use for data storage                                                             | value of `DWN_STORAGE` |
 | `DWN_STORAGE_EVENTS`                     | URL to use for event storage                                                            | value of `DWN_STORAGE` |
-| `DWN_STORAGE_REGISTRATION`               | URL to use for storage of registered DIDs                                               | `sqlite://data/dwn.db` |
 
 ### Storage Options
 

@@ -205,24 +205,26 @@ export class HttpApi {
       this.#api.get('/registration/terms-of-service', (_req: Request, res: Response) => res.send(this.registrationManager.getTermsOfService()));
     }
 
-    this.#api.post('/registration', async (req: Request, res: Response) => {
-      const requestBody = req.body;
-      console.log('Registration request:', requestBody);
+    if (this.#config.registrationProofOfWorkEnabled || this.#config.termsOfServiceFilePath !== undefined) {
+      this.#api.post('/registration', async (req: Request, res: Response) => {
+        const requestBody = req.body;
+        console.log('Registration request:', requestBody);
 
-      try {
-        await this.registrationManager.handleRegistrationRequest(requestBody);
-        res.status(200).json({ success: true });
-      } catch (error) {
-        const dwnServerError = error as DwnServerError;
+        try {
+          await this.registrationManager.handleRegistrationRequest(requestBody);
+          res.status(200).json({ success: true });
+        } catch (error) {
+          const dwnServerError = error as DwnServerError;
 
-        if (dwnServerError.code !== undefined) {
-          res.status(400).json(dwnServerError);
-        } else {
-          console.log('Error handling registration request:', error);
-          res.status(500).json({ success: false });
+          if (dwnServerError.code !== undefined) {
+            res.status(400).json(dwnServerError);
+          } else {
+            console.log('Error handling registration request:', error);
+            res.status(500).json({ success: false });
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   async start(port: number, callback?: () => void): Promise<http.Server> {

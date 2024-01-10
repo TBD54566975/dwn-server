@@ -15,17 +15,12 @@ export const config = {
     process.env.DWN_STORAGE_MESSAGES ||
     process.env.DWN_STORAGE ||
     'level://data',
-  dataStore:
-    process.env.DWN_STORAGE_DATA || process.env.DWN_STORAGE || 'level://data',
-  eventLog:
-    process.env.DWN_STORAGE_EVENTS || process.env.DWN_STORAGE || 'level://data',
-  registrationProofOfWorkEnabled:
-    process.env.DWN_REGISTRATION_PROOF_OF_WORK_ENABLED === 'true',
-  tenantRegistrationStore:
-    process.env.DWN_STORAGE_REGISTRATION ||
-    process.env.DWN_STORAGE ||
-    'sqlite://data/dwn.db',
+  dataStore: process.env.DWN_STORAGE_DATA || process.env.DWN_STORAGE || 'level://data',
+  eventLog: process.env.DWN_STORAGE_EVENTS || process.env.DWN_STORAGE || 'level://data',
 
+  // tenant registration feature configuration
+  registrationStoreUrl: process.env.DWN_REGISTRATION_STORE_URL || process.env.DWN_STORAGE || 'sqlite://data/dwn.db',
+  registrationProofOfWorkEnabled: process.env.DWN_REGISTRATION_PROOF_OF_WORK_ENABLED === 'true',
   termsOfServiceFilePath: process.env.DWN_TERMS_OF_SERVICE_FILE_PATH,
 
   // log level - trace/debug/info/warn/error

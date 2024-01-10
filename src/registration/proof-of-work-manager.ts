@@ -7,8 +7,12 @@ import { ProofOfWork } from "./proof-of-work.js";
  * Can have multiple instances each having their own desired solve rate and difficulty.
  */
 export class ProofOfWorkManager {
+  // Challenge nonces that can be used for proof-of-work.
   private challengeNonces: { currentChallengeNonce: string, previousChallengeNonce?: string };
+
+  // There is opportunity to improve implementation here.
   private proofOfWorkOfLastMinute: Map<string, number> = new Map(); // proofOfWorkId -> timestamp of proof-of-work
+
   private currentMaximumHashValueAsBigInt: bigint;
   private initialMaximumHashValueAsBigInt: bigint;
   private desiredSolveCountPerMinute: number;

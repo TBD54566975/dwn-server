@@ -1,4 +1,3 @@
-import type { Dialect } from "@tbd54566975/dwn-sql-store";
 import { ProofOfWorkManager } from "./proof-of-work-manager.js";
 import { ProofOfWork } from "./proof-of-work.js";
 import { RegistrationStore } from "./registration-store.js";
@@ -6,6 +5,8 @@ import type { RegistrationData, RegistrationRequest } from "./registration-types
 import type { ProofOfWorkChallengeModel } from "./proof-of-work-types.js";
 import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 import type { TenantGate } from "@tbd54566975/dwn-sdk-js";
+import { getDialectFromURI } from "../storage.js";
+import { readFileSync } from "fs";
 
 /**
  * The RegistrationManager is responsible for managing the registration of tenants.
@@ -40,8 +41,9 @@ export class RegistrationManager implements TenantGate {
     this.termsOfService = termsOfService;
   }
 
-  private constructor (termsOfService?: string) {
-    if (termsOfService) {
+  private constructor (termsOfServiceFilePath?: string) {
+    if (termsOfServiceFilePath !== undefined) {
+      const termsOfService = readFileSync(termsOfServiceFilePath).toString();
       this.updateTermsOfService(termsOfService);
     }
   }
@@ -50,13 +52,14 @@ export class RegistrationManager implements TenantGate {
    * Creates a new RegistrationManager instance.
    */
   public static async create(input: {
-    sqlDialect: Dialect,
-    termsOfService?: string
+    registrationStoreUrl: string,
+    termsOfServiceFilePath?: string
   }): Promise<RegistrationManager> {
-    const { termsOfService, sqlDialect } = input;
+    const { termsOfServiceFilePath, registrationStoreUrl } = input;
+
+    const registrationManager = new RegistrationManager(termsOfServiceFilePath);
 
     // Initialize and start ProofOfWorkManager.
-    const registrationManager = new RegistrationManager(termsOfService);
     registrationManager.proofOfWorkManager = await ProofOfWorkManager.create({
       autoStart: true,
       desiredSolveCountPerMinute: 10,
@@ -64,6 +67,7 @@ export class RegistrationManager implements TenantGate {
     });
 
     // Initialize RegistrationStore.
+    const sqlDialect = getDialectFromURI(new URL(registrationStoreUrl));
     const registrationStore = await RegistrationStore.create(sqlDialect);
     registrationManager.registrationStore = registrationStore;
     

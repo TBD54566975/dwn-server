@@ -30,7 +30,6 @@ import {
 import type { ProofOfWorkChallengeModel } from '../../src/registration/proof-of-work-types.js';
 import type { RegistrationData, RegistrationRequest } from '../../src/registration/registration-types.js';
 import { RegistrationManager } from '../../src/registration/registration-manager.js';
-import { getDialectFromURI } from '../../src/storage.js';
 import { DwnServerErrorCode } from '../../src/dwn-error.js';
 import { ProofOfWorkManager } from '../../src/registration/proof-of-work-manager.js';
 
@@ -55,13 +54,14 @@ describe('Registration scenarios', function () {
   before(async function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
 
+    config.registrationStoreUrl = 'sqlite://';
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
 
     // RegistrationManager creation
-    const sqlDialect = getDialectFromURI(new URL('sqlite://'));
-    const termsOfService = readFileSync(config.termsOfServiceFilePath).toString();
-    registrationManager = await RegistrationManager.create({ sqlDialect, termsOfService });
+    const registrationStoreUrl = config.registrationStoreUrl;
+    const termsOfServiceFilePath = config.termsOfServiceFilePath;
+    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath });
 
     dwn = await getTestDwn(registrationManager);
 

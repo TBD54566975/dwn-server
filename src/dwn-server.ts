@@ -1,6 +1,5 @@
 import { Dwn } from '@tbd54566975/dwn-sdk-js';
 
-import { readFileSync } from 'fs';
 import type { Server } from 'http';
 import log from 'loglevel';
 import prefix from 'loglevel-plugin-prefix';
@@ -11,7 +10,7 @@ import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js
 import { type Config, config as defaultConfig } from './config.js';
 import { HttpApi } from './http-api.js';
 import { setProcessHandlers } from './process-handlers.js';
-import { getDWNConfig, getDialectFromURI } from './storage.js';
+import { getDWNConfig } from './storage.js';
 import { WsApi } from './ws-api.js';
 import { RegistrationManager } from './registration/registration-manager.js';
 
@@ -27,6 +26,9 @@ export class DwnServer {
   #httpApi: HttpApi;
   #wsApi: WsApi;
 
+  /**
+   * @param options.dwn - Dwn instance to use as an override. Registration endpoint will not be enabled if this is provided.
+   */
   constructor(options: DwnServerOptions = {}) {
     this.config = options.config ?? defaultConfig;
     this.dwn = options.dwn;
@@ -48,19 +50,13 @@ export class DwnServer {
    * The DWN creation is secondary and only happens if it hasn't already been done.
    */
   async #setupServer(): Promise<void> {
-    // Load terms of service if given the path.
-    const termsOfService =
-      this.config.termsOfServiceFilePath !== undefined
-        ? readFileSync(this.config.termsOfServiceFilePath).toString()
-        : undefined;
-
-    const tenantGateDB = getDialectFromURI(
-      new URL(this.config.tenantRegistrationStore),
-    );
 
     let registrationManager: RegistrationManager;
     if (!this.dwn) {
-      registrationManager = await RegistrationManager.create({ sqlDialect: tenantGateDB, termsOfService });
+      registrationManager = await RegistrationManager.create({
+        registrationStoreUrl: this.config.registrationStoreUrl,
+        termsOfServiceFilePath: this.config.termsOfServiceFilePath,
+      });
 
       this.dwn = await Dwn.create(getDWNConfig(this.config, registrationManager));
     }
