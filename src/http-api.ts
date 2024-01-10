@@ -61,7 +61,10 @@ export class HttpApi {
     this.#api.use(
       responseTime((req: Request, res: Response, time) => {
         const url = req.url === '/' ? '/jsonrpc' : req.url;
-        const route = (req.method + url).toLowerCase().replace(/[:.]/g, '').replace(/\//g, '_');
+        const route = (req.method + url)
+          .toLowerCase()
+          .replace(/[:.]/g, '')
+          .replace(/\//g, '_');
 
         const statusCode = res.statusCode.toString();
         responseHistogram.labels(route, statusCode).observe(time);
