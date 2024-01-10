@@ -7,7 +7,7 @@ import {
   RecordsRead,
   Time,
 } from '@tbd54566975/dwn-sdk-js';
-import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+import type { Dwn, Persona } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
 import type { Server } from 'http';
@@ -28,7 +28,6 @@ import {
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
 import { getTestDwn } from './test-dwn.js';
-import type { Profile } from './utils.js';
 import {
   createRecordsWriteMessage,
   getFileAsReadStream,
@@ -44,7 +43,7 @@ if (!globalThis.crypto) {
 describe('http api', function () {
   let httpApi: HttpApi;
   let server: Server;
-  let profile: Profile;
+  let alice: Persona;
   let registrationManager: RegistrationManager;
   let dwn: Dwn;
   let clock;
@@ -65,8 +64,8 @@ describe('http api', function () {
 
     httpApi = new HttpApi(config, dwn, registrationManager);
 
-    profile = await DidKeyResolver.generate();
-    await registrationManager.recordTenantRegistration({ did: profile.did, termsOfServiceHash: registrationManager.getTermsOfServiceHash()});
+    alice = await DidKeyResolver.generate();
+    await registrationManager.recordTenantRegistration({ did: alice.did, termsOfServiceHash: registrationManager.getTermsOfServiceHash()});
   });
 
   beforeEach(async function () {
@@ -108,7 +107,7 @@ describe('http api', function () {
 
     it('responds with a 2XX HTTP status if JSON RPC handler returns 4XX/5XX DWN status code', async function () {
       const { recordsWrite, dataStream } =
-        await createRecordsWriteMessage(profile);
+        await createRecordsWriteMessage(alice);
 
       // Intentionally delete a required property to produce an invalid RecordsWrite message.
       const message = recordsWrite.toJSON();
@@ -117,7 +116,7 @@ describe('http api', function () {
       const requestId = uuidv4();
       const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: message,
-        target: profile.did,
+        target: alice.did,
       });
 
       const dataBytes = await DataStream.toBytes(dataStream);
@@ -171,13 +170,13 @@ describe('http api', function () {
         filter: {
           schema: 'woosa',
         },
-        signer: profile.signer,
+        signer: alice.signer,
       });
 
       const requestId = uuidv4();
       const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: recordsQuery.toJSON(),
-        target: profile.did,
+        target: alice.did,
       });
 
       const response = await request(httpApi.api)
@@ -197,7 +196,7 @@ describe('http api', function () {
       const filePath = './fixtures/test.jpeg';
       const { cid, size, stream } = await getFileAsReadStream(filePath);
 
-      const { recordsWrite } = await createRecordsWriteMessage(profile, {
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
         dataCid: cid,
         dataSize: size,
       });
@@ -205,7 +204,7 @@ describe('http api', function () {
       const requestId = uuidv4();
       const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: recordsWrite.toJSON(),
-        target: profile.did,
+        target: alice.did,
       });
 
       const resp = await streamHttpRequest(
@@ -233,12 +232,12 @@ describe('http api', function () {
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
       // First RecordsWrite that creates the record.
       const { recordsWrite: initialWrite, dataStream } =
-        await createRecordsWriteMessage(profile);
+        await createRecordsWriteMessage(alice);
       const dataBytes = await DataStream.toBytes(dataStream);
       let requestId = uuidv4();
       let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: initialWrite.toJSON(),
-        target: profile.did,
+        target: alice.did,
       });
 
       const responseInitialWrite = await fetch('http://localhost:3000', {
@@ -255,7 +254,7 @@ describe('http api', function () {
       await Time.minimalSleep();
 
       // Subsequent RecordsWrite that mutates the published property of the record.
-      const { recordsWrite: overWrite } = await createRecordsWriteMessage(profile, {
+      const { recordsWrite: overWrite } = await createRecordsWriteMessage(alice, {
         recordId: initialWrite.message.recordId,
         dataCid: initialWrite.message.descriptor.dataCid,
         dataSize: initialWrite.message.descriptor.dataSize,
@@ -266,7 +265,7 @@ describe('http api', function () {
       requestId = uuidv4();
       dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: overWrite.toJSON(),
-        target: profile.did,
+        target: alice.did,
       });
       const responseOverwrite = await fetch('http://localhost:3000', {
         method: 'POST',
@@ -289,12 +288,12 @@ describe('http api', function () {
 
     it('handles a RecordsWrite tombstone', async function () {
       const { recordsWrite: tombstone } =
-        await createRecordsWriteMessage(profile);
+        await createRecordsWriteMessage(alice);
 
       const requestId = uuidv4();
       const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: tombstone.toJSON(),
-        target: profile.did,
+        target: alice.did,
       });
 
       const responeTombstone = await fetch('http://localhost:3000', {
@@ -335,7 +334,7 @@ describe('http api', function () {
         stream,
       } = await getFileAsReadStream(filePath);
 
-      const { recordsWrite } = await createRecordsWriteMessage(profile, {
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
         dataCid: expectedCid,
         dataSize: size,
       });
@@ -343,7 +342,7 @@ describe('http api', function () {
       let requestId = uuidv4();
       let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: recordsWrite.toJSON(),
-        target: profile.did,
+        target: alice.did,
       });
 
       let response = await fetch('http://localhost:3000', {
@@ -364,7 +363,7 @@ describe('http api', function () {
       expect(reply.status.code).to.equal(202);
 
       const recordsRead = await RecordsRead.create({
-        signer: profile.signer,
+        signer: alice.signer,
         filter: {
           recordId: recordsWrite.message.recordId,
         },
@@ -372,7 +371,7 @@ describe('http api', function () {
 
       requestId = uuidv4();
       dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        target: profile.did,
+        target: alice.did,
         message: recordsRead.toJSON(),
       });
 
@@ -418,7 +417,7 @@ describe('http api', function () {
         stream,
       } = await getFileAsReadStream(filePath);
 
-      const { recordsWrite } = await createRecordsWriteMessage(profile, {
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
         dataCid: expectedCid,
         dataSize: size,
         published: true,
@@ -427,7 +426,7 @@ describe('http api', function () {
       const requestId = uuidv4();
       const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: recordsWrite.toJSON(),
-        target: profile.did,
+        target: alice.did,
       });
 
       let response = await fetch('http://localhost:3000', {
@@ -448,7 +447,7 @@ describe('http api', function () {
       expect(reply.status.code).to.equal(202);
 
       response = await fetch(
-        `http://localhost:3000/${profile.did}/records/${recordsWrite.message.recordId}`,
+        `http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`,
       );
       const blob = await response.blob();
 
@@ -463,7 +462,7 @@ describe('http api', function () {
         stream,
       } = await getFileAsReadStream(filePath);
 
-      const { recordsWrite } = await createRecordsWriteMessage(profile, {
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
         dataCid: expectedCid,
         dataSize: size,
       });
@@ -471,7 +470,7 @@ describe('http api', function () {
       const requestId = uuidv4();
       const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
         message: recordsWrite.toJSON(),
-        target: profile.did,
+        target: alice.did,
       });
 
       let response = await fetch('http://localhost:3000', {
@@ -492,17 +491,17 @@ describe('http api', function () {
       expect(reply.status.code).to.equal(202);
 
       response = await fetch(
-        `http://localhost:3000/${profile.did}/records/${recordsWrite.message.recordId}`,
+        `http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`,
       );
 
       expect(response.status).to.equal(404);
     });
 
-    it('returns a 404 if record doesnt exist', async function () {
-      const { recordsWrite } = await createRecordsWriteMessage(profile);
+    it('returns a 404 if record does not exist', async function () {
+      const { recordsWrite } = await createRecordsWriteMessage(alice);
 
       const response = await fetch(
-        `http://localhost:3000/${profile.did}/records/${recordsWrite.message.recordId}`,
+        `http://localhost:3000/${alice.did}/records/${recordsWrite.message.recordId}`,
       );
       expect(response.status).to.equal(404);
     });
@@ -519,7 +518,7 @@ describe('http api', function () {
 
     it('returns a 404 for invalid record id', async function () {
       const response = await fetch(
-        `http://localhost:3000/${profile.did}/records/kaka`,
+        `http://localhost:3000/${alice.did}/records/kaka`,
       );
       expect(response.status).to.equal(404);
     });
