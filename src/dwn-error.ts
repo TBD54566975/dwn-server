@@ -30,6 +30,7 @@ export enum DwnServerErrorCode {
   ProofOfWorkInvalidOrExpiredChallenge = 'ProofOfWorkInvalidOrExpiredChallenge',
   ProofOfWorkManagerInvalidChallengeNonce = 'ProofOfWorkManagerInvalidChallengeNonce',
   ProofOfWorkManagerInvalidResponseNonceFormat = 'ProofOfWorkManagerInvalidResponseNonceFormat',
+  ProofOfWorkManagerResponseNonceReused = 'ProofOfWorkManagerResponseNonceReused',
   RegistrationManagerInvalidOrOutdatedTermsOfServiceHash = 'RegistrationManagerInvalidOrOutdatedTermsOfServiceHash',
   TenantRegistrationOutdatedTermsOfService = 'TenantRegistrationOutdatedTermsOfService',
 }

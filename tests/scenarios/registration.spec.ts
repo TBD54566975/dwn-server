@@ -41,8 +41,8 @@ if (!globalThis.crypto) {
 
 describe('Registration scenarios', function () {
   const dwnMessageEndpoint = 'http://localhost:3000';
-  const termsOfUseEndpoint = 'http://localhost:3000/register/terms-of-service';
-  const proofOfWorkEndpoint = 'http://localhost:3000/register/proof-of-work';
+  const termsOfUseEndpoint = 'http://localhost:3000/registration/terms-of-service';
+  const proofOfWorkEndpoint = 'http://localhost:3000/registration/proof-of-work';
   const registrationEndpoint = 'http://localhost:3000/registration';
 
   let httpApi: HttpApi;
@@ -256,6 +256,55 @@ describe('Registration scenarios', function () {
     expect(registrationResponseBody.code).to.equal(DwnServerErrorCode.RegistrationManagerInvalidOrOutdatedTermsOfServiceHash);
   });
 
+
+  it('should reject registration request that reuses a response nonce that is already used a short-time earlier', async () => {
+    // Scenario:
+    // 0. Assume Alice fetched the proof-of-work challenge and the terms-of-service.
+    // 1. Alice sends the registration request to the server and it is accepted.
+    // 2. Alice sends the same registration request which uses the same response nonce to the server again and it is rejected.
+
+    // 0. Assume Alice fetched the proof-of-work challenge and the terms-of-service.
+    const { challengeNonce, maximumAllowedHashValue } = registrationManager.getProofOfWorkChallenge();
+    const termsOfService = registrationManager.getTermsOfService();
+
+    // 1. Alice sends the registration request to the server and it is accepted.
+    const registrationData: RegistrationData = {
+      did: alice.did,
+      termsOfServiceHash: ProofOfWork.hashAsHexString([termsOfService]),
+    };
+
+    const responseNonce = ProofOfWork.findQualifiedResponseNonce({
+      challengeNonce,
+      maximumAllowedHashValue,
+      requestData: JSON.stringify(registrationData),
+    });
+
+    const registrationRequest: RegistrationRequest = {
+      registrationData,
+      proofOfWork: {
+        challengeNonce,
+        responseNonce,
+      },
+    };
+    
+    const registrationResponse = await fetch(registrationEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(registrationRequest),
+    });
+    expect(registrationResponse.status).to.equal(200);
+
+    // 2. Alice sends the same registration request which uses the same response nonce to the server again and it is rejected.
+    const registration2Response = await fetch(registrationEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(registrationRequest),
+    });
+    const registration2ResponseBody = await registration2Response.json() as any;
+    expect(registration2Response.status).to.equal(400);
+    expect(registration2ResponseBody.code).to.equal(DwnServerErrorCode.ProofOfWorkManagerResponseNonceReused);
+  });
+
   it('should reject an invalid nonce that is not a HEX string representing a 256 bit value.', async function () {
 
     // Assume Alice fetched the terms-of-service.
@@ -351,7 +400,6 @@ describe('Registration scenarios', function () {
     // 1. Alice is a registered tenant and is able to write to the DWN.
     // 2. DWN server administrator updates the terms-of-service.
     // 3. Alice no longer can write to the DWN because she has not agreed to the new terms-of-service.
-
 
     // 1. Alice is a registered tenant and is able to write to the DWN.
     // Short-cut to register Alice.

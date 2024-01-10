@@ -2,6 +2,10 @@ import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 import type { ProofOfWorkChallengeModel } from "./proof-of-work-types.js";
 import { ProofOfWork } from "./proof-of-work.js";
 
+/**
+ * Manages proof-of-work challenge difficulty and lifecycle based on solve rate.
+ * Can have multiple instances each having their own desired solve rate and difficulty.
+ */
 export class ProofOfWorkManager {
   private challengeNonces: { currentChallengeNonce: string, previousChallengeNonce?: string };
   private proofOfWorkOfLastMinute: Map<string, number> = new Map(); // proofOfWorkId -> timestamp of proof-of-work
@@ -9,13 +13,26 @@ export class ProofOfWorkManager {
   private initialMaximumHashValueAsBigInt: bigint;
   private desiredSolveCountPerMinute: number;
 
+  /**
+   * How often the challenge nonce is refreshed.
+   */
   public challengeRefreshFrequencyInSeconds: number;
+
+  /**
+   * How often the difficulty is reevaluated.
+   */
   public difficultyReevaluationFrequencyInSeconds: number;
 
+  /**
+   * The current maximum allowed hash value.
+   */
   public get currentMaximumAllowedHashValue(): bigint {
     return this.currentMaximumHashValueAsBigInt;
   }
 
+  /**
+   * The current proof-of-work solve rate.
+   */
   public get currentSolveCountPerMinute(): number {
     return this.proofOfWorkOfLastMinute.size;
   }
@@ -36,6 +53,11 @@ export class ProofOfWorkManager {
     this.difficultyReevaluationFrequencyInSeconds = input.difficultyReevaluationFrequencyInSeconds;
   }
 
+  /**
+   * Creates a new ProofOfWorkManager instance.
+   * @param input.challengeRefreshFrequencyInSeconds How often the challenge nonce is refreshed. Defaults to 10 minutes.
+   * @param input.difficultyReevaluationFrequencyInSeconds How often the difficulty is reevaluated. Defaults to 10 seconds.
+   */
   public static async create(input: {
     desiredSolveCountPerMinute: number,
     initialMaximumHashValue: string,
@@ -62,6 +84,14 @@ export class ProofOfWorkManager {
     return proofOfWorkManager;
   }
 
+  /**
+   * Starts the proof-of-work manager by starting the challenge nonce and difficulty refresh timers.
+   */
+  public start(): void {
+    this.periodicallyRefreshChallengeNonce();
+    this.periodicallyRefreshProofOfWorkDifficulty();
+  }
+
   public getProofOfWorkChallenge(): ProofOfWorkChallengeModel {
     return {
       challengeNonce: this.challengeNonces.currentChallengeNonce,
@@ -70,28 +100,21 @@ export class ProofOfWorkManager {
   }
 
   /**
-   * Converts a BigInt to a 256 bit HEX string with padded preceding zeros (64 characters).
+   * Verifies the proof-of-work meets the difficulty requirement.
    */
-  private static bigIntToHexString (int: BigInt): string {
-    let hex = int.toString(16).toUpperCase();
-    const stringLength = hex.length;
-    for (let pad = stringLength; pad < 64; pad++) {
-      hex = '0' + hex;
-    }
-    return hex;
-  }
-
-  public static isHexString(str: string): boolean {
-    const regexp = /^[0-9a-fA-F]+$/;
-    return regexp.test(str);
-  }
-
   public async verifyProofOfWork(proofOfWork: {
     challengeNonce: string;
     responseNonce: string;
     requestData: string;
   }): Promise<void> {
     const { challengeNonce, responseNonce, requestData } = proofOfWork;
+
+    if (this.proofOfWorkOfLastMinute.has(responseNonce)) {
+      throw new DwnServerError(
+        DwnServerErrorCode.ProofOfWorkManagerResponseNonceReused,
+        `Not allowed to reused response nonce: ${responseNonce}.`
+      );
+    }
 
     // Verify response nonce is a HEX string that represents a 256 bit value.
     if (!ProofOfWorkManager.isHexString(responseNonce) || responseNonce.length !== 64) {
@@ -112,13 +135,14 @@ export class ProofOfWorkManager {
 
     const maximumAllowedHashValue = this.currentMaximumAllowedHashValue;
     ProofOfWork.verifyResponseNonce({ challengeNonce, responseNonce, requestData, maximumAllowedHashValue });
+
+    this.recordProofOfWork(responseNonce);
   }
 
-  public start(): void {
-    this.periodicallyRefreshChallengeNonce();
-    this.periodicallyRefreshProofOfWorkDifficulty();
-  }
-
+  /**
+   * Records a successful proof-of-work.
+   * Exposed for testing purposes.
+   */
   public async recordProofOfWork(proofOfWorkId: string): Promise<void> {
     this.proofOfWorkOfLastMinute.set(proofOfWorkId, Date.now());
   }
@@ -132,7 +156,7 @@ export class ProofOfWorkManager {
       setTimeout(async () => this.periodicallyRefreshChallengeNonce(), this.challengeRefreshFrequencyInSeconds * 1000);
     }
   }
-  
+
   private periodicallyRefreshProofOfWorkDifficulty (): void {
     try {
       this.refreshMaximumAllowedHashValue();
@@ -143,7 +167,7 @@ export class ProofOfWorkManager {
     }
   }
 
-  public removeProofOfWorkOlderThanOneMinute (): void {
+  private removeProofOfWorkOlderThanOneMinute (): void {
     const oneMinuteAgo = Date.now() - 60 * 1000;
     for (const proofOfWorkId of this.proofOfWorkOfLastMinute.keys()) {
       if (this.proofOfWorkOfLastMinute.get(proofOfWorkId) < oneMinuteAgo) {
@@ -165,8 +189,7 @@ export class ProofOfWorkManager {
    * If solve rate is lower than expected, the difficulty will decrease gradually.
    * The difficulty will never be lower than the initial difficulty.
    */
-  private hashValueIncrementPerEvaluation = BigInt(1);
-  public async refreshMaximumAllowedHashValue (): Promise<void> {
+  private async refreshMaximumAllowedHashValue (): Promise<void> {
     // Cleanup proof-of-work cache and update solve rate.
     this.removeProofOfWorkOlderThanOneMinute();
 
@@ -224,5 +247,30 @@ export class ProofOfWorkManager {
         this.currentMaximumHashValueAsBigInt = newMaximumAllowedHashValueAsBigInt;
       }
     }
+  }
+
+  /**
+   * Only used by refreshMaximumAllowedHashValue() to reduce the challenge difficulty gradually.
+   */
+  private hashValueIncrementPerEvaluation = BigInt(1);
+
+  /**
+   * Verifies that the supplied string is a HEX string.
+   */
+  public static isHexString(str: string): boolean {
+    const regexp = /^[0-9a-fA-F]+$/;
+    return regexp.test(str);
+  }
+
+  /**
+   * Converts a BigInt to a 256 bit HEX string with padded preceding zeros (64 characters).
+   */
+  private static bigIntToHexString (int: BigInt): string {
+    let hex = int.toString(16).toUpperCase();
+    const stringLength = hex.length;
+    for (let pad = stringLength; pad < 64; pad++) {
+      hex = '0' + hex;
+    }
+    return hex;
   }
 }

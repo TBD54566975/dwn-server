@@ -2,13 +2,21 @@ import { Kysely } from 'kysely';
 import type { RegistrationData } from './registration-types.js';
 import type { Dialect } from '@tbd54566975/dwn-sql-store';
 
+/**
+ * The RegistrationStore is responsible for storing and retrieving tenant registration information.
+ */
 export class RegistrationStore {
+  private static readonly registeredTenantTableName = 'registeredTenants';
+
   private db: Kysely<RegistrationDatabase>;
 
   private constructor (sqlDialect: Dialect) {
     this.db = new Kysely<RegistrationDatabase>({ dialect: sqlDialect });
   }
 
+  /**
+   * Creates a new RegistrationStore instance.
+   */
   public static async create(sqlDialect: Dialect): Promise<RegistrationStore> {
     const proofOfWorkManager = new RegistrationStore(sqlDialect);
 
@@ -19,16 +27,19 @@ export class RegistrationStore {
 
   private async initialize(): Promise<void> {
     await this.db.schema
-    .createTable('authorizedTenants')
+    .createTable(RegistrationStore.registeredTenantTableName)
     .ifNotExists()
     .addColumn('did', 'text', (column) => column.primaryKey())
     .addColumn('termsOfServiceHash', 'boolean')
     .execute();
   }
 
+  /**
+   * Inserts or updates the tenant registration information.
+   */
   public async insertOrUpdateTenantRegistration(registrationData: RegistrationData): Promise<void> {
     await this.db
-      .insertInto('authorizedTenants')
+      .insertInto(RegistrationStore.registeredTenantTableName)
       .values(registrationData)
       .onConflict((oc) =>
         oc.column('did').doUpdateSet((eb) => ({
@@ -39,9 +50,12 @@ export class RegistrationStore {
       .executeTakeFirst();
   }
 
+  /**
+   * Retrieves the tenant registration information.
+   */
   public async getTenantRegistration(tenantDid: string): Promise<RegistrationData | undefined> {
     const result = await this.db
-      .selectFrom('authorizedTenants')
+      .selectFrom(RegistrationStore.registeredTenantTableName)
       .select('did')
       .select('termsOfServiceHash')
       .where('did', '=', tenantDid)
@@ -55,11 +69,11 @@ export class RegistrationStore {
   }
 }
 
-interface AuthorizedTenants {
+interface RegisteredTenants {
   did: string;
   termsOfServiceHash: string;
 }
 
 interface RegistrationDatabase {
-  authorizedTenants: AuthorizedTenants;
+  registeredTenants: RegisteredTenants;
 }

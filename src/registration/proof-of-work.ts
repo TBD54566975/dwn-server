@@ -2,21 +2,25 @@ import { createHash, randomBytes } from 'crypto';
 
 import { DwnServerError, DwnServerErrorCode } from '../dwn-error.js';
 
+/**
+ * Utility methods related to proof-of-work.
+ */
 export class ProofOfWork {
+  /**
+   * Computes the resulting hash of the given proof-of-work input.
+   */
   public static computeHash(input: {
     challengeNonce: string;
     responseNonce: string;
-    requestData?: string;
+    requestData: string;
   }): string {
-    const hashInput = [input.challengeNonce, input.responseNonce];
-
-    if (input.requestData) {
-      hashInput.push(input.requestData);
-    }
-    
+    const hashInput = [input.challengeNonce, input.responseNonce, input.requestData];
     return this.hashAsHexString(hashInput);
   }
 
+  /**
+   * Computes the hash of the given array of strings.
+   */
   public static hashAsHexString(input: string[]): string {
     const hash = createHash('sha256');
     for (const item of input) {
@@ -26,11 +30,14 @@ export class ProofOfWork {
     return hash.digest('hex');
   }
 
+  /**
+   * Verifies that the response nonce meets the proof-of-work difficulty requirement.
+   */
   public static verifyResponseNonce(input: {
     maximumAllowedHashValue: bigint;
     challengeNonce: string;
     responseNonce: string;
-    requestData?: string;
+    requestData: string;
   }): void {
     const computedHash = this.computeHash(input);
     const computedHashAsBigInt = BigInt(`0x${computedHash}`);
@@ -43,10 +50,13 @@ export class ProofOfWork {
     }
   }
 
+  /**
+   * Finds a response nonce that qualifies the difficulty requirement for the given proof-of-work challenge and request data.
+   */
   public static findQualifiedResponseNonce(input: {
     maximumAllowedHashValue: string;
     challengeNonce: string;
-    requestData?: string;
+    requestData: string;
   }): string {
     const startTime = Date.now();
 

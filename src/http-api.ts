@@ -195,14 +195,14 @@ export class HttpApi {
 
   #setupRegistrationRoutes(): void {
     if (this.#config.registrationProofOfWorkEnabled) {
-      this.#api.get('/register/proof-of-work', async (_req: Request, res: Response) => {
+      this.#api.get('/registration/proof-of-work', async (_req: Request, res: Response) => {
         const proofOfWorkChallenge = this.registrationManager.getProofOfWorkChallenge();
         res.json(proofOfWorkChallenge);
       });
     }
 
     if (this.#config.termsOfServiceFilePath !== undefined) {
-      this.#api.get('/register/terms-of-service', (_req: Request, res: Response) => res.send(this.registrationManager.getTermsOfService()));
+      this.#api.get('/registration/terms-of-service', (_req: Request, res: Response) => res.send(this.registrationManager.getTermsOfService()));
     }
 
     this.#api.post('/registration', async (req: Request, res: Response) => {

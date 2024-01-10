@@ -7,6 +7,10 @@ import type { ProofOfWorkChallengeModel } from "./proof-of-work-types.js";
 import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 import type { TenantGate } from "@tbd54566975/dwn-sdk-js";
 
+/**
+ * The RegistrationManager is responsible for managing the registration of tenants.
+ * It handles tenant registration requests and provides the corresponding `TenantGate` implementation.
+ */
 export class RegistrationManager implements TenantGate {
   private proofOfWorkManager: ProofOfWorkManager;
   private registrationStore: RegistrationStore;
@@ -14,11 +18,17 @@ export class RegistrationManager implements TenantGate {
   private termsOfServiceHash?: string;
   private termsOfService?: string;
 
-  public getTermsOfService(): string {
+  /**
+   * The terms-of-service.
+   */
+  public getTermsOfService(): string | undefined {
     return this.termsOfService;
   }
 
-  public getTermsOfServiceHash(): string {
+  /**
+   * The terms-of-service hash. 
+   */
+  public getTermsOfServiceHash(): string | undefined {
     return this.termsOfServiceHash;
   }
 
@@ -36,6 +46,9 @@ export class RegistrationManager implements TenantGate {
     }
   }
 
+  /**
+   * Creates a new RegistrationManager instance.
+   */
   public static async create(input: {
     sqlDialect: Dialect,
     termsOfService?: string
@@ -57,12 +70,17 @@ export class RegistrationManager implements TenantGate {
     return registrationManager;
   }
 
+  /**
+   * Gets the proof-of-work challenge.
+   */
   public getProofOfWorkChallenge(): ProofOfWorkChallengeModel {
     const proofOfWorkChallenge = this.proofOfWorkManager.getProofOfWorkChallenge();
     return proofOfWorkChallenge;
   }
 
-
+  /**
+   * Handles a registration request.
+   */
   public async handleRegistrationRequest(registrationRequest: RegistrationRequest): Promise<void> {
     // Ensure the supplied terms of service hash matches the one we require.
     if (registrationRequest.registrationData.termsOfServiceHash !== this.termsOfServiceHash) {
@@ -91,6 +109,9 @@ export class RegistrationManager implements TenantGate {
     await this.registrationStore.insertOrUpdateTenantRegistration(registrationData);
   }
 
+  /**
+   * The TenantGate implementation.
+   */
   public async isActiveTenant(tenant: string): Promise<boolean> {
     const tenantRegistration = await this.registrationStore.getTenantRegistration(tenant);
 
