@@ -127,8 +127,10 @@ function getStore(storeString: string, storeType: EStoreType): StoreType {
 export function getDialectFromURI(u: URL): Dialect {
   switch (u.protocol.slice(0, -1)) {
     case BackendTypes.SQLITE:
+      const path = u.host + u.pathname;
+      console.log('Relative SQL-lite path:', path);
       return new SqliteDialect({
-        database: async () => new Database(u.host + u.pathname),
+        database: async () => new Database(path),
       });
     case BackendTypes.MYSQL:
       return new MysqlDialect({

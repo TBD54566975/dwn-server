@@ -7,12 +7,6 @@ import { getTestDwn } from './test-dwn.js';
 describe('DwnServer', function () {
   let dwnServer: DwnServer;
   before(async function () {
-
-    // Mute all server console logs during tests.
-    console.log = (): void => {};
-    console.error = (): void => {};
-    console.info = (): void => {};
-
     const testDwn = await getTestDwn();
     dwnServer = new DwnServer({ dwn: testDwn, config: config });
   });

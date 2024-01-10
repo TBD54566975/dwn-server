@@ -171,6 +171,12 @@ describe('CORS setup', function () {
   // dwn-server runs on dwn.localhost
   const proxy = new CorsProxySetup();
   before(async () => {
+
+    // Mute all server console logs during tests.
+    console.log = (): void => {};
+    console.error = (): void => {};
+    console.info = (): void => {};
+
     await proxy.start();
   });
   after(async () => {
