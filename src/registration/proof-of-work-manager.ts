@@ -205,16 +205,14 @@ export class ProofOfWorkManager {
 
     // NOTE: easier difficulty is represented by a larger max allowed hash value
     //       and harder difficulty is represented by a smaller max allowed hash value.
-    const currentSolveRateInFractionOfDesiredSolveRate = latestSolveCountPerMinute / this.desiredSolveCountPerMinute;
     if (latestSolveCountPerMinute > this.desiredSolveCountPerMinute) {
-      this.hashValueIncrementPerEvaluation = undefined;
-
       // if solve rate is higher than desired, make difficulty harder by making the max allowed hash value smaller
       
       // set higher to make difficulty increase faster.
       // This should also be relative to how often the difficulty is reevaluated if the reevaluation frequency is adjustable.
       const increaseMultiplier = 1;
-
+      
+      const currentSolveRateInFractionOfDesiredSolveRate = latestSolveCountPerMinute / this.desiredSolveCountPerMinute;
       const newMaximumHashValueAsBigIntPriorToMultiplierAdjustment
         = (this.currentMaximumHashValueAsBigInt * BigInt(scaleFactor)) / 
           (BigInt(Math.floor(currentSolveRateInFractionOfDesiredSolveRate * increaseMultiplier * scaleFactor)));
@@ -228,6 +226,9 @@ export class ProofOfWorkManager {
       const hashValueDecreaseAmount = hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment / BigInt(difficultyEvaluationsPerMinute);
 
       this.currentMaximumHashValueAsBigInt -= hashValueDecreaseAmount;
+
+      // Resetting to allow hash increment to be recalculated when difficulty needs to be reduced (in `else` block below)
+      this.hashValueIncrementPerEvaluation = undefined;
     } else {
       // if solve rate is lower than desired, make difficulty easier by making the max allowed hash value larger
 
