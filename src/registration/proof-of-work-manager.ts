@@ -13,6 +13,7 @@ export class ProofOfWorkManager {
   // There is opportunity to improve implementation here.
   private proofOfWorkOfLastMinute: Map<string, number> = new Map(); // proofOfWorkId -> timestamp of proof-of-work
 
+  private difficultyIncreaseMultiplier: number;
   private currentMaximumHashValueAsBigInt: bigint;
   private initialMaximumHashValueAsBigInt: bigint;
   private desiredSolveCountPerMinute: number;
@@ -44,6 +45,7 @@ export class ProofOfWorkManager {
   private constructor (input: {
     desiredSolveCountPerMinute: number,
     initialMaximumHashValue: string,
+    difficultyIncreaseMultiplier: number,
     challengeRefreshFrequencyInSeconds: number,
     difficultyReevaluationFrequencyInSeconds: number
   }) {
@@ -53,12 +55,16 @@ export class ProofOfWorkManager {
     this.currentMaximumHashValueAsBigInt = BigInt(`0x${initialMaximumHashValue}`);
     this.initialMaximumHashValueAsBigInt = BigInt(`0x${initialMaximumHashValue}`);
     this.desiredSolveCountPerMinute = desiredSolveCountPerMinute;
+    this.difficultyIncreaseMultiplier = input.difficultyIncreaseMultiplier;
     this.challengeRefreshFrequencyInSeconds = input.challengeRefreshFrequencyInSeconds;
     this.difficultyReevaluationFrequencyInSeconds = input.difficultyReevaluationFrequencyInSeconds;
   }
 
   /**
    * Creates a new ProofOfWorkManager instance.
+   * @param input.difficultyIncreaseMultiplier How fast to increase difficulty when solve rate is higher than desired. Must be >= 1.
+   *   Defaults to 1 which means if the solve rate is 2x the desired solve rate, the difficulty will increase by 2x.
+   *   If set to 2, it means if the solve rate is 2x the desired solve rate, the difficulty will increase by 4x.
    * @param input.challengeRefreshFrequencyInSeconds How often the challenge nonce is refreshed. Defaults to 10 minutes.
    * @param input.difficultyReevaluationFrequencyInSeconds How often the difficulty is reevaluated. Defaults to 10 seconds.
    */
@@ -66,17 +72,20 @@ export class ProofOfWorkManager {
     desiredSolveCountPerMinute: number,
     initialMaximumHashValue: string,
     autoStart: boolean,
+    difficultyIncreaseMultiplier?: number,
     challengeRefreshFrequencyInSeconds?: number,
     difficultyReevaluationFrequencyInSeconds?: number
   }): Promise<ProofOfWorkManager> {
     const { desiredSolveCountPerMinute, initialMaximumHashValue } = input;
 
+    const difficultyIncreaseMultiplier = input.difficultyIncreaseMultiplier ?? 1; // 1x default
     const challengeRefreshFrequencyInSeconds = input.challengeRefreshFrequencyInSeconds ?? 10 * 60; // 10 minutes default
     const difficultyReevaluationFrequencyInSeconds = input.difficultyReevaluationFrequencyInSeconds ?? 10; // 10 seconds default
 
     const proofOfWorkManager = new ProofOfWorkManager({
       desiredSolveCountPerMinute,
       initialMaximumHashValue,
+      difficultyIncreaseMultiplier,
       challengeRefreshFrequencyInSeconds,
       difficultyReevaluationFrequencyInSeconds
     });
@@ -208,20 +217,15 @@ export class ProofOfWorkManager {
     if (latestSolveCountPerMinute > this.desiredSolveCountPerMinute) {
       // if solve rate is higher than desired, make difficulty harder by making the max allowed hash value smaller
       
-      // set higher to make difficulty increase faster.
-      // This should also be relative to how often the difficulty is reevaluated if the reevaluation frequency is adjustable.
-      const increaseMultiplier = 1;
-      
       const currentSolveRateInFractionOfDesiredSolveRate = latestSolveCountPerMinute / this.desiredSolveCountPerMinute;
       const newMaximumHashValueAsBigIntPriorToMultiplierAdjustment
         = (this.currentMaximumHashValueAsBigInt * BigInt(scaleFactor)) / 
-          (BigInt(Math.floor(currentSolveRateInFractionOfDesiredSolveRate * increaseMultiplier * scaleFactor)));
+          (BigInt(Math.floor(currentSolveRateInFractionOfDesiredSolveRate * this.difficultyIncreaseMultiplier * scaleFactor)));
 
-      // set higher to make difficulty increase faster.
       // This should also be relative to how often the difficulty is reevaluated if the reevaluation frequency is adjustable.
       const hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment
          = (this.currentMaximumHashValueAsBigInt - newMaximumHashValueAsBigIntPriorToMultiplierAdjustment) *
-           (BigInt(Math.floor(increaseMultiplier * scaleFactor)) / BigInt(scaleFactor));
+           (BigInt(Math.floor(this.difficultyIncreaseMultiplier * scaleFactor)) / BigInt(scaleFactor));
       
       const hashValueDecreaseAmount = hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment / BigInt(difficultyEvaluationsPerMinute);
 
