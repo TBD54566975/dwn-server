@@ -57,11 +57,13 @@ describe('Registration scenarios', function () {
     config.registrationStoreUrl = 'sqlite://';
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
+    config.registrationProofOfWorkInitialMaxHash = '0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'; // 1 in 16 chance of solving
 
     // RegistrationManager creation
     const registrationStoreUrl = config.registrationStoreUrl;
     const termsOfServiceFilePath = config.termsOfServiceFilePath;
-    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath });
+    const initialMaximumAllowedHashValue = config.registrationProofOfWorkInitialMaxHash;
+    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath, initialMaximumAllowedHashValue });
 
     dwn = await getTestDwn(registrationManager);
 
@@ -179,8 +181,8 @@ describe('Registration scenarios', function () {
     const { challengeNonce } = registrationManager.getProofOfWorkChallenge();
 
     // Force the difficulty to be practically impossible.
-    const originalMaximumAllowedHashValueAsBigInt = registrationManager['proofOfWorkManager']['currentMaximumHashValueAsBigInt']; // for restoring later below
-    registrationManager['proofOfWorkManager']['currentMaximumHashValueAsBigInt'] = BigInt('0x0000000000000000000000000000000000000000000000000000000000000001');
+    const originalMaximumAllowedHashValueAsBigInt = registrationManager['proofOfWorkManager']['currentMaximumAllowedHashValueAsBigInt']; // for restoring later below
+    registrationManager['proofOfWorkManager']['currentMaximumAllowedHashValueAsBigInt'] = BigInt('0x0000000000000000000000000000000000000000000000000000000000000001');
 
     const registrationData: RegistrationData = {
       did: alice.did,
@@ -193,9 +195,6 @@ describe('Registration scenarios', function () {
       maximumAllowedHashValue: 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF', // any hash value will always be less or equal to this value
       requestData: JSON.stringify(registrationData),
     });
-
-    // Restoring original difficulty for subsequent tests.
-    registrationManager['proofOfWorkManager']['currentMaximumHashValueAsBigInt'] = originalMaximumAllowedHashValueAsBigInt;
 
     // 2. Alice sends the registration request to the server and is rejected.
     const registrationRequest: RegistrationRequest = {
@@ -214,6 +213,9 @@ describe('Registration scenarios', function () {
     const registrationResponseBody = await registrationResponse.json() as any;
     expect(registrationResponse.status).to.equal(400);
     expect(registrationResponseBody.code).to.equal(DwnServerErrorCode.ProofOfWorkInsufficientSolutionNonce);
+
+    // Restoring original difficulty for subsequent tests.
+    registrationManager['proofOfWorkManager']['currentMaximumAllowedHashValueAsBigInt'] = originalMaximumAllowedHashValueAsBigInt;
   });
 
   it('should reject a registration request that uses an invalid/outdated terms-of-service hash', async () => {

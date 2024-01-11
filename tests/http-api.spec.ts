@@ -54,11 +54,13 @@ describe('http api', function () {
     config.registrationStoreUrl = 'sqlite://';
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
+    config.registrationProofOfWorkInitialMaxHash = '0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'; // 1 in 16 chance of solving
 
     // RegistrationManager creation
     const registrationStoreUrl = config.registrationStoreUrl;
     const termsOfServiceFilePath = config.termsOfServiceFilePath;
-    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath });
+    const initialMaximumAllowedHashValue = config.registrationProofOfWorkInitialMaxHash;
+    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath, initialMaximumAllowedHashValue });
 
     dwn = await getTestDwn(registrationManager);
 

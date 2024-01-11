@@ -7,6 +7,9 @@ import { ProofOfWork } from "./proof-of-work.js";
  * Can have multiple instances each having their own desired solve rate and difficulty.
  */
 export class ProofOfWorkManager {
+  // Takes from seconds to ~1 minute to solve on an M1 MacBook.
+  private static readonly defaultMaximumAllowedHashValue = '000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
+
   // Challenge nonces that can be used for proof-of-work.
   private challengeNonces: { currentChallengeNonce: string, previousChallengeNonce?: string };
 
@@ -14,8 +17,8 @@ export class ProofOfWorkManager {
   private proofOfWorkOfLastMinute: Map<string, number> = new Map(); // proofOfWorkId -> timestamp of proof-of-work
 
   private difficultyIncreaseMultiplier: number;
-  private currentMaximumHashValueAsBigInt: bigint;
-  private initialMaximumHashValueAsBigInt: bigint;
+  private currentMaximumAllowedHashValueAsBigInt: bigint;
+  private initialMaximumAllowedHashValueAsBigInt: bigint;
   private desiredSolveCountPerMinute: number;
 
   /**
@@ -32,7 +35,7 @@ export class ProofOfWorkManager {
    * The current maximum allowed hash value.
    */
   public get currentMaximumAllowedHashValue(): bigint {
-    return this.currentMaximumHashValueAsBigInt;
+    return this.currentMaximumAllowedHashValueAsBigInt;
   }
 
   /**
@@ -44,16 +47,16 @@ export class ProofOfWorkManager {
 
   private constructor (input: {
     desiredSolveCountPerMinute: number,
-    initialMaximumHashValue: string,
+    initialMaximumAllowedHashValue: string,
     difficultyIncreaseMultiplier: number,
     challengeRefreshFrequencyInSeconds: number,
     difficultyReevaluationFrequencyInSeconds: number
   }) {
-    const { desiredSolveCountPerMinute, initialMaximumHashValue } = input;
+    const { desiredSolveCountPerMinute, initialMaximumAllowedHashValue } = input;
 
     this.challengeNonces = { currentChallengeNonce: ProofOfWork.generateNonce() };
-    this.currentMaximumHashValueAsBigInt = BigInt(`0x${initialMaximumHashValue}`);
-    this.initialMaximumHashValueAsBigInt = BigInt(`0x${initialMaximumHashValue}`);
+    this.currentMaximumAllowedHashValueAsBigInt = BigInt(`0x${initialMaximumAllowedHashValue}`);
+    this.initialMaximumAllowedHashValueAsBigInt = BigInt(`0x${initialMaximumAllowedHashValue}`);
     this.desiredSolveCountPerMinute = desiredSolveCountPerMinute;
     this.difficultyIncreaseMultiplier = input.difficultyIncreaseMultiplier;
     this.challengeRefreshFrequencyInSeconds = input.challengeRefreshFrequencyInSeconds;
@@ -70,21 +73,22 @@ export class ProofOfWorkManager {
    */
   public static async create(input: {
     desiredSolveCountPerMinute: number,
-    initialMaximumHashValue: string,
     autoStart: boolean,
+    initialMaximumAllowedHashValue?: string,
     difficultyIncreaseMultiplier?: number,
     challengeRefreshFrequencyInSeconds?: number,
     difficultyReevaluationFrequencyInSeconds?: number
   }): Promise<ProofOfWorkManager> {
-    const { desiredSolveCountPerMinute, initialMaximumHashValue } = input;
+    const { desiredSolveCountPerMinute } = input;
 
+    const initialMaximumAllowedHashValue = input.initialMaximumAllowedHashValue ?? ProofOfWorkManager.defaultMaximumAllowedHashValue;
     const difficultyIncreaseMultiplier = input.difficultyIncreaseMultiplier ?? 1; // 1x default
     const challengeRefreshFrequencyInSeconds = input.challengeRefreshFrequencyInSeconds ?? 10 * 60; // 10 minutes default
     const difficultyReevaluationFrequencyInSeconds = input.difficultyReevaluationFrequencyInSeconds ?? 10; // 10 seconds default
 
     const proofOfWorkManager = new ProofOfWorkManager({
       desiredSolveCountPerMinute,
-      initialMaximumHashValue,
+      initialMaximumAllowedHashValue,
       difficultyIncreaseMultiplier,
       challengeRefreshFrequencyInSeconds,
       difficultyReevaluationFrequencyInSeconds
@@ -218,42 +222,43 @@ export class ProofOfWorkManager {
       // if solve rate is higher than desired, make difficulty harder by making the max allowed hash value smaller
       
       const currentSolveRateInFractionOfDesiredSolveRate = latestSolveCountPerMinute / this.desiredSolveCountPerMinute;
-      const newMaximumHashValueAsBigIntPriorToMultiplierAdjustment
-        = (this.currentMaximumHashValueAsBigInt * BigInt(scaleFactor)) / 
+      const newMaximumAllowedHashValueAsBigIntPriorToMultiplierAdjustment
+        = (this.currentMaximumAllowedHashValueAsBigInt * BigInt(scaleFactor)) / 
           (BigInt(Math.floor(currentSolveRateInFractionOfDesiredSolveRate * this.difficultyIncreaseMultiplier * scaleFactor)));
 
       const hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment
-        = (this.currentMaximumHashValueAsBigInt - newMaximumHashValueAsBigIntPriorToMultiplierAdjustment) *
+        = (this.currentMaximumAllowedHashValueAsBigInt - newMaximumAllowedHashValueAsBigIntPriorToMultiplierAdjustment) *
           (BigInt(Math.floor(this.difficultyIncreaseMultiplier * scaleFactor)) / BigInt(scaleFactor));
           
       // Adjustment based on the reevaluation frequency to provide more-or-less consistent behavior regardless of the reevaluation frequency.
       const hashValueDecreaseAmount = hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment / BigInt(difficultyEvaluationsPerMinute);
 
-      this.currentMaximumHashValueAsBigInt -= hashValueDecreaseAmount;
+      this.currentMaximumAllowedHashValueAsBigInt -= hashValueDecreaseAmount;
 
       // Resetting to allow hash increment to be recalculated when difficulty needs to be reduced (in `else` block below)
       this.hashValueIncrementPerEvaluation = undefined;
     } else {
       // if solve rate is lower than desired, make difficulty easier by making the max allowed hash value larger
 
-      if (this.currentMaximumHashValueAsBigInt === this.initialMaximumHashValueAsBigInt) {
+      if (this.currentMaximumAllowedHashValueAsBigInt === this.initialMaximumAllowedHashValueAsBigInt) {
         // if current difficulty is already at initial difficulty, nothing to do
         return;
       }
 
       if (this.hashValueIncrementPerEvaluation === undefined) {
         const backToInitialDifficultyInMinutes = 10;
-        const differenceBetweenInitialAndCurrentDifficulty = this.initialMaximumHashValueAsBigInt - this.currentMaximumHashValueAsBigInt;
+        const differenceBetweenInitialAndCurrentDifficulty
+          = this.initialMaximumAllowedHashValueAsBigInt - this.currentMaximumAllowedHashValueAsBigInt;
         this.hashValueIncrementPerEvaluation
           = differenceBetweenInitialAndCurrentDifficulty / BigInt(backToInitialDifficultyInMinutes * difficultyEvaluationsPerMinute);
       }
 
       // if newly calculated difficulty is lower than initial difficulty, just use the initial difficulty
-      const newMaximumAllowedHashValueAsBigInt = this.currentMaximumHashValueAsBigInt + this.hashValueIncrementPerEvaluation;
-      if (newMaximumAllowedHashValueAsBigInt >= this.initialMaximumHashValueAsBigInt) {
-        this.currentMaximumHashValueAsBigInt = this.initialMaximumHashValueAsBigInt;
+      const newMaximumAllowedHashValueAsBigInt = this.currentMaximumAllowedHashValueAsBigInt + this.hashValueIncrementPerEvaluation;
+      if (newMaximumAllowedHashValueAsBigInt >= this.initialMaximumAllowedHashValueAsBigInt) {
+        this.currentMaximumAllowedHashValueAsBigInt = this.initialMaximumAllowedHashValueAsBigInt;
       } else {
-        this.currentMaximumHashValueAsBigInt = newMaximumAllowedHashValueAsBigInt;
+        this.currentMaximumAllowedHashValueAsBigInt = newMaximumAllowedHashValueAsBigInt;
       }
     }
   }

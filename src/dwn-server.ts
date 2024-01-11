@@ -56,6 +56,7 @@ export class DwnServer {
       registrationManager = await RegistrationManager.create({
         registrationStoreUrl: this.config.registrationStoreUrl,
         termsOfServiceFilePath: this.config.termsOfServiceFilePath,
+        initialMaximumAllowedHashValue: this.config.registrationProofOfWorkInitialMaxHash,
       });
 
       this.dwn = await Dwn.create(getDWNConfig(this.config, registrationManager));

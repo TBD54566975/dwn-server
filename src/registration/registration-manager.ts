@@ -54,8 +54,9 @@ export class RegistrationManager implements TenantGate {
   public static async create(input: {
     registrationStoreUrl: string,
     termsOfServiceFilePath?: string
+    initialMaximumAllowedHashValue?: string,
   }): Promise<RegistrationManager> {
-    const { termsOfServiceFilePath, registrationStoreUrl } = input;
+    const { termsOfServiceFilePath, registrationStoreUrl, initialMaximumAllowedHashValue } = input;
 
     const registrationManager = new RegistrationManager(termsOfServiceFilePath);
 
@@ -63,7 +64,7 @@ export class RegistrationManager implements TenantGate {
     registrationManager.proofOfWorkManager = await ProofOfWorkManager.create({
       autoStart: true,
       desiredSolveCountPerMinute: 10,
-      initialMaximumHashValue: '00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'
+      initialMaximumAllowedHashValue,
     });
 
     // Initialize RegistrationStore.

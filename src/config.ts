@@ -17,6 +17,7 @@ export const config = {
   // tenant registration feature configuration
   registrationStoreUrl: process.env.DWN_REGISTRATION_STORE_URL || process.env.DWN_STORAGE || 'sqlite://data/dwn.db',
   registrationProofOfWorkEnabled: process.env.DWN_REGISTRATION_PROOF_OF_WORK_ENABLED === 'true',
+  registrationProofOfWorkInitialMaxHash: process.env.DWN_REGISTRATION_PROOF_OF_WORK_INITIAL_MAX_HASH,
   termsOfServiceFilePath: process.env.DWN_TERMS_OF_SERVICE_FILE_PATH,
 
   // log level - trace/debug/info/warn/error
