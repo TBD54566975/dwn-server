@@ -14,6 +14,7 @@ export class ProofOfWorkManager {
   private challengeNonces: { currentChallengeNonce: string, previousChallengeNonce?: string };
 
   // There is opportunity to improve implementation here.
+  // TODO: https://github.com/TBD54566975/dwn-server/issues/101
   private proofOfWorkOfLastMinute: Map<string, number> = new Map(); // proofOfWorkId -> timestamp of proof-of-work
 
   private difficultyIncreaseMultiplier: number;
