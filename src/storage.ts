@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 import {
   DataStoreLevel,
   EventLogLevel,
@@ -128,7 +130,13 @@ export function getDialectFromURI(u: URL): Dialect {
   switch (u.protocol.slice(0, -1)) {
     case BackendTypes.SQLITE:
       const path = u.host + u.pathname;
-      console.log('Relative SQL-lite path:', path);
+      console.log('SQL-lite relative path:', path ? path : undefined); // NOTE, using ? for lose equality comparison
+
+      if (u.host && !fs.existsSync(u.host)) {
+        console.log('SQL-lite directory does not exist, creating:', u.host);
+        fs.mkdirSync(u.host, { recursive: true });
+      }
+
       return new SqliteDialect({
         database: async () => new Database(path),
       });
