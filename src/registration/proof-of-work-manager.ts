@@ -222,11 +222,11 @@ export class ProofOfWorkManager {
         = (this.currentMaximumHashValueAsBigInt * BigInt(scaleFactor)) / 
           (BigInt(Math.floor(currentSolveRateInFractionOfDesiredSolveRate * this.difficultyIncreaseMultiplier * scaleFactor)));
 
-      // This should also be relative to how often the difficulty is reevaluated if the reevaluation frequency is adjustable.
       const hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment
-         = (this.currentMaximumHashValueAsBigInt - newMaximumHashValueAsBigIntPriorToMultiplierAdjustment) *
-           (BigInt(Math.floor(this.difficultyIncreaseMultiplier * scaleFactor)) / BigInt(scaleFactor));
-      
+        = (this.currentMaximumHashValueAsBigInt - newMaximumHashValueAsBigIntPriorToMultiplierAdjustment) *
+          (BigInt(Math.floor(this.difficultyIncreaseMultiplier * scaleFactor)) / BigInt(scaleFactor));
+          
+      // Adjustment based on the reevaluation frequency to provide more-or-less consistent behavior regardless of the reevaluation frequency.
       const hashValueDecreaseAmount = hashValueDecreaseAmountPriorToEvaluationFrequencyAdjustment / BigInt(difficultyEvaluationsPerMinute);
 
       this.currentMaximumHashValueAsBigInt -= hashValueDecreaseAmount;
