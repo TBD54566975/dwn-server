@@ -524,9 +524,9 @@ describe('http api', function () {
     });
   });
 
-  describe('/info.json', function () {
-    it('verify /info.json has some of the fields it is supposed to have', async function () {
-      const resp = await fetch(`http://localhost:3000/info.json`);
+  describe('/info', function () {
+    it('verify /info has some of the fields it is supposed to have', async function () {
+      const resp = await fetch(`http://localhost:3000/info`);
       expect(resp.status).to.equal(200);
 
       const info = await resp.json();

@@ -174,7 +174,7 @@ export class HttpApi {
 
     this.#setupRegistrationRoutes();
 
-    this.#api.get('/info.json', (req, res) => {
+    this.#api.get('/info', (req, res) => {
       res.setHeader('content-type', 'application/json');
       const registrationRequirements: string[] = [];
       if (config.registrationProofOfWorkEnabled) {
