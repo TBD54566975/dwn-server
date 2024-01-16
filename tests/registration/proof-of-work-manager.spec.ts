@@ -24,7 +24,7 @@ describe('ProofOfWorkManager', function () {
     clock.restore();
   });
 
-  it('should periodically refresh the challenge nonce and proof-of-work difficulty', async function () {
+  it('should continue to periodically refresh the challenge nonce and proof-of-work difficulty even if the refresh logic throws error.', async function () {
     const desiredSolveCountPerMinute = 10;
     const initialMaximumAllowedHashValue = 'FFFFFFFF';
     const proofOfWorkManager = await ProofOfWorkManager.create({
@@ -47,7 +47,6 @@ describe('ProofOfWorkManager', function () {
     const challengeNonceRefreshSpy = sinon.stub(proofOfWorkManager, 'refreshChallengeNonce').callsFake(stub);
     const maximumAllowedHashValueRefreshSpy = sinon.stub(proofOfWorkManager, 'refreshMaximumAllowedHashValue').callsFake(stub);
 
-    // Simulated 1 hour has passed, so all proof-of-work entries should be removed.
     clock.tick(60 * 60 * 1000);
 
     // 1 hour divided by the challenge refresh frequency
@@ -78,7 +77,7 @@ describe('ProofOfWorkManager', function () {
     let lastMaximumAllowedHashValue = BigInt('0x' + initialMaximumAllowedHashValue);
     const lastSolveCountPerMinute = 0;
     for (let i = 0; i < 100; i++) {
-      // Simulating 1 proof-of-work per second which for 100 seconds.
+      // Simulating 1 proof-of-work per second for 100 seconds.
       await proofOfWorkManager.recordProofOfWork(uuidv4());
       expect(proofOfWorkManager.currentSolveCountPerMinute).to.be.greaterThanOrEqual(lastSolveCountPerMinute);
       clock.tick(1000);
@@ -122,7 +121,7 @@ describe('ProofOfWorkManager', function () {
       await proofOfWorkManager.recordProofOfWork(uuidv4());
     }
 
-    // Simulating 1 proof-of-work per second which for 100 seconds to increase proof-of-work difficulty.
+    // Simulating 1 proof-of-work per second for 100 seconds to increase proof-of-work difficulty.
     for (let i = 0; i < 100; i++) {
       await proofOfWorkManager.recordProofOfWork(uuidv4());
       clock.tick(1000);

@@ -168,6 +168,7 @@ describe('Registration scenarios', function () {
     const nonTenantJsonRpcResponseBody = await nonTenantJsonRpcResponse.json() as JsonRpcResponse;
     expect(nonTenantJsonRpcResponse.status).to.equal(200);
     expect(nonTenantJsonRpcResponseBody.result.reply.status.code).to.equal(401);
+    expect(nonTenantJsonRpcResponseBody.result.reply.status.detail).to.equal('Not a registered tenant.');
   });
 
   it('should reject a registration request that has proof-or-work that does not meet the difficulty requirement.', async function () {
@@ -257,7 +258,6 @@ describe('Registration scenarios', function () {
     expect(registrationResponse.status).to.equal(400);
     expect(registrationResponseBody.code).to.equal(DwnServerErrorCode.RegistrationManagerInvalidOrOutdatedTermsOfServiceHash);
   });
-
 
   it('should reject registration request that reuses a response nonce that is already used a short-time earlier', async () => {
     // Scenario:
@@ -402,9 +402,12 @@ describe('Registration scenarios', function () {
     // 1. Alice is a registered tenant and is able to write to the DWN.
     // 2. DWN server administrator updates the terms-of-service.
     // 3. Alice no longer can write to the DWN because she has not agreed to the new terms-of-service.
+    // 4. Alice fetches the new terms-of-service and proof-of-work challenge 
+    // 5. Alice agrees to the new terms-of-service.
+    // 6. Alice can now write to the DWN again.
 
     // 1. Alice is a registered tenant and is able to write to the DWN.
-    // Short-cut to register Alice.
+    // Shortcut to register Alice.
     registrationManager.recordTenantRegistration({
       did: alice.did,
       termsOfServiceHash: ProofOfWork.hashAsHexString([registrationManager.getTermsOfService()])
@@ -424,7 +427,8 @@ describe('Registration scenarios', function () {
     expect(write1ResponseBody.result.reply.status.code).to.equal(202);
 
     // 2. DWN server administrator updates the terms-of-service.
-    registrationManager.updateTermsOfService('new terms of service');
+    const newTermsOfService = 'new terms of service';
+    registrationManager.updateTermsOfService(newTermsOfService);
 
     // 3. Alice no longer can write to the DWN because she has not agreed to the new terms-of-service.
     const write2 = await generateRecordsWriteJsonRpcRequest(alice);
@@ -438,6 +442,61 @@ describe('Registration scenarios', function () {
     const write2ResponseBody = await write2Response.json() as JsonRpcResponse;
     expect(write2Response.status).to.equal(200);
     expect(write2ResponseBody.result.reply.status.code).to.equal(401);
+    expect(write2ResponseBody.result.reply.status.detail).to.equal('Agreed terms-of-service is outdated.');
+
+    // 4. Alice fetches the new terms-of-service and proof-of-work challenge 
+    const termsOfServiceGetResponse = await fetch(termsOfUseEndpoint, {
+      method: 'GET',
+    });
+    const termsOfServiceFetched = await termsOfServiceGetResponse.text();
+    expect(termsOfServiceGetResponse.status).to.equal(200);
+    expect(termsOfServiceFetched).to.equal(newTermsOfService);
+
+    const proofOfWorkChallengeGetResponse = await fetch(proofOfWorkEndpoint, {
+      method: 'GET',
+    });
+    const { challengeNonce, maximumAllowedHashValue} = await proofOfWorkChallengeGetResponse.json() as ProofOfWorkChallengeModel;
+
+    // 5. Alice agrees to the new terms-of-service.
+    const registrationData: RegistrationData = {
+      did: alice.did,
+      termsOfServiceHash: ProofOfWork.hashAsHexString([newTermsOfService]),
+    };
+
+    const responseNonce = ProofOfWork.findQualifiedResponseNonce({
+      challengeNonce,
+      maximumAllowedHashValue,
+      requestData: JSON.stringify(registrationData),
+    });
+
+    const registrationRequest: RegistrationRequest = {
+      registrationData,
+      proofOfWork: {
+        challengeNonce,
+        responseNonce,
+      },
+    };
+
+    const registrationResponse = await fetch(registrationEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(registrationRequest),
+    });
+    expect(registrationResponse.status).to.equal(200);
+
+    // 6. Alice can now write to the DWN again.
+    const { jsonRpcRequest, dataBytes } = await generateRecordsWriteJsonRpcRequest(alice);
+    const write3Response = await fetch(dwnMessageEndpoint, {
+      method: 'POST',
+      headers: {
+        'dwn-request': JSON.stringify(jsonRpcRequest),
+      },
+      body: new Blob([dataBytes]),
+    });
+    const write3ResponseBody = await write3Response.json() as JsonRpcResponse;
+    expect(write3Response.status).to.equal(200);
+    expect(write3ResponseBody.result.reply.status.code).to.equal(202);
+
   });
 });
 

@@ -4,7 +4,7 @@ import { RegistrationStore } from "./registration-store.js";
 import type { RegistrationData, RegistrationRequest } from "./registration-types.js";
 import type { ProofOfWorkChallengeModel } from "./proof-of-work-types.js";
 import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
-import type { TenantGate } from "@tbd54566975/dwn-sdk-js";
+import type { ActiveTenantCheckResult, TenantGate } from "@tbd54566975/dwn-sdk-js";
 import { getDialectFromURI } from "../storage.js";
 import { readFileSync } from "fs";
 
@@ -117,17 +117,23 @@ export class RegistrationManager implements TenantGate {
   /**
    * The TenantGate implementation.
    */
-  public async isActiveTenant(tenant: string): Promise<boolean> {
+  public async isActiveTenant(tenant: string): Promise<ActiveTenantCheckResult> {
     const tenantRegistration = await this.registrationStore.getTenantRegistration(tenant);
 
     if (tenantRegistration === undefined) {
-      return false
+      return {
+        isActiveTenant: false,
+        detail: 'Not a registered tenant.'
+      };
     }
 
     if (tenantRegistration.termsOfServiceHash !== this.termsOfServiceHash) {
-      return false;
+      return {
+        isActiveTenant: false,
+        detail: 'Agreed terms-of-service is outdated.'
+      };
     }
 
-    return true;
+    return { isActiveTenant: true }
   }
 }

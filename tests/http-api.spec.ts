@@ -284,7 +284,6 @@ describe('http api', function () {
       expect(body.error).to.not.exist;
 
       const { reply } = body.result;
-      console.log(reply);
       expect(reply.status.code).to.equal(202);
     });
 
