@@ -52,6 +52,8 @@ export class ProofOfWork {
 
   /**
    * Finds a response nonce that qualifies the difficulty requirement for the given proof-of-work challenge and request data.
+   * NOTE: mainly for demonstrating the procedure to find a qualified response nonce.
+   * Will need to artificially introduce asynchrony to allow other tasks to run if this method is to be used in a real-world client.
    */
   public static findQualifiedResponseNonce(input: {
     maximumAllowedHashValue: string;
