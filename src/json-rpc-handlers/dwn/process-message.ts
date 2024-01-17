@@ -25,7 +25,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
     const reply = (await dwn.processMessage(
       target,
       message,
-      dataStream as IsomorphicReadable,
+      { dataStream: dataStream as IsomorphicReadable },
     )) as RecordsReadReply;
 
     // RecordsRead messages return record data as a stream to for accommodate large amounts of data

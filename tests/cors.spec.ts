@@ -7,7 +7,7 @@ import { executablePath } from 'puppeteer';
 
 import { config as defaultConfig } from '../src/config.js';
 import { DwnServer } from '../src/dwn-server.js';
-import { clear as clearDwn, dwn } from './test-dwn.js';
+import { getTestDwn } from './test-dwn.js';
 
 let noBrowser;
 try {
@@ -24,19 +24,18 @@ class CorsProxySetup {
   proxyPort = 9875;
 
   public async start(): Promise<void> {
+    const testDwn = await getTestDwn();
     const dwnServer = new DwnServer({
-      dwn: dwn,
+      dwn: testDwn,
       config: {
         ...defaultConfig,
         port: 0, // UNSPEC to obtain test specific free port
+        registrationProofOfWorkEnabled: false,
       },
     });
-    const dwnPort = await new Promise((resolve) => {
-      dwnServer.start(() => {
-        const port = (dwnServer.httpServer.address() as AddressInfo).port;
-        resolve(port);
-      });
-    });
+    await dwnServer.start();
+    const dwnPort = (dwnServer.httpServer.address() as AddressInfo).port;
+
     // setup proxy server
     const proxy = httpProxy.createProxyServer({});
     const server = http.createServer((req, res) => {
@@ -77,7 +76,6 @@ class CorsProxySetup {
     await new Promise((resolve) => {
       dwnServer.stop(resolve);
     });
-    await clearDwn();
   }
 }
 
@@ -173,6 +171,12 @@ describe('CORS setup', function () {
   // dwn-server runs on dwn.localhost
   const proxy = new CorsProxySetup();
   before(async () => {
+
+    // Mute all server console logs during tests.
+    console.log = (): void => {};
+    console.error = (): void => {};
+    console.info = (): void => {};
+
     await proxy.start();
   });
   after(async () => {

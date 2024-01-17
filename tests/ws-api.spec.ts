@@ -11,7 +11,7 @@ import {
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
 import { WsApi } from '../src/ws-api.js';
-import { clear as clearDwn, dwn } from './test-dwn.js';
+import { getTestDwn } from './test-dwn.js';
 import { createRecordsWriteMessage, sendWsMessage } from './utils.js';
 
 let server: http.Server;
@@ -22,12 +22,9 @@ describe('websocket api', function () {
     server = http.createServer();
     server.listen(9002, '127.0.0.1');
 
-    const wsApi = new WsApi(server, dwn);
+    const testDwn = await getTestDwn();
+    const wsApi = new WsApi(server, testDwn);
     wsServer = wsApi.start();
-  });
-
-  afterEach(async function () {
-    await clearDwn();
   });
 
   after(function () {
@@ -57,6 +54,7 @@ describe('websocket api', function () {
 
   it('handles RecordsWrite messages', async function () {
     const alice = await DidKeyResolver.generate();
+
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
     const dataBytes = await DataStream.toBytes(dataStream);
     const encodedData = base64url.baseEncode(dataBytes);
@@ -74,6 +72,7 @@ describe('websocket api', function () {
     );
     const resp = JSON.parse(data.toString());
     expect(resp.id).to.equal(requestId);
+    console.log(resp.error);
     expect(resp.error).to.not.exist;
 
     const { reply } = resp.result;

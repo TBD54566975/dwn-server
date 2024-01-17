@@ -12,6 +12,7 @@ import { HttpApi } from './http-api.js';
 import { setProcessHandlers } from './process-handlers.js';
 import { getDWNConfig } from './storage.js';
 import { WsApi } from './ws-api.js';
+import { RegistrationManager } from './registration/registration-manager.js';
 
 export type DwnServerOptions = {
   dwn?: Dwn;
@@ -25,6 +26,9 @@ export class DwnServer {
   #httpApi: HttpApi;
   #wsApi: WsApi;
 
+  /**
+   * @param options.dwn - Dwn instance to use as an override. Registration endpoint will not be enabled if this is provided.
+   */
   constructor(options: DwnServerOptions = {}) {
     this.config = options.config ?? defaultConfig;
     this.dwn = options.dwn;
@@ -46,12 +50,21 @@ export class DwnServer {
    * The DWN creation is secondary and only happens if it hasn't already been done.
    */
   async #setupServer(): Promise<void> {
+
+    let registrationManager: RegistrationManager;
     if (!this.dwn) {
-      this.dwn = await Dwn.create(getDWNConfig(this.config));
+      registrationManager = await RegistrationManager.create({
+        registrationStoreUrl: this.config.registrationStoreUrl,
+        termsOfServiceFilePath: this.config.termsOfServiceFilePath,
+        initialMaximumAllowedHashValue: this.config.registrationProofOfWorkInitialMaxHash,
+      });
+
+      this.dwn = await Dwn.create(getDWNConfig(this.config, registrationManager));
     }
 
-    this.#httpApi = new HttpApi(this.dwn);
-    this.#httpApi.start(this.config.port, () => {
+    this.#httpApi = new HttpApi(this.config, this.dwn, registrationManager);
+
+    await this.#httpApi.start(this.config.port, () => {
       log.info(`HttpServer listening on port ${this.config.port}`);
     });
 

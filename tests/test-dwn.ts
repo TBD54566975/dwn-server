@@ -1,27 +1,32 @@
+import type { TenantGate } from '@tbd54566975/dwn-sdk-js';
+import { Dwn } from '@tbd54566975/dwn-sdk-js';
 import {
-  Dwn,
-  DataStoreLevel,
-  EventLogLevel,
-  MessageStoreLevel,
-} from '@tbd54566975/dwn-sdk-js';
+  DataStoreSql,
+  EventLogSql,
+  MessageStoreSql,
+} from '@tbd54566975/dwn-sql-store';
 
-const testDwnDataDirectory = 'data-test';
+import { getDialectFromURI } from '../src/storage.js';
 
-const dataStore = new DataStoreLevel({
-  blockstoreLocation: `${testDwnDataDirectory}/DATASTORE`,
-});
-const eventLog = new EventLogLevel({
-  location: `${testDwnDataDirectory}/EVENTLOG`,
-});
-const messageStore = new MessageStoreLevel({
-  blockstoreLocation: `${testDwnDataDirectory}/MESSAGESTORE`,
-  indexLocation: `${testDwnDataDirectory}/INDEX`,
-});
+export async function getTestDwn(
+  tenantGate?: TenantGate
+): Promise<Dwn> {
+  const db = getDialectFromURI(new URL('sqlite://'));
+  const dataStore = new DataStoreSql(db);
+  const eventLog = new EventLogSql(db);
+  const messageStore = new MessageStoreSql(db);
 
-export const dwn = await Dwn.create({ eventLog, dataStore, messageStore });
+  let dwn: Dwn;
+  try {
+    dwn = await Dwn.create({
+      eventLog,
+      dataStore,
+      messageStore,
+      tenantGate
+    });
+  } catch (e) {
+    throw e;
+  }
 
-export async function clear(): Promise<void> {
-  await dataStore.clear();
-  await eventLog.clear();
-  await messageStore.clear();
+  return dwn;
 }

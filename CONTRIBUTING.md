@@ -70,9 +70,9 @@ We take our open-source community seriously. Please adhere to our [Code of Condu
 
 ### Code Style
 
-- Our preferred code style has been codified into `eslint` and `prettier`.
-  - Feel free to take a look onto [eslint config](https://github.com/TBD54566975/dwn-server/blob/main/.eslintrc.cjs) and [prettier config](https://github.com/TBD54566975/dwn-server/blob/main/.prettierrc.json).
-- Running `npm run lint:fix` and `npm run prettier:fix`will auto-format as much they can. Everything they weren't able to will be printed out as errors or warnings.
+- Our preferred code style has been codified into `eslint`.
+  - Feel free to take a look onto [eslint config](https://github.com/TBD54566975/dwn-server/blob/main/.eslintrc.cjs).
+- Running `npm run lint:fix` will auto-format as much they can. Everything they weren't able to will be printed out as errors or warnings.
 - We have a pre-commit hook which would run both commands with attempt to autofix problems
   - It runs by [husky](https://github.com/TBD54566975/dwn-server/blob/main/.husky/pre-commit) and executes [lint-staged command](https://github.com/TBD54566975/dwn-server/blob/main/package.json#L89)
 - Make sure that no errors/warnings are introduced in your PR
@@ -91,7 +91,6 @@ We take our open-source community seriously. Please adhere to our [Code of Condu
 | `npm run clean`        | deletes compiled JS                                                |
 | `npm run lint`         | runs linter                                                        |
 | `npm run lint:fix`     | runs linter and fixes auto-fixable problems                        |
-| `npm run prettier:fix` | runs prettier and fixes auto-fixable problems                      |
 | `npm run test`         | runs tests                                                         |
 | `npm run server`       | starts server                                                      |
 | `npm run prepare`      | prepares husky for pre-commit hooks (auto-runs with `npm install`) |

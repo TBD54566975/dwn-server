@@ -268,7 +268,6 @@ cloudflared tunnel --url http://localhost:3000
 | `npm run clean`        | deletes compiled JS                                                |
 | `npm run lint`         | runs linter                                                        |
 | `npm run lint:fix`     | runs linter and fixes auto-fixable problems                        |
-| `npm run prettier:fix` | runs prettier and fixes auto-fixable problems                      |
 | `npm run test`         | runs tests                                                         |
 | `npm run server`       | starts server                                                      |
 | `npm run prepare`      | prepares husky for pre-commit hooks (auto-runs with `npm install`) |
@@ -277,15 +276,19 @@ cloudflared tunnel --url http://localhost:3000
 
 Configuration can be set using environment variables
 
-| Env Var                   | Description                                                                            | Default                |
-| ------------------------- | -------------------------------------------------------------------------------------- | ---------------------- |
-| `DS_PORT`                 | Port that the server listens on                                                        | `3000`                 |
-| `DS_MAX_RECORD_DATA_SIZE` | maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value              | `1gb`                  |
-| `DS_WEBSOCKET_SERVER`     | whether to enable listening over `ws:`. values: `on`,`off`                             | `on`                   |
-| `DWN_STORAGE`             | URL to use for storage by default. See [Storage Options](#storage-options) for details | `level://data`         |
-| `DWN_STORAGE_MESSAGES`    | URL to use for storage of messages.                                                    | value of `DWN_STORAGE` |
-| `DWN_STORAGE_DATA`        | URL to use for data storage                                                            | value of `DWN_STORAGE` |
-| `DWN_STORAGE_EVENTS`      | URL to use for event storage                                                           | value of `DWN_STORAGE` |
+| Env Var                                           | Description                                                                                                             | Default                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `DS_PORT`                                         | Port that the server listens on                                                                                         | `3000`                 |
+| `DS_MAX_RECORD_DATA_SIZE`                         | Maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value                                               | `1gb`                  |
+| `DS_WEBSOCKET_SERVER`                             | Whether to enable listening over `ws:`. values: `on`,`off`                                                              | `on`                   |
+| `DWN_REGISTRATION_STORE_URL`                      | URL to use for storage of registered DIDs                                                                               | `sqlite://data/dwn.db` |
+| `DWN_REGISTRATION_PROOF_OF_WORK_ENABLED`          | Require new users to complete a proof-of-work challenge                                                                 | `false`                |
+| `DWN_REGISTRATION_PROOF_OF_WORK_INITIAL_MAX_HASH` | Initial maximum allowed hash in 64 char HEX string. The more leading zeros (smaller number) the higher the difficulty.  | `false`                |
+| `DWN_TERMS_OF_SERVICE_FILE_PATH`                  | Required terms of service agreement if set. Value is path to the terms of service file.                                 | unset                  |
+| `DWN_STORAGE`                                     | URL to use for storage by default. See [Storage Options](#storage-options) for details                                  | `level://data`         |
+| `DWN_STORAGE_MESSAGES`                            | URL to use for storage of messages.                                                                                     | value of `DWN_STORAGE` |
+| `DWN_STORAGE_DATA`                                | URL to use for data storage                                                                                             | value of `DWN_STORAGE` |
+| `DWN_STORAGE_EVENTS`                              | URL to use for event storage                                                                                            | value of `DWN_STORAGE` |
 
 ### Storage Options
 
@@ -297,3 +300,26 @@ Several storage formats are supported, and may be configured with the `DWN_STORA
 | Sqlite     | `sqlite://dwn.db`                                     | use three slashes for absolute paths, two for relative. Example shown creates a file `dwn.db` in the current working directory                                                        |
 | MySQL      | `mysql://user:pass@host/db?debug=true&timezone=-0700` | [all URL options documented here](https://github.com/mysqljs/mysql#connection-options)                                                                                                |
 | PostgreSQL | `postgres:///dwn`                                     | any options other than the URL scheme (`postgres://`) may also be specified via [standard environment variables](https://node-postgres.com/features/connecting#environment-variables) |
+
+## Registration Requirements
+
+There are multiple optional registration gates, each of which can be enabled (all are disabled by default). Tenants (DIDs) must comply with whatever
+requirements are enabled before they are allowed to use the server. Tenants that have not completed the registration requirements will be met with a 401. Note that registration is tracked in a database, and only SQL-based databases are supported (LevelDB is not supported). Current registration
+requirements are available at the `/info` endpoint.
+
+- **Proof of Work** (`DWN_REGISTRATION_PROOF_OF_WORK_ENABLED=true`) - new tenants must GET `/registration/proof-of-work` for a challenge, then generate a nonce that produces a string that has a sha256 hex sum starting with the specified (`complexity`) number of zeros (`0`) when added to the end of the challenge (`sha256(challenge + nonce)`). This nonce should be POSTed to `/registration/proof-of-work` with a JSON body including the `challenge`, the nonce in field `response` and `did`. Challenges expire after 5 minutes, and complexity will increase based on the number of successful proof-of-work registrations that have been completed within the last hour. This registration requirement is listed in `/info` as `proof-of-work-sha256-v0`.
+- **Terms of Service** (`DWN_TERMS_OF_SERVICE_FILE_PATH=/path/to/terms-of-service.txt`) - new tenants must GET `/registration/terms-of-service` to fetch the terms. These terms must be displayed to the human end-user, who must actively accept them. When the user accepts the terms, send the sha256 hash of the accepted terms and the user's did via POST `/registration/terms-of-service`. The JSON body should have fields `termsOfServiceHash` and `did`. To change the terms, update the file and restart the server. Users that accepted the old terms will be blocked until they accept the new terms. This registration requirement is listed in `/info` as `terms-of-service`.
+
+## Server info
+
+the server exposes information about itself via the `/info` endpoint, which returns data in the following format:
+
+```json
+{
+  "server": "@web5/dwn-server",
+  "maxFileSize": 1073741824,
+  "registrationRequirements": ["proof-of-work-sha256-v0", "terms-of-service"],
+  "version": "0.1.5",
+  "sdkVersion": "0.2.6"
+}
+```

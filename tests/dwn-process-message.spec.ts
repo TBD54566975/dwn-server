@@ -6,14 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { handleDwnProcessMessage } from '../src/json-rpc-handlers/dwn/process-message.js';
 import type { RequestContext } from '../src/lib/json-rpc-router.js';
 import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
-import { clear as clearDwn, dwn } from './test-dwn.js';
+import { getTestDwn } from './test-dwn.js';
 import { createRecordsWriteMessage } from './utils.js';
 
 describe('handleDwnProcessMessage', function () {
-  afterEach(async function () {
-    await clearDwn();
-  });
-
   it('returns a JSON RPC Success Response when DWN returns a 2XX status code', async function () {
     const alice = await DidKeyResolver.generate();
 
@@ -25,6 +21,7 @@ describe('handleDwnProcessMessage', function () {
       target: alice.did,
     });
 
+    const dwn = await getTestDwn();
     const context: RequestContext = { dwn, transport: 'http', dataStream };
 
     const { jsonRpcResponse } = await handleDwnProcessMessage(
@@ -49,6 +46,7 @@ describe('handleDwnProcessMessage', function () {
       target: 'did:key:abc1234',
     });
 
+    const dwn = await getTestDwn();
     const context: RequestContext = { dwn, transport: 'http' };
 
     const { jsonRpcResponse } = await handleDwnProcessMessage(

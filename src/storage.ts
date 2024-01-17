@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 import {
   DataStoreLevel,
   EventLogLevel,
@@ -8,6 +10,7 @@ import type {
   DwnConfig,
   EventLog,
   MessageStore,
+  TenantGate,
 } from '@tbd54566975/dwn-sdk-js';
 import type { Dialect } from '@tbd54566975/dwn-sql-store';
 import {
@@ -41,7 +44,10 @@ export enum BackendTypes {
 
 export type StoreType = DataStore | EventLog | MessageStore;
 
-export function getDWNConfig(config: Config): DwnConfig {
+export function getDWNConfig(
+  config: Config,
+  tenantGate: TenantGate,
+): DwnConfig {
   const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
   const eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);
   const messageStore: MessageStore = getStore(
@@ -49,7 +55,7 @@ export function getDWNConfig(config: Config): DwnConfig {
     EStoreType.MessageStore,
   );
 
-  return { eventLog, dataStore, messageStore };
+  return { eventLog, dataStore, messageStore, tenantGate };
 }
 
 function getLevelStore(
@@ -113,18 +119,26 @@ function getStore(storeString: string, storeType: EStoreType): StoreType {
     case BackendTypes.SQLITE:
     case BackendTypes.MYSQL:
     case BackendTypes.POSTGRES:
-      return getDBStore(getDBFromURI(storeURI), storeType);
+      return getDBStore(getDialectFromURI(storeURI), storeType);
 
     default:
       throw invalidStorageSchemeMessage(storeURI.protocol);
   }
 }
 
-function getDBFromURI(u: URL): Dialect {
+export function getDialectFromURI(u: URL): Dialect {
   switch (u.protocol.slice(0, -1)) {
     case BackendTypes.SQLITE:
+      const path = u.host + u.pathname;
+      console.log('SQL-lite relative path:', path ? path : undefined); // NOTE, using ? for lose equality comparison
+
+      if (u.host && !fs.existsSync(u.host)) {
+        console.log('SQL-lite directory does not exist, creating:', u.host);
+        fs.mkdirSync(u.host, { recursive: true });
+      }
+
       return new SqliteDialect({
-        database: async () => new Database(u.host + u.pathname),
+        database: async () => new Database(path),
       });
     case BackendTypes.MYSQL:
       return new MysqlDialect({

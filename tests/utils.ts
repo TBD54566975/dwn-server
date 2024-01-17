@@ -1,4 +1,4 @@
-import type { PrivateJwk, PublicJwk, Signer } from '@tbd54566975/dwn-sdk-js';
+import type { Persona } from '@tbd54566975/dwn-sdk-js';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import type { ReadStream } from 'node:fs';
@@ -12,15 +12,6 @@ import { WebSocket } from 'ws';
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-export type Profile = {
-  did: string;
-  keyPair: {
-    publicJwk: PublicJwk;
-    privateJwk: PrivateJwk;
-  };
-  signer: Signer;
-};
 
 export type CreateRecordsWriteOverrides =
   | ({
@@ -44,7 +35,7 @@ export type GenerateProtocolsConfigureOutput = {
 };
 
 export async function createRecordsWriteMessage(
-  signer: Profile,
+  signer: Persona,
   overrides: CreateRecordsWriteOverrides = {},
 ): Promise<GenerateProtocolsConfigureOutput> {
   if (!overrides.dataCid && !overrides.data) {
