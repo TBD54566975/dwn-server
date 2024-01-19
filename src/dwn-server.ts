@@ -53,6 +53,7 @@ export class DwnServer {
 
     let registrationManager: RegistrationManager;
     if (!this.dwn) {
+      // undefined registrationStoreUrl is used as a signal that there is no need for tenant registration, DWN is open for all.
       registrationManager = await RegistrationManager.create({
         registrationStoreUrl: this.config.registrationStoreUrl,
         termsOfServiceFilePath: this.config.termsOfServiceFilePath,
@@ -88,5 +89,12 @@ export class DwnServer {
 
   get wsServer(): WebSocketServer {
     return this.#wsApi.server;
+  }
+
+  /**
+   * Gets the RegistrationManager for testing purposes.
+   */
+  get registrationManager(): RegistrationManager {
+    return this.#httpApi.registrationManager;
   }
 }

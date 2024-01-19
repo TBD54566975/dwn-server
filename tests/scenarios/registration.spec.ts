@@ -3,18 +3,16 @@ import {
   DataStream,
   DidKeyResolver,
 } from '@tbd54566975/dwn-sdk-js';
-import type { Dwn, Persona } from '@tbd54566975/dwn-sdk-js';
+import type { Persona } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
 import { readFileSync } from 'fs';
-import type { Server } from 'http';
 import fetch from 'node-fetch';
 import { webcrypto } from 'node:crypto';
 import { useFakeTimers } from 'sinon';
 import { v4 as uuidv4 } from 'uuid';
 
 import { config } from '../../src/config.js';
-import { HttpApi } from '../../src/http-api.js';
 import type {
   JsonRpcRequest,
   JsonRpcResponse,
@@ -23,15 +21,15 @@ import {
   createJsonRpcRequest,
 } from '../../src/lib/json-rpc.js';
 import { ProofOfWork } from '../../src/registration/proof-of-work.js';
-import { getTestDwn } from '../test-dwn.js';
 import {
   createRecordsWriteMessage,
 } from '../utils.js';
 import type { ProofOfWorkChallengeModel } from '../../src/registration/proof-of-work-types.js';
 import type { RegistrationData, RegistrationRequest } from '../../src/registration/registration-types.js';
-import { RegistrationManager } from '../../src/registration/registration-manager.js';
+import type { RegistrationManager } from '../../src/registration/registration-manager.js';
 import { DwnServerErrorCode } from '../../src/dwn-error.js';
 import { ProofOfWorkManager } from '../../src/registration/proof-of-work-manager.js';
+import { DwnServer } from '../../src/dwn-server.js';
 
 if (!globalThis.crypto) {
   // @ts-ignore
@@ -44,45 +42,76 @@ describe('Registration scenarios', function () {
   const proofOfWorkEndpoint = 'http://localhost:3000/registration/proof-of-work';
   const registrationEndpoint = 'http://localhost:3000/registration';
 
-  let httpApi: HttpApi;
-  let server: Server;
   let alice: Persona;
   let registrationManager: RegistrationManager;
-  let dwn: Dwn;
   let clock;
+  let dwnServer: DwnServer;
+  const dwnServerConfig = { ...config } // not touching the original config
 
   before(async function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
 
-    config.registrationStoreUrl = 'sqlite://';
-    config.registrationProofOfWorkEnabled = true;
-    config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
-    config.registrationProofOfWorkInitialMaxHash = '0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'; // 1 in 16 chance of solving
-
-    // RegistrationManager creation
-    const registrationStoreUrl = config.registrationStoreUrl;
-    const termsOfServiceFilePath = config.termsOfServiceFilePath;
-    const initialMaximumAllowedHashValue = config.registrationProofOfWorkInitialMaxHash;
-    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath, initialMaximumAllowedHashValue });
-
-    dwn = await getTestDwn(registrationManager);
-
-    httpApi = new HttpApi(config, dwn, registrationManager);
-
     alice = await DidKeyResolver.generate();
+
+    // NOTE: using SQL to workaround an issue where multiple instances of DwnServer can be started using LevelDB in the same test run,
+    // and dwn-server.spec.ts already uses LevelDB.
+    dwnServerConfig.messageStore = 'sqlite://',
+    dwnServerConfig.dataStore = 'sqlite://',
+    dwnServerConfig.eventLog = 'sqlite://',
+
+    // registration config
+    dwnServerConfig.registrationStoreUrl = 'sqlite://';
+    dwnServerConfig.registrationProofOfWorkEnabled = true;
+    dwnServerConfig.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
+    dwnServerConfig.registrationProofOfWorkInitialMaxHash = '0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'; // 1 in 16 chance of solving
+
+    dwnServer =  new DwnServer({ config: dwnServerConfig });
+    await dwnServer.start();
+    registrationManager = dwnServer.registrationManager;
   });
 
   beforeEach(async function () {
-    server = await httpApi.start(3000);
+    // server = await httpApi.start(3000);
   });
 
   afterEach(async function () {
-    server.close();
-    server.closeAllConnections();
+    // server.close();
+    // server.closeAllConnections();
   });
 
   after(function () {
+    dwnServer.stop(() => { });
     clock.restore();
+  });
+
+  it('should allow tenant registration to be turned off to allow all DWN messages through.', async () => {
+    // Scenario:
+    // 1. There is a DWN that does not require tenant registration.
+    // 2. Alice can write to the DWN without registering as a tenant.
+
+    const configClone = {
+      ...dwnServerConfig,
+      registrationStoreUrl: '', // set to empty to disable tenant registration
+      port: 3001,
+      registrationProofOfWorkEnabled: false,
+      termsOfServiceFilePath: undefined,
+    };
+    const dwnServer = new DwnServer({ config: configClone });
+    await dwnServer.start();
+
+    const { jsonRpcRequest, dataBytes } = await generateRecordsWriteJsonRpcRequest(alice);
+    const writeResponse = await fetch('http://localhost:3001', {
+      method: 'POST',
+      headers: {
+        'dwn-request': JSON.stringify(jsonRpcRequest),
+      },
+      body: new Blob([dataBytes]),
+    });
+    const writeResponseBody = await writeResponse.json() as JsonRpcResponse;
+    expect(writeResponse.status).to.equal(200);
+    expect(writeResponseBody.result.reply.status.code).to.equal(202);
+
+    dwnServer.stop(() => { });
   });
 
   it('should facilitate tenant registration with terms-of-service and proof-or-work turned on', async () => {
@@ -101,7 +130,7 @@ describe('Registration scenarios', function () {
     });
     const termsOfServiceFetched = await termsOfServiceGetResponse.text();
     expect(termsOfServiceGetResponse.status).to.equal(200);
-    expect(termsOfServiceFetched).to.equal(readFileSync(config.termsOfServiceFilePath).toString());
+    expect(termsOfServiceFetched).to.equal(readFileSync(dwnServerConfig.termsOfServiceFilePath).toString());
 
     // 2. Alice fetches the proof-of-work challenge.
     const proofOfWorkChallengeGetResponse = await fetch(proofOfWorkEndpoint, {

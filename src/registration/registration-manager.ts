@@ -41,24 +41,31 @@ export class RegistrationManager implements TenantGate {
     this.termsOfService = termsOfService;
   }
 
-  private constructor (termsOfServiceFilePath?: string) {
-    if (termsOfServiceFilePath !== undefined) {
-      const termsOfService = readFileSync(termsOfServiceFilePath).toString();
-      this.updateTermsOfService(termsOfService);
-    }
-  }
-
   /**
    * Creates a new RegistrationManager instance.
+   * @param input.registrationStoreUrl - The URL of the registration store.
+   * Set to `undefined` or empty string if tenant registration is not required (ie. DWN is open for all).
+   * 
    */
   public static async create(input: {
-    registrationStoreUrl: string,
+    registrationStoreUrl?: string,
     termsOfServiceFilePath?: string
     initialMaximumAllowedHashValue?: string,
   }): Promise<RegistrationManager> {
     const { termsOfServiceFilePath, registrationStoreUrl, initialMaximumAllowedHashValue } = input;
 
-    const registrationManager = new RegistrationManager(termsOfServiceFilePath);
+    const registrationManager = new RegistrationManager();
+
+    // short-circuit if tenant registration is not required.
+    if (!registrationStoreUrl) {
+      return registrationManager;
+    }
+
+    // Initialize terms-of-service.
+    if (termsOfServiceFilePath !== undefined) {
+      const termsOfService = readFileSync(termsOfServiceFilePath).toString();
+      registrationManager.updateTermsOfService(termsOfService);
+    }
 
     // Initialize and start ProofOfWorkManager.
     registrationManager.proofOfWorkManager = await ProofOfWorkManager.create({
@@ -118,6 +125,11 @@ export class RegistrationManager implements TenantGate {
    * The TenantGate implementation.
    */
   public async isActiveTenant(tenant: string): Promise<ActiveTenantCheckResult> {
+    // If there is no registration store initialized, then DWN is open for all.
+    if (this.registrationStore === undefined) {
+      return { isActiveTenant: true };
+    }
+
     const tenantRegistration = await this.registrationStore.getTenantRegistration(tenant);
 
     if (tenantRegistration === undefined) {

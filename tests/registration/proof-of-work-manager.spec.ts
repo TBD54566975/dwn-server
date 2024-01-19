@@ -134,4 +134,14 @@ describe('ProofOfWorkManager', function () {
 
     expect(proofOfWorkManager.currentMaximumAllowedHashValue === initialMaximumAllowedHashValueAsBigInt).to.be.true;
   });
+
+  it('should use default difficulty if not given', async function () {
+    const desiredSolveCountPerMinute = 10;
+    const proofOfWorkManager = await ProofOfWorkManager.create({
+      autoStart: false,
+      desiredSolveCountPerMinute,
+    });
+
+    expect(proofOfWorkManager.currentMaximumAllowedHashValue).to.equal(BigInt('0x' + ProofOfWorkManager.defaultMaximumAllowedHashValue));
+  });
 });
