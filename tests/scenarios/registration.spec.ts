@@ -71,12 +71,9 @@ describe('Registration scenarios', function () {
   });
 
   beforeEach(async function () {
-    // server = await httpApi.start(3000);
   });
 
   afterEach(async function () {
-    // server.close();
-    // server.closeAllConnections();
   });
 
   after(function () {
