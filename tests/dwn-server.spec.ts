@@ -33,13 +33,6 @@ describe('DwnServer', function () {
     expect(dwnServer.registrationManager['proofOfWorkManager']['challengeSeed']).to.equal(registrationProofOfWorkSeed);
 
     dwnServer.stop(() => console.log('server Stop'));
+    expect(dwnServer.httpServer.listening).to.be.false;
   });
-
-  // it('should stop listening to HTTP requests when stopped.', async function () {
-  //   const dwnServer = new DwnServer({ config: dwnServerConfig });
-  //   await dwnServer.start();
-  //   dwnServer.stop(() => console.log('server Stop'));
-  //   // Add an assertion to check that the server has been stopped
-  //   expect(dwnServer.httpServer.listening).to.be.false;
-  // });
 });
