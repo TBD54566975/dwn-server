@@ -210,7 +210,7 @@ export class HttpApi {
       this.#api.get('/registration/terms-of-service', (_req: Request, res: Response) => res.send(this.registrationManager.getTermsOfService()));
     }
 
-    if (this.#config.registrationProofOfWorkEnabled || this.#config.termsOfServiceFilePath !== undefined) {
+    if (this.#config.registrationStoreUrl !== undefined) {
       this.#api.post('/registration', async (req: Request, res: Response) => {
         const requestBody = req.body;
         console.log('Registration request:', requestBody);

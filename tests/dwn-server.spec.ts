@@ -6,7 +6,7 @@ import { DwnServer } from '../src/dwn-server.js';
 describe('DwnServer', function () {
   let dwnServer: DwnServer;
   before(async function () {
-    dwnServer = new DwnServer({ config: config });
+    dwnServer = new DwnServer({ config });
   });
 
   after(async function () {

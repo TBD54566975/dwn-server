@@ -8,7 +8,7 @@ import { ProofOfWork } from "./proof-of-work.js";
  */
 export class ProofOfWorkManager {
   // Takes from seconds to ~1 minute to solve on an M1 MacBook.
-  private static readonly defaultMaximumAllowedHashValue = '000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
+  public static readonly defaultMaximumAllowedHashValue = '000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
   // Challenge nonces that can be used for proof-of-work.
   private challengeNonces: { currentChallengeNonce: string, previousChallengeNonce?: string };
