@@ -59,8 +59,8 @@ describe('http api', function () {
     // RegistrationManager creation
     const registrationStoreUrl = config.registrationStoreUrl;
     const termsOfServiceFilePath = config.termsOfServiceFilePath;
-    const initialMaximumAllowedHashValue = config.registrationProofOfWorkInitialMaxHash;
-    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath, initialMaximumAllowedHashValue });
+    const proofOfWorkInitialMaximumAllowedHash = config.registrationProofOfWorkInitialMaxHash;
+    registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath, proofOfWorkInitialMaximumAllowedHash });
 
     dwn = await getTestDwn(registrationManager);
 

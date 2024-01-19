@@ -11,12 +11,18 @@ export class ProofOfWorkManager {
   public static readonly defaultMaximumAllowedHashValue = '000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
 
   // Challenge nonces that can be used for proof-of-work.
-  private challengeNonces: { currentChallengeNonce: string, previousChallengeNonce?: string };
+  private challengeNonces: {
+    previousChallengeNonce?: string,
+    currentChallengeNonce: string,
+    nextChallengeNonce?: string
+  };
 
   // There is opportunity to improve implementation here.
   // TODO: https://github.com/TBD54566975/dwn-server/issues/101
   private proofOfWorkOfLastMinute: Map<string, number> = new Map(); // proofOfWorkId -> timestamp of proof-of-work
 
+  // Seed to generate the challenge nonce from, this allows all DWN instances in a cluster to generate the same challenge.
+  private challengeSeed?: string;
   private difficultyIncreaseMultiplier: number;
   private currentMaximumAllowedHashValueAsBigInt: bigint;
   private initialMaximumAllowedHashValueAsBigInt: bigint;
@@ -50,11 +56,13 @@ export class ProofOfWorkManager {
     desiredSolveCountPerMinute: number,
     initialMaximumAllowedHashValue: string,
     difficultyIncreaseMultiplier: number,
+    challengeSeed?: string,
     challengeRefreshFrequencyInSeconds: number,
     difficultyReevaluationFrequencyInSeconds: number
   }) {
     const { desiredSolveCountPerMinute, initialMaximumAllowedHashValue } = input;
 
+    this.challengeSeed = input.challengeSeed;
     this.challengeNonces = { currentChallengeNonce: ProofOfWork.generateNonce() };
     this.currentMaximumAllowedHashValueAsBigInt = BigInt(`0x${initialMaximumAllowedHashValue}`);
     this.initialMaximumAllowedHashValueAsBigInt = BigInt(`0x${initialMaximumAllowedHashValue}`);
@@ -77,6 +85,7 @@ export class ProofOfWorkManager {
     autoStart: boolean,
     initialMaximumAllowedHashValue?: string,
     difficultyIncreaseMultiplier?: number,
+    challengeSeed?: string,
     challengeRefreshFrequencyInSeconds?: number,
     difficultyReevaluationFrequencyInSeconds?: number
   }): Promise<ProofOfWorkManager> {
@@ -91,6 +100,7 @@ export class ProofOfWorkManager {
       desiredSolveCountPerMinute,
       initialMaximumAllowedHashValue,
       difficultyIncreaseMultiplier,
+      challengeSeed: input.challengeSeed,
       challengeRefreshFrequencyInSeconds,
       difficultyReevaluationFrequencyInSeconds
     });
@@ -143,8 +153,9 @@ export class ProofOfWorkManager {
     }
 
     // Verify challenge nonce is valid.
-    if (challengeNonce !== this.challengeNonces.currentChallengeNonce &&
-        challengeNonce !== this.challengeNonces.previousChallengeNonce) {
+    const { previousChallengeNonce, currentChallengeNonce, nextChallengeNonce } = this.challengeNonces;
+    const acceptableChallengeNonces = [previousChallengeNonce, currentChallengeNonce, nextChallengeNonce].filter(nonce => nonce !== undefined && nonce !== '');
+    if (!acceptableChallengeNonces.includes(challengeNonce)) {
       throw new DwnServerError(
         DwnServerErrorCode.ProofOfWorkManagerInvalidChallengeNonce,
         `Unknown or expired challenge nonce: ${challengeNonce}.`
@@ -195,8 +206,23 @@ export class ProofOfWorkManager {
   }
 
   private refreshChallengeNonce(): void {
-    this.challengeNonces.previousChallengeNonce = this.challengeNonces.currentChallengeNonce;
-    this.challengeNonces.currentChallengeNonce = ProofOfWork.generateNonce();
+    // If challenge seed is supplied, use it to deterministically generate the challenge nonces.
+    if (this.challengeSeed !== undefined) {
+      const currentRefreshIntervalId = Math.floor(Date.now() / (this.challengeRefreshFrequencyInSeconds * 1000));
+      const previousRefreshIntervalId = currentRefreshIntervalId - 1;
+      const nextRefreshIntervalId = currentRefreshIntervalId + 1;
+
+      const previousChallengeNonce = ProofOfWork.hashAsHexString([this.challengeSeed, previousRefreshIntervalId.toString(), this.challengeSeed]);
+      const currentChallengeNonce = ProofOfWork.hashAsHexString([this.challengeSeed, currentRefreshIntervalId.toString(), this.challengeSeed]);
+      const nextChallengeNonce = ProofOfWork.hashAsHexString([this.challengeSeed, nextRefreshIntervalId.toString(), this.challengeSeed]);
+
+      this.challengeNonces = { previousChallengeNonce, currentChallengeNonce, nextChallengeNonce };
+    } else {
+      const newChallengeNonce = ProofOfWork.generateNonce();
+
+      this.challengeNonces.previousChallengeNonce = this.challengeNonces.currentChallengeNonce;
+      this.challengeNonces.currentChallengeNonce = newChallengeNonce;
+    }
   }
 
   /**

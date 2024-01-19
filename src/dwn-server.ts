@@ -7,7 +7,7 @@ import { type WebSocketServer } from 'ws';
 
 import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
 
-import { type Config, config as defaultConfig } from './config.js';
+import { type DwnServerConfig, config as defaultConfig } from './config.js';
 import { HttpApi } from './http-api.js';
 import { setProcessHandlers } from './process-handlers.js';
 import { getDWNConfig } from './storage.js';
@@ -16,12 +16,12 @@ import { RegistrationManager } from './registration/registration-manager.js';
 
 export type DwnServerOptions = {
   dwn?: Dwn;
-  config?: Config;
+  config?: DwnServerConfig;
 };
 
 export class DwnServer {
   dwn?: Dwn;
-  config: Config;
+  config: DwnServerConfig;
   #httpServerShutdownHandler: HttpServerShutdownHandler;
   #httpApi: HttpApi;
   #wsApi: WsApi;
@@ -57,7 +57,8 @@ export class DwnServer {
       registrationManager = await RegistrationManager.create({
         registrationStoreUrl: this.config.registrationStoreUrl,
         termsOfServiceFilePath: this.config.termsOfServiceFilePath,
-        initialMaximumAllowedHashValue: this.config.registrationProofOfWorkInitialMaxHash,
+        proofOfWorkChallengeNonceSeed: this.config.registrationProofOfWorkSeed,
+        proofOfWorkInitialMaximumAllowedHash: this.config.registrationProofOfWorkInitialMaxHash,
       });
 
       this.dwn = await Dwn.create(getDWNConfig(this.config, registrationManager));
