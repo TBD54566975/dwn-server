@@ -14,7 +14,7 @@ import type { RequestContext } from './lib/json-rpc-router.js';
 import type { JsonRpcRequest } from './lib/json-rpc.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
 
-import type { Config } from './config.js';
+import type { DwnServerConfig } from './config.js';
 import { config } from './config.js';
 import { type DwnServerError } from './dwn-error.js';
 import { jsonRpcApi } from './json-rpc-api.js';
@@ -24,13 +24,13 @@ import type { RegistrationManager } from './registration/registration-manager.js
 const packageJson = process.env.npm_package_json ? JSON.parse(readFileSync(process.env.npm_package_json).toString()) : {};
 
 export class HttpApi {
-  #config: Config;
+  #config: DwnServerConfig;
   #api: Express;
   #server: http.Server;
   registrationManager: RegistrationManager;
   dwn: Dwn;
 
-  constructor(config: Config, dwn: Dwn, registrationManager: RegistrationManager) {
+  constructor(config: DwnServerConfig, dwn: Dwn, registrationManager: RegistrationManager) {
     console.log(config);
 
     this.#config = config;

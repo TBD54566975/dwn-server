@@ -282,6 +282,7 @@ Configuration can be set using environment variables
 | `DS_MAX_RECORD_DATA_SIZE`                         | Maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value                                               | `1gb`                  |
 | `DS_WEBSOCKET_SERVER`                             | Whether to enable listening over `ws:`. values: `on`,`off`                                                              | `on`                   |
 | `DWN_REGISTRATION_STORE_URL`                      | URL to use for storage of registered DIDs. Leave unset to if DWN does not require registration (ie. open for all)       | unset                  |
+| `DWN_REGISTRATION_PROOF_OF_WORK_SEED`             | Seed to generate the challenge nonce from, this allows all DWN instances in a cluster to generate the same challenge.   | unset                  |
 | `DWN_REGISTRATION_PROOF_OF_WORK_ENABLED`          | Require new users to complete a proof-of-work challenge                                                                 | `false`                |
 | `DWN_REGISTRATION_PROOF_OF_WORK_INITIAL_MAX_HASH` | Initial maximum allowed hash in 64 char HEX string. The more leading zeros (smaller number) the higher the difficulty.  | `false`                |
 | `DWN_TERMS_OF_SERVICE_FILE_PATH`                  | Required terms of service agreement if set. Value is path to the terms of service file.                                 | unset                  |

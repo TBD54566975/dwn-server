@@ -6,6 +6,8 @@ import { expect } from 'chai';
 import { useFakeTimers } from 'sinon';
 import { v4 as uuidv4 } from 'uuid';
 import { ProofOfWorkManager } from '../..//src/registration/proof-of-work-manager.js';
+import { randomBytes } from 'crypto';
+import { ProofOfWork } from '../../src/registration/proof-of-work.js';
 
 describe('ProofOfWorkManager', function () {
   let clock;
@@ -57,6 +59,49 @@ describe('ProofOfWorkManager', function () {
 
     expect(challengeNonceRefreshSpy.callCount).to.greaterThanOrEqual(expectedChallengeNonceRefreshCount);
     expect(maximumAllowedHashValueRefreshSpy.callCount).to.greaterThanOrEqual(expectedDifficultyReevaluationCount);
+  });
+
+  it('should accept previous and next challenge nonce to account for server time drift when challenge seed is given.', async function () {
+    const desiredSolveCountPerMinute = 10;
+    const initialMaximumAllowedHashValue = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'; // always accept
+    const challengeSeed = randomBytes(32).toString('hex');
+    const proofOfWorkManager = await ProofOfWorkManager.create({
+      autoStart: true,
+      desiredSolveCountPerMinute,
+      challengeSeed,
+      initialMaximumAllowedHashValue,
+    });
+
+    const previousChallengeNonce = proofOfWorkManager['challengeNonces'].previousChallengeNonce;
+    const nextChallengeNonce = proofOfWorkManager['challengeNonces'].nextChallengeNonce;
+    expect(previousChallengeNonce?.length).to.equal(64);
+    expect(nextChallengeNonce?.length).to.equal(64);
+
+    const requestData = 'irrelevant';
+
+    // Expect to accept response nonce generated using previous challenge nonce.
+    const responseNonceUsingPreviousChallengeNonce = ProofOfWork.findQualifiedResponseNonce({
+      challengeNonce: previousChallengeNonce,
+      maximumAllowedHashValue: initialMaximumAllowedHashValue,
+      requestData
+    });
+    await proofOfWorkManager.verifyProofOfWork({
+      challengeNonce: previousChallengeNonce,
+      responseNonce: responseNonceUsingPreviousChallengeNonce,
+      requestData
+    });
+
+    // Expect to accept response nonce generated using next challenge nonce.
+    const responseNonceUsingNextChallengeNonce = ProofOfWork.findQualifiedResponseNonce({
+      challengeNonce: nextChallengeNonce,
+      maximumAllowedHashValue: initialMaximumAllowedHashValue,
+      requestData
+    });
+    await proofOfWorkManager.verifyProofOfWork({
+      challengeNonce: nextChallengeNonce,
+      responseNonce: responseNonceUsingNextChallengeNonce,
+      requestData
+    });
   });
 
   it('should increase difficulty if proof-of-work rate goes above desired rate and reduce difficulty as proof-of-work rate falls below desired rate.', async function () {

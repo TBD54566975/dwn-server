@@ -27,7 +27,7 @@ import { createPool as MySQLCreatePool } from 'mysql2';
 import pg from 'pg';
 import Cursor from 'pg-cursor';
 
-import type { Config } from './config.js';
+import type { DwnServerConfig } from './config.js';
 
 export enum EStoreType {
   DataStore,
@@ -45,7 +45,7 @@ export enum BackendTypes {
 export type StoreType = DataStore | EventLog | MessageStore;
 
 export function getDWNConfig(
-  config: Config,
+  config: DwnServerConfig,
   tenantGate: TenantGate,
 ): DwnConfig {
   const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);

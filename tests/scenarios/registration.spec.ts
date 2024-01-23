@@ -377,12 +377,15 @@ describe('Registration scenarios', function () {
     expect(registrationResponseBody2.code).to.equal(DwnServerErrorCode.ProofOfWorkManagerInvalidResponseNonceFormat);
   });
 
-  it('should reject a registration request that uses an expired challenge nonce', async () => {
+  it('should reject a response nonce based on an expired challenge nonce and accept one is based on the new challenge nonce', async () => {
     // Scenario:
     // 0. Assume Alice fetched the terms-of-service and proof-of-work challenge.
     // 1. A long time has passed since Alice fetched the proof-of-work challenge and the challenge nonce has expired.
     // 2. Alice computes the proof-of-work response nonce based on the the proof-of-work challenge and the registration data.
     // 3. Alice sends the registration request to the server and it is rejected.
+    // 4. Alice fetches the new proof-of-work challenge.
+    // 5. Alice computes the proof-of-work response nonce based on the the new proof-of-work challenge and the registration data.
+    // 6. Alice sends the new registration request to the server and it is accepted.
 
     // 0. Assume Alice fetched the terms-of-service and proof-of-work challenge.
     const termsOfService = registrationManager.getTermsOfService();
@@ -421,6 +424,39 @@ describe('Registration scenarios', function () {
     const registrationResponseBody = await registrationResponse.json() as any;
     expect(registrationResponse.status).to.equal(400);
     expect(registrationResponseBody.code).to.equal(DwnServerErrorCode.ProofOfWorkManagerInvalidChallengeNonce);
+
+    // 4. Alice fetches the new proof-of-work challenge.
+    const proofOfWorkChallengeGetResponse = await fetch(proofOfWorkEndpoint, {
+      method: 'GET',
+    });
+    const {
+      challengeNonce: newChallengeNonce,
+      maximumAllowedHashValue: newMaximumAllowedHashValue
+    } = await proofOfWorkChallengeGetResponse.json() as ProofOfWorkChallengeModel;
+    expect(proofOfWorkChallengeGetResponse.status).to.equal(200);
+
+    // 5. Alice computes the proof-of-work response nonce based on the the new proof-of-work challenge and the registration data.
+    const newResponseNonce = ProofOfWork.findQualifiedResponseNonce({
+      challengeNonce: newChallengeNonce,
+      maximumAllowedHashValue: newMaximumAllowedHashValue,
+      requestData: JSON.stringify(registrationData),
+    });
+
+    // 6. Alice sends the new registration request to the server and it is accepted.
+    const newRegistrationRequest: RegistrationRequest = {
+      registrationData,
+      proofOfWork: {
+        challengeNonce: newChallengeNonce,
+        responseNonce: newResponseNonce
+      },
+    };
+    
+    const newRegistrationResponse = await fetch(registrationEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newRegistrationRequest),
+    });
+    expect(newRegistrationResponse.status).to.equal(200);
   });
 
   it('should reject a DWN message for an existing tenant who agreed to an outdated terms-of-service.', async () => {
