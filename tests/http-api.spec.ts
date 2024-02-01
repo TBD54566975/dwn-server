@@ -2,9 +2,9 @@
 import {
   Cid,
   DataStream,
-  DidKeyResolver,
   RecordsQuery,
   RecordsRead,
+  TestDataGenerator,
   Time,
 } from '@tbd54566975/dwn-sdk-js';
 import type { Dwn, Persona } from '@tbd54566975/dwn-sdk-js';
@@ -66,7 +66,7 @@ describe('http api', function () {
 
     httpApi = new HttpApi(config, dwn, registrationManager);
 
-    alice = await DidKeyResolver.generate();
+    alice = await TestDataGenerator.generateDidKeyPersona();
     await registrationManager.recordTenantRegistration({ did: alice.did, termsOfServiceHash: registrationManager.getTermsOfServiceHash()});
   });
 
@@ -508,7 +508,7 @@ describe('http api', function () {
     });
 
     it('returns a 404 for invalid or unauthorized did', async function () {
-      const unauthorized = await DidKeyResolver.generate();
+      const unauthorized = await TestDataGenerator.generateDidKeyPersona();
       const { recordsWrite } = await createRecordsWriteMessage(unauthorized);
 
       const response = await fetch(
