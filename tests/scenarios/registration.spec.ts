@@ -1,8 +1,5 @@
 // node.js 18 and earlier,  needs globalThis.crypto polyfill
-import {
-  DataStream,
-  DidKeyResolver,
-} from '@tbd54566975/dwn-sdk-js';
+import { DataStream, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
 import type { Persona } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
@@ -51,7 +48,7 @@ describe('Registration scenarios', function () {
   before(async function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
 
-    alice = await DidKeyResolver.generate();
+    alice = await TestDataGenerator.generateDidKeyPersona();
 
     // NOTE: using SQL to workaround an issue where multiple instances of DwnServer can be started using LevelDB in the same test run,
     // and dwn-server.spec.ts already uses LevelDB.
@@ -182,7 +179,7 @@ describe('Registration scenarios', function () {
     expect(writeResponseBody.result.reply.status.code).to.equal(202);
 
     // 7. Sanity test that another non-tenant is NOT authorized to write.
-    const nonTenant = await DidKeyResolver.generate();
+    const nonTenant = await TestDataGenerator.generateDidKeyPersona();
     const nonTenantJsonRpcRequest = await generateRecordsWriteJsonRpcRequest(nonTenant);
     const nonTenantJsonRpcResponse = await fetch(dwnMessageEndpoint, {
       method: 'POST',

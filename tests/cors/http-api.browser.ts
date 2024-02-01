@@ -1,8 +1,8 @@
 import {
-  DidKeyResolver,
   RecordsRead,
   RecordsWrite,
   Jws,
+  TestDataGenerator,
 } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
@@ -13,7 +13,7 @@ describe('http-api', () => {
     // work only under secure context.
     // Test code runs on secure context of http://dwn.localhost
     // by cors setup.
-    const alice = await DidKeyResolver.generate();
+    const alice = await TestDataGenerator.generateDidKeyPersona();
     const encoder = new TextEncoder();
     const data = encoder.encode('Hello, World!');
     const recordsWrite = (

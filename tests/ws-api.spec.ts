@@ -1,4 +1,4 @@
-import { DataStream, DidKeyResolver } from '@tbd54566975/dwn-sdk-js';
+import { DataStream, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
 import { base64url } from 'multiformats/bases/base64';
@@ -53,7 +53,7 @@ describe('websocket api', function () {
   });
 
   it('handles RecordsWrite messages', async function () {
-    const alice = await DidKeyResolver.generate();
+    const alice = await TestDataGenerator.generateDidKeyPersona();
 
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
     const dataBytes = await DataStream.toBytes(dataStream);
