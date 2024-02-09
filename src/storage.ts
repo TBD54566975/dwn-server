@@ -2,6 +2,7 @@ import * as fs from 'fs';
 
 import {
   DataStoreLevel,
+  EventEmitterStream,
   EventLogLevel,
   MessageStoreLevel,
 } from '@tbd54566975/dwn-sdk-js';
@@ -55,7 +56,8 @@ export function getDWNConfig(
     EStoreType.MessageStore,
   );
 
-  return { eventLog, dataStore, messageStore, tenantGate };
+  const eventStream = config.webSocketServerEnabled ? new EventEmitterStream() : undefined;
+  return { eventStream, eventLog, dataStore, messageStore, tenantGate };
 }
 
 function getLevelStore(

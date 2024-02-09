@@ -76,7 +76,8 @@ export class DwnServer {
 
     if (this.config.webSocketServerEnabled) {
       this.#wsApi = new WsApi(this.#httpApi.server, this.dwn);
-      this.#wsApi.start(() => log.info(`WebSocketServer ready...`));
+      this.#wsApi.start();
+      log.info('WebSocketServer ready...');
     }
   }
 
