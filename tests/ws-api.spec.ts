@@ -52,7 +52,7 @@ describe('websocket api', function () {
     expect(resp.error.message).to.include('JSON');
   });
 
-  it('handles RecordsWrite messages', async function () {
+  it('RecordsWrite messages are not supported', async function () {
     const alice = await TestDataGenerator.generateDidKeyPersona();
 
     const { recordsWrite, dataStream } = await createRecordsWriteMessage(alice);
@@ -72,10 +72,8 @@ describe('websocket api', function () {
     );
     const resp = JSON.parse(data.toString());
     expect(resp.id).to.equal(requestId);
-    console.log(resp.error);
-    expect(resp.error).to.not.exist;
-
-    const { reply } = resp.result;
-    expect(reply.status.code).to.equal(202);
+    expect(resp.error).to.not.be.undefined;
+    expect(resp.error.code).to.equal(JsonRpcErrorCodes.MethodNotFound);
+    expect(resp.error.message).to.include('RecordsWrite is not supported via ws');
   });
 });

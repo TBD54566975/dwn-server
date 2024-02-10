@@ -1,13 +1,16 @@
-import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+import type { Dwn, MessageSubscriptionHandler } from '@tbd54566975/dwn-sdk-js';
 
 import type { Readable } from 'node:stream';
 
 import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
+import type { SubscriptionManager } from '../ws-api.js';
 
 export type RequestContext = {
-  dwn: Dwn;
   transport: 'http' | 'ws';
+  dwn: Dwn;
+  subscriptionManager?: SubscriptionManager;
   dataStream?: Readable;
+  subscriptionHandler?: MessageSubscriptionHandler;
 };
 
 export type HandlerResponse = {

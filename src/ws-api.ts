@@ -1,7 +1,6 @@
 import type { AddressInfo, WebSocket } from 'ws';
 import type { IncomingMessage, Server } from 'http';
 
-import { base64url } from 'multiformats/bases/base64';
 import log from 'loglevel';
 import { WebSocketServer } from 'ws';
 
@@ -9,18 +8,20 @@ import type {
   Dwn,
   GenericMessage,
   MessageSubscription,
-  MessageSubscriptionHandler
 } from '@tbd54566975/dwn-sdk-js'
 
-import { DataStream, DwnMethodName } from '@tbd54566975/dwn-sdk-js';
+import { DwnMethodName } from '@tbd54566975/dwn-sdk-js';
 
+import type { RequestContext } from './lib/json-rpc-router.js';
 import type { JsonRpcErrorResponse, JsonRpcId, JsonRpcRequest, JsonRpcResponse } from './lib/json-rpc.js';
 
+import { jsonRpcApi } from './json-rpc-api.js';
 import {
   createJsonRpcErrorResponse,
   createJsonRpcSuccessResponse,
   JsonRpcErrorCodes
 } from './lib/json-rpc.js';
+
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 const HEARTBEAT_INTERVAL = 30_000;
@@ -122,7 +123,6 @@ export class SocketConnection {
   }
 
   private async message(dataBuffer: Buffer): Promise<void> {
-
     const requestData = dataBuffer.toString();
     if (!requestData) {
       return this.send(createJsonRpcErrorResponse(
@@ -145,82 +145,42 @@ export class SocketConnection {
       return this.send(errorResponse);
     };
 
-    const { id, params, method } = jsonRequest;
-    const { target, message, subscriptionId, encodedData } = params;
-
-    // DISCUSSION: Should this be a DWN message or is this rpc specific to the server?
-    //             Having it as a DWN message feels like the incorrect approach as both `Subscribe` and a potential `Unsubscribe` are ephemeral.
-    //             They do not propagate between DWNs in a way that the current DWN holding the Subscription would eventually get an Unsubscribe.
-    //             The `Unsubscribe` is specifically targeted to the live subscription transport. Am open to other ideas on how to handle this.
-
-    if (method === 'dwn.closeSubscription' && subscriptionId !== undefined) {
-      return await this.closeSubscription(id, target, subscriptionId);
-    } else if (method === 'dwn.processMessage' && target && message) {
-      return await this.processMessage({ id, target, message, encodedData });
-    } else {
-      const errorResponse = createJsonRpcErrorResponse(
-        id,
-        JsonRpcErrorCodes.InvalidRequest,
-        `${method} is not supported.`,
-      );
-      this.send(errorResponse);
-    }
+    const requestContext = await this.buildRequestContext(jsonRequest);
+    const { jsonRpcResponse } = await jsonRpcApi.handle(jsonRequest, requestContext);
+    this.send(jsonRpcResponse);
   }
 
   private send(response: JsonRpcResponse | JsonRpcErrorResponse): void {
     this.socket.send(Buffer.from(JSON.stringify(response)), this.error.bind(this));
   }
 
-  private async closeSubscription(id: JsonRpcId, target: string, subscriptionId: string ): Promise<void> {
-    try {
-      await this.subscriptions.close(target, subscriptionId);
-      const response = createJsonRpcSuccessResponse(id, { reply: { status: 200, detail: 'Accepted' } });
+  private subscriptionHandler(id: JsonRpcId): (message: GenericMessage) => void {
+    return (message) => {
+      const response = createJsonRpcSuccessResponse(id, { reply: {
+        record : message
+      } });
       this.send(response);
-    } catch(error) {
-      const errorResponse = createJsonRpcErrorResponse(id, JsonRpcErrorCodes.InvalidParams, `subscription ${subscriptionId} does not exist.`);
-      this.send(errorResponse);
     }
   }
 
-  /**
-   * Handles a DWN Server RPC Request via WebSockets. Currently only Subscription Messages are supported.
-   */
-  private async processMessage(options: {
-    id: JsonRpcId,
-    target: string,
-    message: GenericMessage,
-    encodedData?: string;
-  }):Promise<void> {
-
-    const { id, target, message, encodedData } = options;
-
-    // a subscription message requires a subscription handler
-    if (message.descriptor.method === DwnMethodName.Subscribe) {
-      const subscriptionHandler: MessageSubscriptionHandler = (message) => {
-        const response = createJsonRpcSuccessResponse(id, { reply: {
-          // status : { code: 200, detail: 'Accepted' },
-          record : message
-        } });
-        this.send(response);
-      }
-
-      const { status, subscription } = await this.dwn.processMessage(target, message, { subscriptionHandler });
-      if (status.code !== 200) {
-        const response = createJsonRpcSuccessResponse(id, { reply: { status }})
-        return this.send(response);
-      }
-
-      await this.subscriptions.subscribe(target, subscription);
-      const response = createJsonRpcSuccessResponse(id, { reply: { status, subscription: { id: subscription.id } } });
-      return this.send(response);
+  private async buildRequestContext(request: JsonRpcRequest): Promise<RequestContext> {
+    const { id, params, method} = request;
+    const requestContext: RequestContext = {
+      transport           : 'ws',
+      dwn                 : this.dwn,
+      subscriptionManager : this.subscriptions,
     }
 
-    // Check whether data was provided in the request
-    const dataStream = encodedData ? DataStream.fromBytes(base64url.baseDecode(encodedData)) : undefined;
-    const dwnResponse = await this.dwn.processMessage(target, message, { dataStream });
-    const response = createJsonRpcSuccessResponse(id, { reply: dwnResponse });
-    this.send(response);
+    if (method === 'dwn.processMessage') {
+      const { message } = params;
+      if (message.descriptor.method === DwnMethodName.Subscribe) {
+        requestContext.subscriptionHandler = this.subscriptionHandler(id).bind(this);
+      }
+    }
+
+    return requestContext;
   }
+
 }
 
 export class WsApi {
