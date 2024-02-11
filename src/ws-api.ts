@@ -21,6 +21,7 @@ import {
   createJsonRpcSuccessResponse,
   JsonRpcErrorCodes
 } from './lib/json-rpc.js';
+import { requestCounter } from './metrics.js';
 
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
@@ -73,12 +74,11 @@ class Manager {
 }
 
 export class SocketConnection {
-  private id: string;
-  private subscriptions: SubscriptionManager;
-
-  constructor(private socket: WebSocket, private dwn: Dwn){
-    this.id = crypto.randomUUID();
-    this.subscriptions = new Manager();
+  constructor(
+    private socket: WebSocket,
+    private dwn: Dwn,
+    private subscriptions: SubscriptionManager = new Manager(),
+  ){
     socket.on('close', this.close.bind(this));
     socket.on('pong', this.pong.bind(this));
     socket.on('error', this.error.bind(this));
@@ -116,7 +116,7 @@ export class SocketConnection {
 
   private async error(error?:Error): Promise<void>{
     if (error !== undefined) {
-      log.error('WebSocket', this.id, error);
+      log.error('WebSocket', this.socket.url, error);
       this.socket.terminate();
       await this.close()
     }
@@ -147,6 +147,15 @@ export class SocketConnection {
 
     const requestContext = await this.buildRequestContext(jsonRequest);
     const { jsonRpcResponse } = await jsonRpcApi.handle(jsonRequest, requestContext);
+    if (jsonRpcResponse.error) {
+      requestCounter.inc({ method: jsonRequest.method, error: 1 });
+    } else {
+      requestCounter.inc({
+        method: jsonRequest.method,
+        status: jsonRpcResponse?.result?.reply?.status?.code || 0,
+      });
+    }
+
     this.send(jsonRpcResponse);
   }
 
@@ -172,7 +181,7 @@ export class SocketConnection {
     }
 
     if (method === 'dwn.processMessage') {
-      const { message } = params;
+      const { message } = params as { message: GenericMessage };
       if (message.descriptor.method === DwnMethodName.Subscribe) {
         requestContext.subscriptionHandler = this.subscriptionHandler(id).bind(this);
       }
@@ -180,13 +189,14 @@ export class SocketConnection {
 
     return requestContext;
   }
-
 }
 
 export class WsApi {
   #wsServer: WebSocketServer;
-  #connectionManager: Set<SocketConnection> = new Set();
   dwn: Dwn;
+
+  #heartbeatInterval: NodeJS.Timer | undefined;
+  #connections: Map<WebSocket, SocketConnection> = new Map();
 
   constructor(server: Server, dwn: Dwn) {
     this.dwn = dwn;
@@ -207,26 +217,28 @@ export class WsApi {
    */
   #handleConnection(socket: WebSocket, _request: IncomingMessage): void {
     const connection = new SocketConnection(socket, this.dwn);
-    this.#connectionManager.add(connection);
+    this.#connections.set(socket, connection);
     // attach to the socket's close handler to clean up this connection.
     socket.on('close', () => {
       // the connection internally already cleans itself up upon a socket close event, we just ned to remove it from our set.
-      this.#connectionManager.delete(connection);
+      this.#connections.delete(socket);
     });
   }
-
   /**
    * This handler returns an interval to ping clients' socket every 30s
    * if a pong hasn't received from a socket by the next ping, the server will terminate the socket connection.
    */
   #setupHeartbeat(): NodeJS.Timer {
+    if (this.#heartbeatInterval) {
+      return this.#heartbeatInterval;
+    }
     // Sometimes connections between client <-> server can get borked in such a way that
     // leaves both unaware of the borkage. ping messages can be used as a means to verify
     // that the remote endpoint is still responsive. Server will ping each socket every 30s
     // if a pong hasn't received from a socket by the next ping, the server will terminate
     // the socket connection
-    return setInterval(() => {
-      this.#connectionManager.forEach(async (connection) => {
+    this.#heartbeatInterval = setInterval(() => {
+      this.#connections.forEach(async (connection) => {
         if (connection.isAlive === false) {
           return await connection.close();
         }
@@ -258,10 +270,9 @@ export class WsApi {
 
   async close(): Promise<void> {
     this.#wsServer.close();
-    const closeSubscriptions: Promise<void>[] = [];
-    for (const subscription of this.#connectionManager) {
-      closeSubscriptions.push(subscription.close());
+    for (const [socket, connection] of this.#connections) {
+      this.#connections.delete(socket);
+      await connection.close()
     }
-    await Promise.all(closeSubscriptions);
   }
 }

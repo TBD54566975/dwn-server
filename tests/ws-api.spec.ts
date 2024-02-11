@@ -1,3 +1,4 @@
+import type { Dwn} from '@tbd54566975/dwn-sdk-js';
 import { DataStream, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
@@ -16,14 +17,15 @@ import { createRecordsWriteMessage, sendWsMessage } from './utils.js';
 
 let server: http.Server;
 let wsServer: WebSocketServer;
+let dwn: Dwn;
 
-describe('websocket api', function () {
+describe.only('websocket api', function () {
   before(async function () {
     server = http.createServer();
     server.listen(9002, '127.0.0.1');
 
-    const testDwn = await getTestDwn();
-    const wsApi = new WsApi(server, testDwn);
+    dwn = await getTestDwn();
+    const wsApi = new WsApi(server, dwn);
     wsServer = wsApi.start();
   });
 
@@ -75,5 +77,8 @@ describe('websocket api', function () {
     expect(resp.error).to.not.be.undefined;
     expect(resp.error.code).to.equal(JsonRpcErrorCodes.MethodNotFound);
     expect(resp.error.message).to.include('RecordsWrite is not supported via ws');
+  });
+
+  xit('RecordsSubscribe keeps a subscription alive', async function() {
   });
 });
