@@ -1,3 +1,4 @@
+import log from 'loglevel';
 import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 
@@ -22,11 +23,11 @@ export class JSONRPCSocket {
     const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT } = options;
 
     const onclose = ():void => {
-      console.log('json rpc close');
+      log.info(`JSON RPC Socket close ${url}`);
     };
 
     const onerror = (event: any):void => {
-      console.log('json rpc error', event);
+      log.error(`JSON RPC Socket error ${url}`, event);
     };
 
     const socket = new WebSocket(url);

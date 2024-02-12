@@ -222,7 +222,7 @@ export async function sendWsMessage(
   });
 }
 
-const MAX_RESPONSE_TIMEOUT = 3_000;
+const MAX_RESPONSE_TIMEOUT = 1_500;
 
 export async function subscriptionRequest(
   url: string,
@@ -255,10 +255,8 @@ export async function subscriptionRequest(
         messageHandler(record);
         return;
       }
-
       if (subscription) {
         resolved = true;
-
         resolve({
           status,
           subscription: {

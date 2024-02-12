@@ -139,7 +139,7 @@ describe('websocket api', function () {
     // close the subscription
     await response.subscription.close();
 
-    await new Promise(resolve => setTimeout(resolve, 500)); // wait for records to be processed
+    await new Promise(resolve => setTimeout(resolve, 5)); // wait for records to be processed
     expect(records).to.have.members([
       await Message.getCid(write1Message.message),
       await Message.getCid(write2Message.message)
@@ -216,7 +216,7 @@ describe('websocket api', function () {
     }) 
     expect(writeResult3.status.code).to.equal(202);
 
-    await new Promise(resolve => setTimeout(resolve, 500)); // wait for records to be processed
+    await new Promise(resolve => setTimeout(resolve, 5)); // wait for records to be processed
     expect(records).to.have.members([ await Message.getCid(write1Message.message) ]);
   });
 });

@@ -1,0 +1,143 @@
+import type { Dwn, GenericMessage } from "@tbd54566975/dwn-sdk-js";
+import { DwnMethodName } from "@tbd54566975/dwn-sdk-js";
+
+import log from 'loglevel';
+import { v4 as uuidv4 } from 'uuid';
+import type { WebSocket } from "ws";
+
+import type { RequestContext } from "../lib/json-rpc-router.js";
+import type { SubscriptionManager } from "../subscription-manager.js";
+import type { JsonRpcErrorResponse, JsonRpcId, JsonRpcRequest, JsonRpcResponse } from "../lib/json-rpc.js";
+
+import { requestCounter } from "../metrics.js";
+import { jsonRpcApi } from "../json-rpc-api.js";
+import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResponse } from "../lib/json-rpc.js";
+
+const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
+const HEARTBEAT_INTERVAL = 30_000;
+
+export class SocketConnection {
+  private heartbeatInterval: NodeJS.Timer;
+  constructor(
+    private socket: WebSocket,
+    private dwn: Dwn,
+    private subscriptions: SubscriptionManager
+  ){
+    socket.on('close', this.close.bind(this));
+    socket.on('pong', this.pong.bind(this));
+    socket.on('error', this.error.bind(this));
+    socket.on('message', this.message.bind(this));
+
+    // Sometimes connections between client <-> server can get borked in such a way that
+    // leaves both unaware of the borkage. ping messages can be used as a means to verify
+    // that the remote endpoint is still responsive. Server will ping each socket every 30s
+    // if a pong hasn't received from a socket by the next ping, the server will terminate
+    // the socket connection
+    socket[SOCKET_ISALIVE_SYMBOL] = true;
+    this.heartbeatInterval = setInterval(() => {
+      if (this.socket[SOCKET_ISALIVE_SYMBOL] === false) {
+        this.close();
+      }
+      this.socket[SOCKET_ISALIVE_SYMBOL] = false;
+      this.socket.ping();
+    }, HEARTBEAT_INTERVAL);
+  }
+
+  /**
+   * Closes the existing connection and cleans up any listeners or subscriptions.
+   */
+  async close(): Promise<void> {
+    clearInterval(this.heartbeatInterval);
+    // clean up all socket event listeners
+    this.socket.removeAllListeners();
+
+    // close all of the associated subscriptions
+    await this.subscriptions.closeAll();
+
+    // close the socket.
+    this.socket.close();
+  }
+
+  /**
+   * Pong messages are automatically sent in response to ping messages as required by
+   * the websocket spec. So, no need to send explicit pongs.
+   */
+  private pong(): void {
+    this.socket[SOCKET_ISALIVE_SYMBOL] = true;
+  }
+
+  private async error(error?:Error): Promise<void>{
+    if (error) {
+      log.error(`SocketConnection error, terminating connection`, error);
+      this.socket.terminate();
+      await this.close()
+    }
+  }
+
+  private async message(dataBuffer: Buffer): Promise<void> {
+    const requestData = dataBuffer.toString();
+    if (!requestData) {
+      return this.send(createJsonRpcErrorResponse(
+        uuidv4(),
+        JsonRpcErrorCodes.BadRequest,
+        'request payload required.'
+      ))
+    }
+
+    let jsonRequest: JsonRpcRequest;
+    try {
+      jsonRequest = JSON.parse(requestData);
+    } catch(error) {
+      const errorResponse = createJsonRpcErrorResponse(
+        uuidv4(),
+        JsonRpcErrorCodes.BadRequest,
+        (error as Error).message
+      );
+
+      return this.send(errorResponse);
+    };
+
+    const requestContext = await this.buildRequestContext(jsonRequest);
+    const { jsonRpcResponse } = await jsonRpcApi.handle(jsonRequest, requestContext);
+    if (jsonRpcResponse.error) {
+      requestCounter.inc({ method: jsonRequest.method, error: 1 });
+    } else {
+      requestCounter.inc({
+        method: jsonRequest.method,
+        status: jsonRpcResponse?.result?.reply?.status?.code || 0,
+      });
+    }
+    this.send(jsonRpcResponse);
+  }
+
+  private send(response: JsonRpcResponse | JsonRpcErrorResponse): void {
+    this.socket.send(Buffer.from(JSON.stringify(response)), this.error.bind(this));
+  }
+
+  private subscriptionHandler(id: JsonRpcId): (message: GenericMessage) => void {
+    return (message) => {
+      const response = createJsonRpcSuccessResponse(id, { reply: {
+        record : message
+      } });
+      this.send(response);
+    }
+  }
+
+  private async buildRequestContext(request: JsonRpcRequest): Promise<RequestContext> {
+    const { id, params, method} = request;
+    const requestContext: RequestContext = {
+      transport           : 'ws',
+      dwn                 : this.dwn,
+      subscriptionManager : this.subscriptions,
+    }
+
+    if (method === 'dwn.processMessage') {
+      const { message } = params as { message: GenericMessage };
+      if (message.descriptor.method === DwnMethodName.Subscribe) {
+        requestContext.subscriptionHandler = this.subscriptionHandler(id).bind(this);
+      }
+    }
+
+    return requestContext;
+  }
+}
