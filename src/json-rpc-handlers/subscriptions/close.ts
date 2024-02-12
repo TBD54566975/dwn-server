@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 import { DwnServerErrorCode } from '../../dwn-error.js';
 import type {
   HandlerResponse,
@@ -15,7 +17,7 @@ export const handleSubscriptionsClose: JsonRpcHandler = async (
   dwnRequest,
   context,
 ) => {
-  const requestId = dwnRequest.id ?? crypto.randomUUID();
+  const requestId = dwnRequest.id ?? uuidv4();
   const { subscriptionManager } = context;
   const { target, subscriptionId } = dwnRequest.params as { target: string, subscriptionId: string };
 

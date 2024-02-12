@@ -3,6 +3,7 @@ import type { IncomingMessage, Server } from 'http';
 
 import log from 'loglevel';
 import { WebSocketServer } from 'ws';
+import { v4 as uuidv4 } from 'uuid';
 
 import type {
   Dwn,
@@ -130,7 +131,7 @@ export class SocketConnection {
     const requestData = dataBuffer.toString();
     if (!requestData) {
       return this.send(createJsonRpcErrorResponse(
-        crypto.randomUUID(),
+        uuidv4(),
         JsonRpcErrorCodes.BadRequest,
         'request payload required.'
       ))
@@ -141,7 +142,7 @@ export class SocketConnection {
       jsonRequest = JSON.parse(requestData);
     } catch(error) {
       const errorResponse = createJsonRpcErrorResponse(
-        crypto.randomUUID(),
+        uuidv4(),
         JsonRpcErrorCodes.BadRequest,
         (error as Error).message
       );

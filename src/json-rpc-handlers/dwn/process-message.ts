@@ -2,6 +2,7 @@ import type { GenericMessage } from '@tbd54566975/dwn-sdk-js';
 import { DwnInterfaceName, DwnMethodName } from '@tbd54566975/dwn-sdk-js';
 
 import type { Readable as IsomorphicReadable } from 'readable-stream';
+import { v4 as uuidv4 } from 'uuid';
 
 import type {
   HandlerResponse,
@@ -20,7 +21,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
 ) => {
   const { dwn, dataStream, subscriptionHandler, subscriptionManager, transport } = context;
   const { target, message } = dwnRequest.params as { target: string, message: GenericMessage };
-  const requestId = dwnRequest.id ?? crypto.randomUUID();
+  const requestId = dwnRequest.id ?? uuidv4();
 
   try {
 
