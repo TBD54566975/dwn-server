@@ -268,8 +268,9 @@ export class WsApi {
     });
   }
 
-  start(): WebSocketServer {
+  start(callback?: () => void): WebSocketServer {
     this.#setupWebSocket();
+    callback?.();
     return this.#wsServer;
   }
 
