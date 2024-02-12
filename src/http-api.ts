@@ -30,9 +30,7 @@ export class HttpApi {
   registrationManager: RegistrationManager;
   dwn: Dwn;
 
-  constructor(config: DwnServerConfig, dwn: Dwn, registrationManager: RegistrationManager) {
-    console.log(config);
-
+  constructor(config: DwnServerConfig, dwn: Dwn, registrationManager?: RegistrationManager) {
     this.#config = config;
     this.#api = express();
     this.#server = http.createServer(this.#api);

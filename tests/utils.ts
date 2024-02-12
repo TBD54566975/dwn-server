@@ -1,13 +1,19 @@
-import type { Persona } from '@tbd54566975/dwn-sdk-js';
+import type { GenericMessage, MessageSubscriptionHandler, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import type { ReadStream } from 'node:fs';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import fetch from 'node-fetch';
 import type { Readable } from 'readable-stream';
 import { fileURLToPath } from 'url';
 import { WebSocket } from 'ws';
+
+import type { JsonRpcResponse, JsonRpcRequest } from '../src/lib/json-rpc.js';
+import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
+import { JSONRPCSocket } from '../src/json-rpc-socket.js';
 
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);
@@ -139,6 +145,65 @@ export function streamHttpRequest(
   });
 }
 
+export async function sendHttpMessage(options: {
+  url: string,
+  target: string,
+  message: GenericMessage,
+  data?: any,
+}): Promise<UnionMessageReply> {
+  const { url, target, message, data } = options;
+  // First RecordsWrite that creates the record.
+  const requestId = uuidv4();
+  const jsonRpcRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+    target,
+    message,
+  });
+
+  const fetchOpts = {
+    method  : 'POST',
+    headers : {
+      'dwn-request': JSON.stringify(jsonRpcRequest)
+    }
+  };
+
+  if (data !== undefined) {
+    fetchOpts.headers['content-type'] = 'application/octet-stream';
+    fetchOpts['body'] = data;
+  }
+
+  const resp = await fetch(url, fetchOpts);
+  let dwnRpcResponse: JsonRpcResponse;
+
+  // check to see if response is in header first. if it is, that means the response is a ReadableStream
+  let dataStream;
+  const { headers } = resp;
+  if (headers.has('dwn-response')) {
+    const jsonRpcResponse = JSON.parse(headers.get('dwn-response')) as JsonRpcResponse;
+
+    if (jsonRpcResponse == null) {
+      throw new Error(`failed to parse json rpc response. dwn url: ${url}`);
+    }
+
+    dataStream = resp.body;
+    dwnRpcResponse = jsonRpcResponse;
+  } else {
+    const responseBody = await resp.text();
+    dwnRpcResponse = JSON.parse(responseBody);
+  }
+
+  if (dwnRpcResponse.error) {
+    const { code, message } = dwnRpcResponse.error;
+    throw new Error(`(${code}) - ${message}`);
+  }
+
+  const { reply } = dwnRpcResponse.result;
+  if (dataStream) {
+    reply['record']['data'] = dataStream;
+  }
+
+  return reply as UnionMessageReply;
+}
+
 export async function sendWsMessage(
   address: string,
   message: any,
@@ -154,5 +219,69 @@ export async function sendWsMessage(
 
       socket.send(message);
     };
+  });
+}
+
+const MAX_RESPONSE_TIMEOUT = 3_000;
+
+export async function subscriptionRequest(
+  url: string,
+  request: JsonRpcRequest,
+  messageHandler: MessageSubscriptionHandler
+): Promise<{ status: any, subscription?: { id: string, close: () => Promise<void> } }> {
+  let resolved: boolean = false;
+  const { params: { target } } = request;
+  const connection = await JSONRPCSocket.connect(url);
+
+  const closeSubscription = async (id: string, target: string, connection: JSONRPCSocket): Promise<JsonRpcResponse> => {
+    const requestId = crypto.randomUUID();
+    const request = createJsonRpcRequest(requestId, 'subscriptions.close', { subscriptionId: id, target });
+    return await connection.request(request);
+  }
+
+  return new Promise<{ status: any, subscription?: { id: string, close: () => Promise<void> } }>((resolve, reject) => {
+    const { close: subscriptionClose } = connection.subscribe(request, (response) => {
+      const { result, error } = response;
+
+      // this is an error specific to the `JsonRpcRequest` requesting the subscription
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      // at this point the reply should be DwnRpcResponse
+      const { status, record, subscription } = result.reply;
+      if (record) {
+        messageHandler(record);
+        return;
+      }
+
+      if (subscription) {
+        resolved = true;
+
+        resolve({
+          status,
+          subscription: {
+            ...subscription,
+            close: async (): Promise<void> => {
+              subscriptionClose();
+              const closeResponse = await closeSubscription(subscription.id, target, connection);
+              if (closeResponse.error?.message !== undefined) {
+                throw new Error(`unable to close subscription: ${closeResponse.error.message}`);
+              }
+            }
+          }
+        })
+      } else {
+        resolve({ status });
+      }
+    });
+
+    setTimeout(() => {
+      if (resolved) {
+        return;
+      };
+      return reject('subscription request timeout');
+    }, MAX_RESPONSE_TIMEOUT);
   });
 }
