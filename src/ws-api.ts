@@ -22,6 +22,7 @@ import {
   JsonRpcErrorCodes
 } from './lib/json-rpc.js';
 import { requestCounter } from './metrics.js';
+import { DwnServerError, DwnServerErrorCode } from './dwn-error.js';
 
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
@@ -56,7 +57,10 @@ class Manager {
     }
 
     // if it reached here no subscription to close
-    throw new Error('could not find subscription to close');
+    throw new DwnServerError(
+      DwnServerErrorCode.SubscriptionManagerSubscriptionNotFound,
+      `subscription ${id} was not found`
+    )
   }
 
   async closeAll(): Promise<void> {

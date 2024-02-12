@@ -1,4 +1,5 @@
-import { DwnInterfaceName, DwnMethodName, type GenericMessage } from '@tbd54566975/dwn-sdk-js';
+import type { GenericMessage } from '@tbd54566975/dwn-sdk-js';
+import { DwnInterfaceName, DwnMethodName } from '@tbd54566975/dwn-sdk-js';
 
 import type { Readable as IsomorphicReadable } from 'readable-stream';
 
@@ -31,17 +32,17 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
     ) {
       const jsonRpcResponse = createJsonRpcErrorResponse(
         requestId,
-        JsonRpcErrorCodes.MethodNotFound,
+        JsonRpcErrorCodes.InvalidParams,
         `RecordsWrite is not supported via ${context.transport}`
       )
       return { jsonRpcResponse };
     }
 
-    // Subscribe methods are only supported on WebSockets
+    // Subscribe methods are only supported on 'ws' (WebSockets)
     if (transport !== 'ws' && message.descriptor.method === DwnMethodName.Subscribe) {
       const jsonRpcResponse = createJsonRpcErrorResponse(
         requestId,
-        JsonRpcErrorCodes.MethodNotFound,
+        JsonRpcErrorCodes.InvalidParams,
         `Subscribe not supported via ${context.transport}`
       )
       return { jsonRpcResponse };
@@ -55,7 +56,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
     const { record, subscription } = reply;
 
     // RecordsRead messages return record data as a stream to for accommodate large amounts of data
-    let recordDataStream;
+    let recordDataStream: IsomorphicReadable;
     if (record !== undefined && record.data !== undefined) {
       recordDataStream = reply.record.data;
       delete reply.record.data; // not serializable via JSON

@@ -79,7 +79,7 @@ describe('websocket api', function () {
     const resp = JSON.parse(data.toString());
     expect(resp.id).to.equal(requestId);
     expect(resp.error).to.not.be.undefined;
-    expect(resp.error.code).to.equal(JsonRpcErrorCodes.MethodNotFound);
+    expect(resp.error.code).to.equal(JsonRpcErrorCodes.InvalidParams);
     expect(resp.error.message).to.include('RecordsWrite is not supported via ws');
   });
 

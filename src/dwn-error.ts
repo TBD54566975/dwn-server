@@ -32,5 +32,6 @@ export enum DwnServerErrorCode {
   ProofOfWorkManagerInvalidResponseNonceFormat = 'ProofOfWorkManagerInvalidResponseNonceFormat',
   ProofOfWorkManagerResponseNonceReused = 'ProofOfWorkManagerResponseNonceReused',
   RegistrationManagerInvalidOrOutdatedTermsOfServiceHash = 'RegistrationManagerInvalidOrOutdatedTermsOfServiceHash',
+  SubscriptionManagerSubscriptionNotFound = 'SubscriptionManagerSubscriptionNotFound',
   TenantRegistrationOutdatedTermsOfService = 'TenantRegistrationOutdatedTermsOfService',
 }
