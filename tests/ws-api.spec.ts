@@ -1,11 +1,11 @@
 import type { Dwn, GenericMessage } from '@tbd54566975/dwn-sdk-js';
 import { DataStream, Message, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
 
+import type { AddressInfo } from 'ws';
+
 import { expect } from 'chai';
 import { base64url } from 'multiformats/bases/base64';
-import type { Server } from 'http';
 import { v4 as uuidv4 } from 'uuid';
-import { type WebSocketServer } from 'ws';
 
 import {
   createJsonRpcRequest,
@@ -17,8 +17,7 @@ import { getTestDwn } from './test-dwn.js';
 import { createRecordsWriteMessage, sendWsMessage, sendHttpMessage, subscriptionRequest } from './utils.js';
 import { HttpApi } from '../src/http-api.js';
 
-let server: Server;
-let wsServer: WebSocketServer;
+let wsApi: WsApi;
 let dwn: Dwn;
 
 describe('websocket api', function () {
@@ -27,16 +26,23 @@ describe('websocket api', function () {
 
     // set up http api for issuing writes within the tests
     const httpApi = new HttpApi(config, dwn);
-    server = await httpApi.start(9002);
+    await httpApi.start(9002);
 
-    const wsApi = new WsApi(server, dwn);
-    wsServer = wsApi.start();
+    wsApi = new WsApi(httpApi.server, dwn);
+    wsApi.start();
   });
 
   after(function () {
-    wsServer.close();
-    server.close();
-    server.closeAllConnections();
+    wsApi.close();
+  });
+
+  it('returns the server address', async function() {
+    if (typeof wsApi.address === 'string') {
+      expect(wsApi.address).to.include('9002');
+    } else {
+      const port = (wsApi.address as AddressInfo).port;
+      expect(port).to.equal(9002);
+    }
   });
 
   it('returns an error response if no request payload is provided', async function () {

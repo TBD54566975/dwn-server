@@ -99,8 +99,8 @@ export class DwnServer {
     return this.#httpApi.server;
   }
 
-  get wsServer(): WebSocketServer {
-    return this.#wsApi.server;
+  get wsServer(): WebSocketServer | undefined {
+    return this.#wsApi?.server;
   }
 
   /**

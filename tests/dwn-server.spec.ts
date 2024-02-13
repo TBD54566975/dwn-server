@@ -17,4 +17,35 @@ describe('DwnServer', function () {
     dwnServer.stop(() => console.log('server Stop'));
     expect(dwnServer.httpServer.listening).to.be.false;
   });
+
+  describe('webSocketServerEnabled config', function() {
+    it('should not return a websocket server if disabled', async function() {
+      const withoutSocketServer = new DwnServer({
+        config: {
+          ...dwnServerConfig,
+          webSocketServerEnabled: false,
+        }
+      });
+
+      await withoutSocketServer.start(() => console.log('Started without sockets.'));
+      expect(withoutSocketServer.httpServer.listening).to.be.true;
+      expect(withoutSocketServer.wsServer).to.be.undefined;
+      withoutSocketServer.stop(() => console.log('server Stop'));
+      expect(withoutSocketServer.httpServer.listening).to.be.false;
+    });
+
+    it('should return a websocket server if enabled', async function() {
+      const withSocketServer = new DwnServer({
+        config: {
+          ...dwnServerConfig,
+          webSocketServerEnabled: true,
+        }
+      });
+
+      await withSocketServer.start(() => console.log('Started with sockets'));
+      expect(withSocketServer.wsServer).to.not.be.undefined;
+      withSocketServer.stop(() => console.log('server Stop'));
+      expect(withSocketServer.httpServer.listening).to.be.false;
+    });
+  });
 });
