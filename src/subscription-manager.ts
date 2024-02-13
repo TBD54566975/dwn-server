@@ -11,8 +11,13 @@ export interface SubscriptionManager {
   closeAll: () => Promise<void>;
 }
 
+/**
+ * Simple InMemory implementation of a `SubscriptionManager`.
+ * Uses `Map<string, MessageSubscription>` to manage internal state.
+ */
 export class InMemorySubscriptionManager implements SubscriptionManager {
   constructor(private subscriptions: Map<string, Map<string, MessageSubscription>> = new Map()){};
+
   async subscribe(target: string, subscription: MessageSubscription): Promise<void> {
     let targetSubscriptions = this.subscriptions.get(target);
     if (targetSubscriptions === undefined) {

@@ -13,6 +13,12 @@ import {
   JsonRpcErrorCodes,
 } from '../../lib/json-rpc.js';
 
+/**
+ * Closes a subscription for a given `target` and `subscriptionId` within a given connection's `SubscriptionManager`.
+ * @param dwnRequest must include the `target` and `subscriptionId` within the `params`.
+ * @param context must include the `subscriptionManager` for the associated connection.
+ *
+ */
 export const handleSubscriptionsClose: JsonRpcHandler = async (
   dwnRequest,
   context,

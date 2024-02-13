@@ -8,9 +8,12 @@ import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
 export type RequestContext = {
   transport: 'http' | 'ws';
   dwn: Dwn;
+  /** The `SubscriptionManager` associated with a subscription request, only used in `ws` requests */
   subscriptionManager?: SubscriptionManager;
-  dataStream?: Readable;
+  /** The `MessageSubscriptionHandler` associated with a subscription request, only used in `ws` requests */
   subscriptionHandler?: MessageSubscriptionHandler;
+  /** The `Readable` stream associated with a `RecordsWrite` request only used in `ws` requests */
+  dataStream?: Readable;
 };
 
 export type HandlerResponse = {

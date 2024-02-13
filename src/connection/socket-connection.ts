@@ -1,9 +1,9 @@
 import type { Dwn, GenericMessage } from "@tbd54566975/dwn-sdk-js";
 import { DwnMethodName } from "@tbd54566975/dwn-sdk-js";
 
+import type { WebSocket } from "ws";
 import log from 'loglevel';
 import { v4 as uuidv4 } from 'uuid';
-import type { WebSocket } from "ws";
 
 import type { RequestContext } from "../lib/json-rpc-router.js";
 import type { SubscriptionManager } from "../subscription-manager.js";
@@ -16,6 +16,9 @@ import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResp
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 const HEARTBEAT_INTERVAL = 30_000;
 
+/**
+ * SocketConnection class sets up a socket connection along with a `ping/pong` heartbeat.
+ */
 export class SocketConnection {
   private heartbeatInterval: NodeJS.Timer;
   constructor(
@@ -74,6 +77,9 @@ export class SocketConnection {
     }
   }
 
+  /**
+   * Handles a `JSON RPC 2.0` encoded message.
+   */
   private async message(dataBuffer: Buffer): Promise<void> {
     const requestData = dataBuffer.toString();
     if (!requestData) {
@@ -110,10 +116,17 @@ export class SocketConnection {
     this.send(jsonRpcResponse);
   }
 
+  /**
+   * Sends a JSON encoded Buffer through the Websocket.
+   */
   private send(response: JsonRpcResponse | JsonRpcErrorResponse): void {
     this.socket.send(Buffer.from(JSON.stringify(response)), this.error.bind(this));
   }
 
+  /**
+   * Subscription Handler used to build the context for a `JSON RPC` API call.
+   * Wraps the incoming `message` in a `JSON RPC Success Response` using the origin subscription`JSON RPC Id` to send through the WebSocket.
+   */
   private subscriptionHandler(id: JsonRpcId): (message: GenericMessage) => void {
     return (message) => {
       const response = createJsonRpcSuccessResponse(id, { reply: {
@@ -123,6 +136,11 @@ export class SocketConnection {
     }
   }
 
+  /**
+   * Builds a `RequestContext` object to use with the `JSON RPC API`.
+   *
+   * Adds a `subscriptionHandler` for `Subscribe` messages.
+   */
   private async buildRequestContext(request: JsonRpcRequest): Promise<RequestContext> {
     const { id, params, method} = request;
     const requestContext: RequestContext = {

@@ -48,6 +48,6 @@ export class WsApi {
 
   async close(): Promise<void> {
     this.#wsServer.close();
-    await this.#connections.close();
+    await this.#connections.closeAll();
   }
 }
