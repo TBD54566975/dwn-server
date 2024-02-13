@@ -5,10 +5,14 @@ import type { Readable as IsomorphicReadable } from 'readable-stream';
 import { v4 as uuidv4 } from 'uuid';
 
 import type {
+  JsonRpcErrorResponse,
+} from '../../lib/json-rpc.js';
+import type {
   HandlerResponse,
   JsonRpcHandler,
 } from '../../lib/json-rpc-router.js';
 
+import { DwnServerErrorCode } from '../../dwn-error.js';
 import {
   createJsonRpcErrorResponse,
   createJsonRpcSuccessResponse,
@@ -19,7 +23,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
   dwnRequest,
   context,
 ) => {
-  const { dwn, dataStream, subscriptionHandler, subscriptionManager, transport } = context;
+  const { dwn, dataStream, subscriptionHandler, socketConnection, transport } = context;
   const { target, message } = dwnRequest.params as { target: string, message: GenericMessage };
   const requestId = dwnRequest.id ?? uuidv4();
 
@@ -65,8 +69,31 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
 
     // Subscribe messages return a close function to facilitate closing the subscription
     if (subscription !== undefined) {
-      const { id, close } = subscription;
-      subscriptionManager.subscribe(target, { id, close });
+      const { close } = subscription;
+      try {
+        await socketConnection.subscribe({
+          id: requestId,
+          close,
+        })
+      } catch(error) {
+        let errorResponse: JsonRpcErrorResponse;
+        if (error.code === DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdExists) {
+          // a subscription with this request id already exists
+          errorResponse = createJsonRpcErrorResponse(
+            requestId,
+            JsonRpcErrorCodes.BadRequest,
+            `the request id ${requestId} already has an active subscription`
+          );
+        } else {
+          // will catch as an unknown error below
+          throw new Error('unknown error adding subscription');
+        }
+
+        // close the subscription that was just opened and return an error
+        await close();
+        return { jsonRpcResponse: errorResponse };
+      }
+
       delete reply.subscription.close // not serializable via JSON
     }
 

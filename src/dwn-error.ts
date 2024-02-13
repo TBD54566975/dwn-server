@@ -26,12 +26,13 @@ export class DwnServerError extends Error {
  * DWN Server error codes.
  */
 export enum DwnServerErrorCode {
+  ConnectionSubscriptionJsonRPCIdExists = 'ConnectionSubscriptionJsonRPCIdExists',
+  ConnectionSubscriptionJsonRPCIdNotFound = 'ConnectionSubscriptionJsonRPCIdNotFound',
   ProofOfWorkInsufficientSolutionNonce = 'ProofOfWorkInsufficientSolutionNonce',
   ProofOfWorkInvalidOrExpiredChallenge = 'ProofOfWorkInvalidOrExpiredChallenge',
   ProofOfWorkManagerInvalidChallengeNonce = 'ProofOfWorkManagerInvalidChallengeNonce',
   ProofOfWorkManagerInvalidResponseNonceFormat = 'ProofOfWorkManagerInvalidResponseNonceFormat',
   ProofOfWorkManagerResponseNonceReused = 'ProofOfWorkManagerResponseNonceReused',
   RegistrationManagerInvalidOrOutdatedTermsOfServiceHash = 'RegistrationManagerInvalidOrOutdatedTermsOfServiceHash',
-  SubscriptionManagerSubscriptionNotFound = 'SubscriptionManagerSubscriptionNotFound',
   TenantRegistrationOutdatedTermsOfService = 'TenantRegistrationOutdatedTermsOfService',
 }

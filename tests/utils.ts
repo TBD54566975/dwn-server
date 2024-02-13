@@ -11,7 +11,7 @@ import type { Readable } from 'readable-stream';
 import { fileURLToPath } from 'url';
 import { WebSocket } from 'ws';
 
-import type { JsonRpcResponse, JsonRpcRequest } from '../src/lib/json-rpc.js';
+import type { JsonRpcResponse, JsonRpcRequest, JsonRpcId } from '../src/lib/json-rpc.js';
 import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { JSONRPCSocket } from '../src/json-rpc-socket.js';
 
@@ -230,12 +230,12 @@ export async function subscriptionRequest(
   messageHandler: MessageSubscriptionHandler
 ): Promise<{ status: any, subscription?: { id: string, close: () => Promise<void> } }> {
   let resolved: boolean = false;
-  const { params: { target } } = request;
+  const { id: requestId } = request;
   const connection = await JSONRPCSocket.connect(url);
 
-  const closeSubscription = async (id: string, target: string, connection: JSONRPCSocket): Promise<JsonRpcResponse> => {
+  const closeSubscription = async (id: JsonRpcId, connection: JSONRPCSocket): Promise<JsonRpcResponse> => {
     const requestId = uuidv4();
-    const request = createJsonRpcRequest(requestId, 'subscriptions.close', { subscriptionId: id, target });
+    const request = createJsonRpcRequest(requestId, 'subscriptions.close', { id });
     return await connection.request(request);
   }
 
@@ -263,7 +263,7 @@ export async function subscriptionRequest(
             ...subscription,
             close: async (): Promise<void> => {
               subscriptionClose();
-              const closeResponse = await closeSubscription(subscription.id, target, connection);
+              const closeResponse = await closeSubscription(requestId, connection);
               if (closeResponse.error?.message !== undefined) {
                 throw new Error(`unable to close subscription: ${closeResponse.error.message}`);
               }

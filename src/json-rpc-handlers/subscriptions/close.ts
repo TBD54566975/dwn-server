@@ -6,7 +6,7 @@ import type {
   JsonRpcHandler,
 } from '../../lib/json-rpc-router.js';
 
-import type { JsonRpcResponse } from '../../lib/json-rpc.js';
+import type { JsonRpcId, JsonRpcResponse } from '../../lib/json-rpc.js';
 import {
   createJsonRpcErrorResponse,
   createJsonRpcSuccessResponse,
@@ -14,9 +14,10 @@ import {
 } from '../../lib/json-rpc.js';
 
 /**
- * Closes a subscription for a given `target` and `subscriptionId` within a given connection's `SubscriptionManager`.
- * @param dwnRequest must include the `target` and `subscriptionId` within the `params`.
- * @param context must include the `subscriptionManager` for the associated connection.
+ * Closes a subscription for a given `id` for a given `SocketConnection`
+ *
+ * @param dwnRequest must include the `id` of the subscription to close within the `params`.
+ * @param context must include the associated `SocketConnection`.
  *
  */
 export const handleSubscriptionsClose: JsonRpcHandler = async (
@@ -24,21 +25,21 @@ export const handleSubscriptionsClose: JsonRpcHandler = async (
   context,
 ) => {
   const requestId = dwnRequest.id ?? uuidv4();
-  const { subscriptionManager } = context;
-  const { target, subscriptionId } = dwnRequest.params as { target: string, subscriptionId: string };
+  const { socketConnection } = context;
+  const { id } = dwnRequest.params as { id: JsonRpcId};
 
   let jsonRpcResponse:JsonRpcResponse;
   try {
-    await subscriptionManager.close(target, subscriptionId);
+    await socketConnection.closeSubscription(id);
     jsonRpcResponse = createJsonRpcSuccessResponse(requestId, { reply: { status: 200, detail: 'Accepted' } });
   } catch(error) {
-    if (error.code === DwnServerErrorCode.SubscriptionManagerSubscriptionNotFound) {
-      jsonRpcResponse = createJsonRpcErrorResponse(requestId, JsonRpcErrorCodes.InvalidParams, `subscription ${subscriptionId} does not exist.`);
+    if (error.code === DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdNotFound) {
+      jsonRpcResponse = createJsonRpcErrorResponse(requestId, JsonRpcErrorCodes.InvalidParams, `subscription ${id} does not exist.`);
     } else {
       jsonRpcResponse = createJsonRpcErrorResponse(
         requestId,
         JsonRpcErrorCodes.InternalError,
-        `unknown subscription close error for ${subscriptionId}: ${error.message}`
+        `unknown subscription close error for ${id}: ${error.message}`
       );
     }
   }

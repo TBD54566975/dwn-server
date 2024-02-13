@@ -2,14 +2,13 @@ import type { Dwn, MessageSubscriptionHandler } from '@tbd54566975/dwn-sdk-js';
 
 import type { Readable } from 'node:stream';
 
-import type { SubscriptionManager } from '../subscription-manager.js';
 import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
+import type { SocketConnection } from '../connection/socket-connection.js';
 
 export type RequestContext = {
   transport: 'http' | 'ws';
   dwn: Dwn;
-  /** The `SubscriptionManager` associated with a subscription request, only used in `ws` requests */
-  subscriptionManager?: SubscriptionManager;
+  socketConnection?: SocketConnection;
   /** The `MessageSubscriptionHandler` associated with a subscription request, only used in `ws` requests */
   subscriptionHandler?: MessageSubscriptionHandler;
   /** The `Readable` stream associated with a `RecordsWrite` request only used in `ws` requests */

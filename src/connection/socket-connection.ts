@@ -6,25 +6,31 @@ import log from 'loglevel';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { RequestContext } from "../lib/json-rpc-router.js";
-import type { SubscriptionManager } from "../subscription-manager.js";
 import type { JsonRpcErrorResponse, JsonRpcId, JsonRpcRequest, JsonRpcResponse } from "../lib/json-rpc.js";
 
 import { requestCounter } from "../metrics.js";
 import { jsonRpcApi } from "../json-rpc-api.js";
 import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResponse } from "../lib/json-rpc.js";
+import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 const HEARTBEAT_INTERVAL = 30_000;
+
+export interface Subscription {
+  id: JsonRpcId;
+  close: () => Promise<void>;
+}
 
 /**
  * SocketConnection class sets up a socket connection along with a `ping/pong` heartbeat.
  */
 export class SocketConnection {
   private heartbeatInterval: NodeJS.Timer;
+  private subscriptions: Map<JsonRpcId, Subscription> = new Map();
+
   constructor(
     private socket: WebSocket,
-    private dwn: Dwn,
-    private subscriptions: SubscriptionManager
+    private dwn: Dwn
   ){
     socket.on('close', this.close.bind(this));
     socket.on('pong', this.pong.bind(this));
@@ -46,6 +52,28 @@ export class SocketConnection {
     }, HEARTBEAT_INTERVAL);
   }
 
+  async subscribe(subscription: Subscription): Promise<void> {
+    if (this.subscriptions.has(subscription.id)) {
+      throw new DwnServerError(
+        DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdExists,
+        `the subscription with id ${subscription.id} already exists`
+      )
+    }
+
+    this.subscriptions.set(subscription.id, subscription);
+  }
+
+  async closeSubscription(id: JsonRpcId): Promise<void> {
+    if (!this.subscriptions.has(id)) {
+      throw new DwnServerError(
+        DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdNotFound,
+        `the subscription with id ${id} was not found`
+      )
+    }
+
+    this.subscriptions.delete(id);
+  }
+
   /**
    * Closes the existing connection and cleans up any listeners or subscriptions.
    */
@@ -54,8 +82,13 @@ export class SocketConnection {
     // clean up all socket event listeners
     this.socket.removeAllListeners();
 
+    const closePromises = [];
+    for (const [_target, subscription] of this.subscriptions) {
+      closePromises.push(subscription.close());
+    }
+
     // close all of the associated subscriptions
-    await this.subscriptions.closeAll();
+    await Promise.all(closePromises);
 
     // close the socket.
     this.socket.close();
@@ -144,9 +177,9 @@ export class SocketConnection {
   private async buildRequestContext(request: JsonRpcRequest): Promise<RequestContext> {
     const { id, params, method} = request;
     const requestContext: RequestContext = {
-      transport           : 'ws',
-      dwn                 : this.dwn,
-      subscriptionManager : this.subscriptions,
+      transport        : 'ws',
+      dwn              : this.dwn,
+      socketConnection : this,
     }
 
     if (method === 'dwn.processMessage') {

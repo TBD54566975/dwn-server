@@ -4,7 +4,6 @@ import type { IncomingMessage } from "http";
 import type { WebSocket } from 'ws';
 
 import { SocketConnection } from "./socket-connection.js";
-import { InMemorySubscriptionManager } from "../subscription-manager.js";
 
 /**
  * Interface for managing `WebSocket` connections as they arrive.
@@ -21,7 +20,6 @@ export interface ConnectionManager {
 /**
  * A Simple In Memory ConnectionManager implementation.
  * It uses a `Map<WebSocket, SocketConnection>` to manage connections.
- * It uses am `InMemorySubscriptionManager` for individual subscription management within the connection.
  */
 export class InMemoryConnectionManager implements ConnectionManager {
   constructor(private dwn: Dwn, private connections: Map<WebSocket, SocketConnection> = new Map()) {}
@@ -31,7 +29,7 @@ export class InMemoryConnectionManager implements ConnectionManager {
    * Sets listeners for `message`, `pong`, `close`, and `error` events.
    */
   async connect(socket: WebSocket): Promise<void> {
-    const connection = new SocketConnection(socket, this.dwn, new InMemorySubscriptionManager());
+    const connection = new SocketConnection(socket, this.dwn);
     this.connections.set(socket, connection);
     // attach to the socket's close handler to clean up this connection.
     socket.on('close', () => {
