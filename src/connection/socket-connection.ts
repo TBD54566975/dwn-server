@@ -16,26 +16,28 @@ import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 const HEARTBEAT_INTERVAL = 30_000;
 
-export interface Subscription {
+export interface JsonRPCSubscription {
+  /** JSON RPC Id of the Subscription Request */
   id: JsonRpcId;
   close: () => Promise<void>;
 }
 
 /**
- * SocketConnection class sets up a socket connection along with a `ping/pong` heartbeat.
+ * SocketConnection handles a WebSocket connection to a DWN using JSON RPC.
+ * It also manages references to the long running RPC subscriptions for the connection.
  */
 export class SocketConnection {
   private heartbeatInterval: NodeJS.Timer;
-  private subscriptions: Map<JsonRpcId, Subscription> = new Map();
+  private subscriptions: Map<JsonRpcId, JsonRPCSubscription> = new Map();
 
   constructor(
     private socket: WebSocket,
     private dwn: Dwn
   ){
-    socket.on('close', this.close.bind(this));
-    socket.on('pong', this.pong.bind(this));
-    socket.on('error', this.error.bind(this));
     socket.on('message', this.message.bind(this));
+    socket.on('close', this.close.bind(this));
+    socket.on('error', this.error.bind(this));
+    socket.on('pong', this.pong.bind(this));
 
     // Sometimes connections between client <-> server can get borked in such a way that
     // leaves both unaware of the borkage. ping messages can be used as a means to verify
@@ -52,7 +54,11 @@ export class SocketConnection {
     }, HEARTBEAT_INTERVAL);
   }
 
-  async subscribe(subscription: Subscription): Promise<void> {
+  /**
+   * Adds a reference for the JSON RPC Subscription to this connection.
+   * Used for cleanup if the connection is closed.
+   */
+  async subscribe(subscription: JsonRPCSubscription): Promise<void> {
     if (this.subscriptions.has(subscription.id)) {
       throw new DwnServerError(
         DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdExists,
@@ -63,6 +69,11 @@ export class SocketConnection {
     this.subscriptions.set(subscription.id, subscription);
   }
 
+  /**
+   * Closes and removes the reference for a given subscription from this connection.
+   *
+   * @param id the `JsonRpcId` of the JSON RPC subscription request.
+   */
   async closeSubscription(id: JsonRpcId): Promise<void> {
     if (!this.subscriptions.has(id)) {
       throw new DwnServerError(
@@ -71,6 +82,8 @@ export class SocketConnection {
       )
     }
 
+    const connection = this.subscriptions.get(id);
+    await connection.close();
     this.subscriptions.delete(id);
   }
 
@@ -83,8 +96,9 @@ export class SocketConnection {
     this.socket.removeAllListeners();
 
     const closePromises = [];
-    for (const [_target, subscription] of this.subscriptions) {
+    for (const [id, subscription] of this.subscriptions) {
       closePromises.push(subscription.close());
+      this.subscriptions.delete(id);
     }
 
     // close all of the associated subscriptions
@@ -158,7 +172,7 @@ export class SocketConnection {
 
   /**
    * Subscription Handler used to build the context for a `JSON RPC` API call.
-   * Wraps the incoming `message` in a `JSON RPC Success Response` using the origin subscription`JSON RPC Id` to send through the WebSocket.
+   * Wraps the incoming `message` in a `JSON RPC Success Response` using the original subscription`JSON RPC Id` to send through the WebSocket.
    */
   private subscriptionHandler(id: JsonRpcId): (message: GenericMessage) => void {
     return (message) => {

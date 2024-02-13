@@ -65,7 +65,7 @@ export class DwnServer {
       let eventStream: EventStream | undefined;
       if (this.config.webSocketServerEnabled) {
         // setting `EventEmitterStream` as default the default `EventStream
-        // if an alternate implementation is needed instantiate a `Dwn` with a custom `EventStream` and add it to server options. 
+        // if an alternate implementation is needed, instantiate a `Dwn` with a custom `EventStream` and add it to server options. 
         eventStream = new EventEmitterStream();
       }
 

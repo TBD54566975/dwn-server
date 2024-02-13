@@ -14,9 +14,9 @@ import {
 } from '../../lib/json-rpc.js';
 
 /**
- * Closes a subscription for a given `id` for a given `SocketConnection`
+ * Closes a subscription tied to a specific `SocketConnection`.
  *
- * @param dwnRequest must include the `id` of the subscription to close within the `params`.
+ * @param dwnRequest must include JsonRpcId of the subscription request within the `params`.
  * @param context must include the associated `SocketConnection`.
  *
  */
@@ -30,6 +30,7 @@ export const handleSubscriptionsClose: JsonRpcHandler = async (
 
   let jsonRpcResponse:JsonRpcResponse;
   try {
+    // closing the subscription and cleaning up the reference within the given connection.
     await socketConnection.closeSubscription(id);
     jsonRpcResponse = createJsonRpcSuccessResponse(requestId, { reply: { status: 200, detail: 'Accepted' } });
   } catch(error) {

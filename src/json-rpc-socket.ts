@@ -8,9 +8,11 @@ import type { JsonRpcRequest, JsonRpcResponse } from "./lib/json-rpc.js";
 const CONNECT_TIMEOUT = 3_000;
 const RESPONSE_TIMEOUT = 30_000;
 
-export type JSONRPCSocketOptions = {
+export interface JSONRPCSocketOptions {
   connectTimeout?: number;
   responseTimeout?: number;
+  onclose?: () => void;
+  onerror?: (error?: any) => void;
 }
 
 /**
@@ -20,17 +22,21 @@ export class JSONRPCSocket {
   private constructor(private socket: WebSocket, private responseTimeout: number) {}
 
   static async connect(url: string, options: JSONRPCSocketOptions = {}): Promise<JSONRPCSocket> {
-    const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT } = options;
-
-    const onclose = ():void => {
-      log.info(`JSON RPC Socket close ${url}`);
-    };
-
-    const onerror = (event: any):void => {
-      log.error(`JSON RPC Socket error ${url}`, event);
-    };
+    const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT, onclose, onerror } = options;
 
     const socket = new WebSocket(url);
+    if (onclose === undefined) {
+      socket.onclose = ():void => {
+        log.info(`JSON RPC Socket close ${url}`);
+      }
+    }
+
+    if (onerror === undefined) {
+      socket.onerror = (error?: any):void => {
+        log.error(`JSON RPC Socket error ${url}`, error);
+      }
+    }
+
     socket.onclose = onclose;
     socket.onerror = onerror;
 

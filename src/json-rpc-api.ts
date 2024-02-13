@@ -6,4 +6,4 @@ import { handleSubscriptionsClose } from './json-rpc-handlers/subscriptions/inde
 export const jsonRpcApi = new JsonRpcRouter();
 
 jsonRpcApi.on('dwn.processMessage', handleDwnProcessMessage);
-jsonRpcApi.on('subscriptions.close', handleSubscriptionsClose);
+jsonRpcApi.on('subscription.close', handleSubscriptionsClose);

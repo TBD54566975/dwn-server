@@ -235,7 +235,7 @@ export async function subscriptionRequest(
 
   const closeSubscription = async (id: JsonRpcId, connection: JSONRPCSocket): Promise<JsonRpcResponse> => {
     const requestId = uuidv4();
-    const request = createJsonRpcRequest(requestId, 'subscriptions.close', { id });
+    const request = createJsonRpcRequest(requestId, 'subscription.close', { id });
     return await connection.request(request);
   }
 

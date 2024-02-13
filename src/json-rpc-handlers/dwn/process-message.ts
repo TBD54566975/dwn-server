@@ -5,9 +5,6 @@ import type { Readable as IsomorphicReadable } from 'readable-stream';
 import { v4 as uuidv4 } from 'uuid';
 
 import type {
-  JsonRpcErrorResponse,
-} from '../../lib/json-rpc.js';
-import type {
   HandlerResponse,
   JsonRpcHandler,
 } from '../../lib/json-rpc-router.js';
@@ -28,8 +25,8 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
   const requestId = dwnRequest.id ?? uuidv4();
 
   try {
-
-    // RecordsWrite is only supported on 'http'
+    // RecordsWrite is only supported on 'http' to support data stream for large data
+    // TODO: https://github.com/TBD54566975/dwn-server/issues/108
     if (
       transport !== 'http' &&
       message.descriptor.interface === DwnInterfaceName.Records &&
@@ -71,30 +68,26 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
     if (subscription !== undefined) {
       const { close } = subscription;
       try {
-        await socketConnection.subscribe({
-          id: requestId,
-          close,
-        })
+        // adding a reference to the close function for this subscription request to the connection.
+        // this will facilitate closing the subscription later.
+        await socketConnection.subscribe({ id: requestId, close });
+        delete reply.subscription.close // not serializable via JSON
       } catch(error) {
-        let errorResponse: JsonRpcErrorResponse;
+        // close the subscription upon receiving an error here
+        await close();
         if (error.code === DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdExists) {
           // a subscription with this request id already exists
-          errorResponse = createJsonRpcErrorResponse(
+          const errorResponse = createJsonRpcErrorResponse(
             requestId,
             JsonRpcErrorCodes.BadRequest,
             `the request id ${requestId} already has an active subscription`
           );
+          return { jsonRpcResponse: errorResponse };
         } else {
           // will catch as an unknown error below
           throw new Error('unknown error adding subscription');
         }
-
-        // close the subscription that was just opened and return an error
-        await close();
-        return { jsonRpcResponse: errorResponse };
       }
-
-      delete reply.subscription.close // not serializable via JSON
     }
 
     const jsonRpcResponse = createJsonRpcSuccessResponse(requestId, { reply });
