@@ -7,7 +7,7 @@ import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from '../src/lib/json
 import { JSONRPCSocket } from '../src/json-rpc-socket.js';
 import { createJsonRpcRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
-describe.only('JSONRPCSocket', () => {
+describe('JSONRPCSocket', () => {
   let wsServer: WebSocketServer;
 
   before(async () => {
