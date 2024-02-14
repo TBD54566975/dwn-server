@@ -11,8 +11,6 @@ import { SocketConnection } from "./socket-connection.js";
 export interface ConnectionManager {
   /** connect handler used for the `WebSockets` `'connection'` event. */
   connect(socket: WebSocket, request?: IncomingMessage): Promise<void>;
-  /** cleans up handlers associated with the `WebSocket` connection */
-  close(socket:WebSocket): Promise<void>;
   /** closes all of the connections */
   closeAll(): Promise<void>
 }
@@ -32,12 +30,6 @@ export class InMemoryConnectionManager implements ConnectionManager {
       // the connection internally already cleans itself up upon a socket close event, we just ned to remove it from our set.
       this.connections.delete(socket);
     });
-  }
-
-  async close(socket: WebSocket): Promise<void> {
-    const connection = this.connections.get(socket);
-    this.connections.delete(socket);
-    await connection.close();
   }
 
   async closeAll(): Promise<void> {
