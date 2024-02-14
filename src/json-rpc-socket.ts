@@ -74,7 +74,10 @@ export class JSONRPCSocket {
       this.send(request);
 
       // reject this promise if we don't receive any response back within the timeout period
-      setTimeout(reject, this.responseTimeout);
+      setTimeout(() => {
+        this.socket.removeEventListener('message', handleResponse);
+        reject('request timed out');
+      }, this.responseTimeout);
     });
   }
 
