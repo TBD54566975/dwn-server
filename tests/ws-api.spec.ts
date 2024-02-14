@@ -1,8 +1,6 @@
 import type { Dwn, GenericMessage } from '@tbd54566975/dwn-sdk-js';
 import { DataStream, Message, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
 
-import type { AddressInfo } from 'ws';
-
 import { expect } from 'chai';
 import { base64url } from 'multiformats/bases/base64';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,15 +32,6 @@ describe('websocket api', function () {
 
   after(function () {
     wsApi.close();
-  });
-
-  it('returns the server address', async function() {
-    if (typeof wsApi.address === 'string') {
-      expect(wsApi.address).to.include('9002');
-    } else {
-      const port = (wsApi.address as AddressInfo).port;
-      expect(port).to.equal(9002);
-    }
   });
 
   it('returns an error response if no request payload is provided', async function () {

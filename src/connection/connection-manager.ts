@@ -24,10 +24,6 @@ export interface ConnectionManager {
 export class InMemoryConnectionManager implements ConnectionManager {
   constructor(private dwn: Dwn, private connections: Map<WebSocket, SocketConnection> = new Map()) {}
 
-  /**
-   * Handler for opening websocket event - `connection`.
-   * Sets listeners for `message`, `pong`, `close`, and `error` events.
-   */
   async connect(socket: WebSocket): Promise<void> {
     const connection = new SocketConnection(socket, this.dwn);
     this.connections.set(socket, connection);
@@ -38,18 +34,12 @@ export class InMemoryConnectionManager implements ConnectionManager {
     });
   }
 
-  /**
-   * Handler for closing websocket event - `close`.
-   */
   async close(socket: WebSocket): Promise<void> {
     const connection = this.connections.get(socket);
     this.connections.delete(socket);
     await connection.close();
   }
 
-  /**
-   * Closes all associated connections.
-   */
   async closeAll(): Promise<void> {
     const closePromises = [];
     this.connections.forEach(connection => closePromises.push(connection.close()));

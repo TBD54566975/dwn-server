@@ -13,10 +13,9 @@ import { jsonRpcApi } from "../json-rpc-api.js";
 import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResponse } from "../lib/json-rpc.js";
 import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 
-const SOCKET_ISALIVE_SYMBOL = Symbol('isAlive');
 const HEARTBEAT_INTERVAL = 30_000;
 
-export interface JsonRPCSubscription {
+export interface JsonRpcSubscription {
   /** JSON RPC Id of the Subscription Request */
   id: JsonRpcId;
   close: () => Promise<void>;
@@ -28,7 +27,8 @@ export interface JsonRPCSubscription {
  */
 export class SocketConnection {
   private heartbeatInterval: NodeJS.Timer;
-  private subscriptions: Map<JsonRpcId, JsonRPCSubscription> = new Map();
+  private subscriptions: Map<JsonRpcId, JsonRpcSubscription> = new Map();
+  private isAlive: boolean;
 
   constructor(
     private socket: WebSocket,
@@ -44,12 +44,12 @@ export class SocketConnection {
     // that the remote endpoint is still responsive. Server will ping each socket every 30s
     // if a pong hasn't received from a socket by the next ping, the server will terminate
     // the socket connection
-    socket[SOCKET_ISALIVE_SYMBOL] = true;
+    this.isAlive = true;
     this.heartbeatInterval = setInterval(() => {
-      if (this.socket[SOCKET_ISALIVE_SYMBOL] === false) {
+      if (this.isAlive === false) {
         this.close();
       }
-      this.socket[SOCKET_ISALIVE_SYMBOL] = false;
+      this.isAlive = false;
       this.socket.ping();
     }, HEARTBEAT_INTERVAL);
   }
@@ -58,7 +58,7 @@ export class SocketConnection {
    * Adds a reference for the JSON RPC Subscription to this connection.
    * Used for cleanup if the connection is closed.
    */
-  async subscribe(subscription: JsonRPCSubscription): Promise<void> {
+  async subscribe(subscription: JsonRpcSubscription): Promise<void> {
     if (this.subscriptions.has(subscription.id)) {
       throw new DwnServerError(
         DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdExists,
@@ -113,15 +113,16 @@ export class SocketConnection {
    * the websocket spec. So, no need to send explicit pongs.
    */
   private pong(): void {
-    this.socket[SOCKET_ISALIVE_SYMBOL] = true;
+    this.isAlive = true;
   }
 
-  private async error(error?:Error): Promise<void>{
-    if (error) {
-      log.error(`SocketConnection error, terminating connection`, error);
-      this.socket.terminate();
-      await this.close()
-    }
+  /**
+   * Log the error and close the connection.
+   */
+  private async error(error:Error): Promise<void>{
+    log.error(`SocketConnection error, terminating connection`, error);
+    this.socket.terminate();
+    await this.close();
   }
 
   /**
@@ -166,8 +167,8 @@ export class SocketConnection {
   /**
    * Sends a JSON encoded Buffer through the Websocket.
    */
-  private send(response: JsonRpcResponse | JsonRpcErrorResponse): void {
-    this.socket.send(Buffer.from(JSON.stringify(response)), this.error.bind(this));
+  private send(response: JsonRpcResponse | JsonRpcErrorResponse, onError?: (error?: Error) => void): void {
+    this.socket.send(Buffer.from(JSON.stringify(response)), onError);
   }
 
   /**

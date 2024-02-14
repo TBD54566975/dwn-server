@@ -27,7 +27,7 @@ describe('DwnServer', function () {
         }
       });
 
-      await withoutSocketServer.start(() => console.log('Started without sockets.'));
+      await withoutSocketServer.start();
       expect(withoutSocketServer.httpServer.listening).to.be.true;
       expect(withoutSocketServer.wsServer).to.be.undefined;
       withoutSocketServer.stop(() => console.log('server Stop'));
@@ -42,7 +42,7 @@ describe('DwnServer', function () {
         }
       });
 
-      await withSocketServer.start(() => console.log('Started with sockets'));
+      await withSocketServer.start();
       expect(withSocketServer.wsServer).to.not.be.undefined;
       withSocketServer.stop(() => console.log('server Stop'));
       expect(withSocketServer.httpServer.listening).to.be.false;

@@ -40,10 +40,9 @@ export class DwnServer {
     prefix.apply(log);
   }
 
-  async start(callback?: () => void): Promise<void> {
+  async start(): Promise<void> {
     await this.#setupServer();
     setProcessHandlers(this);
-    callback?.();
   }
 
   /**
@@ -87,7 +86,8 @@ export class DwnServer {
 
     if (this.config.webSocketServerEnabled) {
       this.#wsApi = new WsApi(this.#httpApi.server, this.dwn);
-      this.#wsApi.start(() => log.info('WebSocketServer ready...'));
+      this.#wsApi.start();
+      log.info('WebSocketServer ready...');
     }
   }
 
