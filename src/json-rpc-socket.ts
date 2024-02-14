@@ -9,9 +9,13 @@ const CONNECT_TIMEOUT = 3_000;
 const RESPONSE_TIMEOUT = 30_000;
 
 export interface JSONRPCSocketOptions {
+  /** socket connection timeout in milliseconds */
   connectTimeout?: number;
+  /** response timeout for rpc requests in milliseconds */
   responseTimeout?: number;
+  /** optional connection close handler */
   onclose?: () => void;
+  /** optional socket error handler */
   onerror?: (error?: any) => void;
 }
 
@@ -76,7 +80,7 @@ export class JSONRPCSocket {
       // reject this promise if we don't receive any response back within the timeout period
       setTimeout(() => {
         this.socket.removeEventListener('message', handleResponse);
-        reject('request timed out');
+        reject(new Error('request timed out'));
       }, this.responseTimeout);
     });
   }
