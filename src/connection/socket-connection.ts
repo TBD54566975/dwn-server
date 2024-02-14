@@ -165,9 +165,15 @@ export class SocketConnection {
   }
 
   /**
-   * Sends a JSON encoded Buffer through the Websocket.
+   * Sends a JSON encoded Buffer through the Websocket. Accepts an error handler, if none is provided the error is logged.
    */
   private send(response: JsonRpcResponse | JsonRpcErrorResponse, onError?: (error?: Error) => void): void {
+    if (!onError) {
+      onError = (error):void => {
+        if(error) { log.error('socket send error', error, response); }
+      }
+    }
+
     this.socket.send(Buffer.from(JSON.stringify(response)), onError);
   }
 
