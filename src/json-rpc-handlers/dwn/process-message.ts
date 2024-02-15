@@ -71,7 +71,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       try {
         // adding a reference to the close function for this subscription request to the connection.
         // this will facilitate closing the subscription later.
-        await socketConnection.subscribe({ id: requestId, close });
+        await socketConnection.addSubscription({ id: requestId, close });
         delete reply.subscription.close // not serializable via JSON
       } catch(error) {
         // close the subscription upon receiving an error here

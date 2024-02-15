@@ -8,7 +8,7 @@ import type { JsonRpcRequest, JsonRpcResponse } from "./lib/json-rpc.js";
 const CONNECT_TIMEOUT = 3_000;
 const RESPONSE_TIMEOUT = 30_000;
 
-export interface JSONRPCSocketOptions {
+export interface JsonRpcSocketOptions {
   /** socket connection timeout in milliseconds */
   connectTimeout?: number;
   /** response timeout for rpc requests in milliseconds */
@@ -25,7 +25,7 @@ export interface JSONRPCSocketOptions {
 export class JsonRpcClient {
   private constructor(private socket: WebSocket, private responseTimeout: number) {}
 
-  static async connect(url: string, options: JSONRPCSocketOptions = {}): Promise<JsonRpcClient> {
+  static async connect(url: string, options: JsonRpcSocketOptions = {}): Promise<JsonRpcClient> {
     const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT, onclose, onerror } = options;
 
     const socket = new WebSocket(url);
@@ -115,6 +115,7 @@ export class JsonRpcClient {
    * Sends a JSON-RPC request through the socket. You must subscribe to a message listener separately to capture the response.
    */
   send(request: JsonRpcRequest):void {
-    return this.socket.send(Buffer.from(JSON.stringify(request)));
+    this.socket.send(Buffer.from(JSON.stringify(request)));
+    return;
   }
 }

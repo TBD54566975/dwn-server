@@ -58,7 +58,7 @@ export class SocketConnection {
    * Adds a reference for the JSON RPC Subscription to this connection.
    * Used for cleanup if the connection is closed.
    */
-  async subscribe(subscription: JsonRpcSubscription): Promise<void> {
+  async addSubscription(subscription: JsonRpcSubscription): Promise<void> {
     if (this.subscriptions.has(subscription.id)) {
       throw new DwnServerError(
         DwnServerErrorCode.ConnectionSubscriptionJsonRpcIdExists,
@@ -178,10 +178,11 @@ export class SocketConnection {
   }
 
   /**
-   * Subscription Handler used to build the context for a `JSON RPC` API call.
+   * Creates a subscription handler to send messages matching the subscription requested.
+   *
    * Wraps the incoming `message` in a `JSON RPC Success Response` using the original subscription`JSON RPC Id` to send through the WebSocket.
    */
-  private subscriptionHandler(id: JsonRpcId): (message: GenericMessage) => void {
+  private createSubscriptionHandler(id: JsonRpcId): (message: GenericMessage) => void {
     return (message) => {
       const response = createJsonRpcSuccessResponse(id, { reply: {
         record : message
@@ -196,7 +197,7 @@ export class SocketConnection {
    * Adds a `subscriptionHandler` for `Subscribe` messages.
    */
   private async buildRequestContext(request: JsonRpcRequest): Promise<RequestContext> {
-    const { id, params, method} = request;
+    const { id, params, method } = request;
     const requestContext: RequestContext = {
       transport        : 'ws',
       dwn              : this.dwn,
@@ -206,7 +207,7 @@ export class SocketConnection {
     if (method === 'dwn.processMessage') {
       const { message } = params as { message: GenericMessage };
       if (message.descriptor.method === DwnMethodName.Subscribe) {
-        requestContext.subscriptionHandler = this.subscriptionHandler(id).bind(this);
+        requestContext.subscriptionHandler = this.createSubscriptionHandler(id).bind(this);
       }
     }
 
