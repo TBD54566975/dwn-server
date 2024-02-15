@@ -11,7 +11,7 @@ import { createJsonRpcRequest, createJsonRpcSuccessResponse } from '../src/lib/j
 
 chai.use(chaiAsPromised);
 
-describe('JSONRPCSocket', () => {
+describe('JsonRpcSocket', () => {
   let wsServer: WebSocketServer;
 
   before(async () => {
