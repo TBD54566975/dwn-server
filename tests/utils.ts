@@ -1,4 +1,4 @@
-import type { GenericMessage, MessageSubscriptionHandler, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
+import type { GenericMessage, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import type { ReadStream } from 'node:fs';
@@ -13,7 +13,7 @@ import { WebSocket } from 'ws';
 
 import type { JsonRpcResponse, JsonRpcRequest, JsonRpcId } from '../src/lib/json-rpc.js';
 import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
-import { JsonRpcClient } from '../src/json-rpc-socket.js';
+import { JsonRpcSocket } from '../src/json-rpc-socket.js';
 
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);
@@ -227,13 +227,12 @@ const MAX_RESPONSE_TIMEOUT = 1_500;
 export async function subscriptionRequest(
   url: string,
   request: JsonRpcRequest,
-  messageHandler: MessageSubscriptionHandler
+  messageHandler: (message: GenericMessage) => void,
 ): Promise<{ status: any, subscription?: { id: string, close: () => Promise<void> } }> {
-  let resolved: boolean = false;
   const { id: requestId } = request;
-  const connection = await JsonRpcClient.connect(url);
+  const connection = await JsonRpcSocket.connect(url);
 
-  const closeSubscription = async (id: JsonRpcId, connection: JsonRpcClient): Promise<JsonRpcResponse> => {
+  const closeSubscription = async (id: JsonRpcId, connection: JsonRpcSocket): Promise<JsonRpcResponse> => {
     const requestId = uuidv4();
     const request = createJsonRpcRequest(requestId, 'subscription.close', { id });
     return await connection.request(request);
@@ -250,13 +249,13 @@ export async function subscriptionRequest(
       }
 
       // at this point the reply should be DwnRpcResponse
-      const { status, record, subscription } = result.reply;
-      if (record) {
-        messageHandler(record);
+      const { status, event, subscription } = result.reply;
+      if (event) {
+        messageHandler(event);
         return;
       }
+
       if (subscription) {
-        resolved = true;
         resolve({
           status,
           subscription: {
@@ -270,15 +269,12 @@ export async function subscriptionRequest(
             }
           }
         })
-      } else {
-        resolve({ status });
-      }
+      } 
+
+      resolve({ status });
     });
 
     setTimeout(() => {
-      if (resolved) {
-        return;
-      };
       return reject('subscription request timeout');
     }, MAX_RESPONSE_TIMEOUT);
   });

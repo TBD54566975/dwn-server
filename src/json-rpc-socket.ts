@@ -20,12 +20,12 @@ export interface JsonRpcSocketOptions {
 }
 
 /**
- * JSONRPC Socket Client for WebSocket request/response and long-running subscriptions
+ * JSON RPC Socket Client for WebSocket request/response and long-running subscriptions.
  */
-export class JsonRpcClient {
+export class JsonRpcSocket {
   private constructor(private socket: WebSocket, private responseTimeout: number) {}
 
-  static async connect(url: string, options: JsonRpcSocketOptions = {}): Promise<JsonRpcClient> {
+  static async connect(url: string, options: JsonRpcSocketOptions = {}): Promise<JsonRpcSocket> {
     const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT, onclose, onerror } = options;
 
     const socket = new WebSocket(url);
@@ -44,9 +44,9 @@ export class JsonRpcClient {
     socket.onclose = onclose;
     socket.onerror = onerror;
 
-    return new Promise<JsonRpcClient>((resolve, reject) => {
+    return new Promise<JsonRpcSocket>((resolve, reject) => {
       socket.on('open', () => {
-        resolve(new JsonRpcClient(socket, responseTimeout));
+        resolve(new JsonRpcSocket(socket, responseTimeout));
       });
 
       setTimeout(() => reject, connectTimeout);

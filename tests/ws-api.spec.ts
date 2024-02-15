@@ -1,5 +1,8 @@
+
 import type { Dwn, GenericMessage } from '@tbd54566975/dwn-sdk-js';
 import { DataStream, Message, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
+
+import type { Server } from 'http';
 
 import { expect } from 'chai';
 import { base64url } from 'multiformats/bases/base64';
@@ -15,23 +18,26 @@ import { getTestDwn } from './test-dwn.js';
 import { createRecordsWriteMessage, sendWsMessage, sendHttpMessage, subscriptionRequest } from './utils.js';
 import { HttpApi } from '../src/http-api.js';
 
-let wsApi: WsApi;
-let dwn: Dwn;
 
 describe('websocket api', function () {
-  before(async function () {
+  let server: Server;
+  let httpApi: HttpApi;
+  let wsApi: WsApi;
+  let dwn: Dwn;
+
+  beforeEach(async function () {
     dwn = await getTestDwn({ withEvents: true });
-
-    // set up http api for issuing writes within the tests
-    const httpApi = new HttpApi(config, dwn);
-    await httpApi.start(9002);
-
-    wsApi = new WsApi(httpApi.server, dwn);
+    httpApi = new HttpApi(config, dwn);
+    server = await httpApi.start(9002);
+    wsApi = new WsApi(server, dwn);
     wsApi.start();
   });
 
-  after(function () {
-    wsApi.close();
+  afterEach(async function () {
+    await wsApi.close();
+    server.close();
+    server.closeAllConnections();
+    await dwn.close();
   });
 
   it('returns an error response if no request payload is provided', async function () {

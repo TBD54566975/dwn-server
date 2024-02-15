@@ -1,4 +1,4 @@
-import type { Dwn, MessageSubscriptionHandler } from '@tbd54566975/dwn-sdk-js';
+import type { Dwn, GenericMessage } from '@tbd54566975/dwn-sdk-js';
 
 import type { Readable } from 'node:stream';
 
@@ -9,8 +9,8 @@ export type RequestContext = {
   transport: 'http' | 'ws';
   dwn: Dwn;
   socketConnection?: SocketConnection;
-  /** The `MessageSubscriptionHandler` associated with a subscription request, only used in `ws` requests */
-  subscriptionHandler?: MessageSubscriptionHandler;
+  /** The `GenericMessage` handler associated with a subscription request, only used in `ws` requests */
+  subscriptionHandler?: (message: GenericMessage) => void;
   /** The `Readable` stream associated with a `RecordsWrite` request only used in `http` requests */
   dataStream?: Readable;
 };

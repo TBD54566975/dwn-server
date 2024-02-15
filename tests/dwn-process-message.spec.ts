@@ -32,6 +32,7 @@ describe('handleDwnProcessMessage', function () {
     const { reply } = jsonRpcResponse.result;
     expect(reply.status.code).to.equal(202);
     expect(reply.status.detail).to.equal('Accepted');
+    await dwn.close();
   });
 
   it('returns a JSON RPC Success Response when DWN returns a 4XX/5XX status code', async function () {
@@ -59,5 +60,6 @@ describe('handleDwnProcessMessage', function () {
     expect(reply.status.detail).to.exist;
     expect(reply.data).to.be.undefined;
     expect(reply.entries).to.be.undefined;
+    await dwn.close();
   });
 });

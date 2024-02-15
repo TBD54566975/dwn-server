@@ -183,10 +183,8 @@ export class SocketConnection {
    * Wraps the incoming `message` in a `JSON RPC Success Response` using the original subscription`JSON RPC Id` to send through the WebSocket.
    */
   private createSubscriptionHandler(id: JsonRpcId): (message: GenericMessage) => void {
-    return (message) => {
-      const response = createJsonRpcSuccessResponse(id, { reply: {
-        record : message
-      } });
+    return (event) => {
+      const response = createJsonRpcSuccessResponse(id, { reply: { event } });
       this.send(response);
     }
   }
