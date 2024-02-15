@@ -1,4 +1,6 @@
-import { expect } from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import chai, { expect } from 'chai';
+
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from 'ws';
 
@@ -6,6 +8,8 @@ import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from '../src/lib/json
 
 import { JsonRpcClient } from '../src/json-rpc-socket.js';
 import { createJsonRpcRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
+
+chai.use(chaiAsPromised);
 
 describe('JSONRPCSocket', () => {
   let wsServer: WebSocketServer;
@@ -56,13 +60,9 @@ describe('JSONRPCSocket', () => {
     const client = await JsonRpcClient.connect('ws://127.0.0.1:9003', { responseTimeout: 1 });
     const requestId = uuidv4();
     const request = createJsonRpcRequest(requestId, 'test.method', { param1: 'test-param1', param2: 'test-param2' });
+    const requestPromise = client.request(request);
 
-    try {
-      await client.request(request);
-    } catch (error) {
-      expect(error).to.not.be.undefined;
-      expect((error as Error).message).to.include('timed out');
-    }
+    await expect(requestPromise).to.eventually.be.rejectedWith('timed out');
   });
 
   it('opens a subscription', async () => {
@@ -97,14 +97,14 @@ describe('JSONRPCSocket', () => {
   });
 
   it('sends message', async () => {
-    const received = new Promise<{ id?: JsonRpcId }>((resolve) => {
+    const receivedPromise = new Promise<{ reply: { id?: JsonRpcId }}>((resolve) => {
       wsServer.addListener('connection', (socket) => {
         socket.on('message', (dataBuffer: Buffer) => {
           const request = JSON.parse(dataBuffer.toString()) as JsonRpcRequest;
           const { param1, param2 } = request.params;
           expect(param1).to.equal('test-param1');
           expect(param2).to.equal('test-param2');
-          resolve(request);
+          resolve({ reply: { id: request.id }});
         });
       });
     });
@@ -112,8 +112,7 @@ describe('JSONRPCSocket', () => {
     const requestId = uuidv4();
     const request = createJsonRpcRequest(requestId, 'test.method', { param1: 'test-param1', param2: 'test-param2' });
     client.send(request);
-    const resolved = await received;
-    expect(resolved.id).to.equal(request.id);
+    await expect(receivedPromise).to.eventually.eql({ reply: { id: request.id }});
   });
 
   xit('calls onerror handler', async () => {

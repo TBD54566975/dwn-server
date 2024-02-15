@@ -15,6 +15,7 @@ import {
   createJsonRpcSuccessResponse,
   JsonRpcErrorCodes,
 } from '../../lib/json-rpc.js';
+import log from 'loglevel';
 
 export const handleDwnProcessMessage: JsonRpcHandler = async (
   dwnRequest,
@@ -103,6 +104,9 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       JsonRpcErrorCodes.InternalError,
       e.message,
     );
+
+    // log the error response
+    log.error('handleDwnProcessMessage error', jsonRpcResponse);
 
     return { jsonRpcResponse } as HandlerResponse;
   }
