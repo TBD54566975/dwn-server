@@ -4,7 +4,7 @@ import { WebSocketServer } from 'ws';
 
 import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from '../src/lib/json-rpc.js';
 
-import { JSONRPCSocket } from '../src/json-rpc-socket.js';
+import { JsonRpcClient } from '../src/json-rpc-socket.js';
 import { createJsonRpcRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
 describe('JSONRPCSocket', () => {
@@ -21,7 +21,7 @@ describe('JSONRPCSocket', () => {
   });
 
   it('connects to a url', async () => {
-    const client = await JSONRPCSocket.connect('ws://127.0.0.1:9003');
+    const client = await JsonRpcClient.connect('ws://127.0.0.1:9003');
     expect(wsServer.clients.size).to.equal(1);
     client.close();
 
@@ -44,7 +44,7 @@ describe('JSONRPCSocket', () => {
       });
     });
    
-    const client = await JSONRPCSocket.connect('ws://127.0.0.1:9003');
+    const client = await JsonRpcClient.connect('ws://127.0.0.1:9003');
     const requestId = uuidv4();
     const request = createJsonRpcRequest(requestId, 'test.method', { param1: 'test-param1', param2: 'test-param2' });
     const response = await client.request(request);
@@ -53,7 +53,7 @@ describe('JSONRPCSocket', () => {
 
   it('request times out', async () => {
     // time out after 1 ms
-    const client = await JSONRPCSocket.connect('ws://127.0.0.1:9003', { responseTimeout: 1 });
+    const client = await JsonRpcClient.connect('ws://127.0.0.1:9003', { responseTimeout: 1 });
     const requestId = uuidv4();
     const request = createJsonRpcRequest(requestId, 'test.method', { param1: 'test-param1', param2: 'test-param2' });
 
@@ -76,7 +76,7 @@ describe('JSONRPCSocket', () => {
         }
       });
     });
-    const client = await JSONRPCSocket.connect('ws://127.0.0.1:9003');
+    const client = await JsonRpcClient.connect('ws://127.0.0.1:9003');
     const requestId = uuidv4();
     const request = createJsonRpcRequest(requestId, 'test.method', { param1: 'test-param1', param2: 'test-param2' });
 
@@ -108,11 +108,17 @@ describe('JSONRPCSocket', () => {
         });
       });
     });
-    const client = await JSONRPCSocket.connect('ws://127.0.0.1:9003');
+    const client = await JsonRpcClient.connect('ws://127.0.0.1:9003');
     const requestId = uuidv4();
     const request = createJsonRpcRequest(requestId, 'test.method', { param1: 'test-param1', param2: 'test-param2' });
     client.send(request);
     const resolved = await received;
     expect(resolved.id).to.equal(request.id);
+  });
+
+  xit('calls onerror handler', async () => {
+  });
+
+  xit('calls onclose handler', async () => {
   });
 });

@@ -34,7 +34,7 @@ export const handleSubscriptionsClose: JsonRpcHandler = async (
     await socketConnection.closeSubscription(id);
     jsonRpcResponse = createJsonRpcSuccessResponse(requestId, { reply: { status: 200, detail: 'Accepted' } });
   } catch(error) {
-    if (error.code === DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdNotFound) {
+    if (error.code === DwnServerErrorCode.ConnectionSubscriptionJsonRpcIdNotFound) {
       jsonRpcResponse = createJsonRpcErrorResponse(requestId, JsonRpcErrorCodes.InvalidParams, `subscription ${id} does not exist.`);
     } else {
       jsonRpcResponse = createJsonRpcErrorResponse(

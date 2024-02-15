@@ -61,7 +61,7 @@ export class SocketConnection {
   async subscribe(subscription: JsonRpcSubscription): Promise<void> {
     if (this.subscriptions.has(subscription.id)) {
       throw new DwnServerError(
-        DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdExists,
+        DwnServerErrorCode.ConnectionSubscriptionJsonRpcIdExists,
         `the subscription with id ${subscription.id} already exists`
       )
     }
@@ -77,7 +77,7 @@ export class SocketConnection {
   async closeSubscription(id: JsonRpcId): Promise<void> {
     if (!this.subscriptions.has(id)) {
       throw new DwnServerError(
-        DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdNotFound,
+        DwnServerErrorCode.ConnectionSubscriptionJsonRpcIdNotFound,
         `the subscription with id ${id} was not found`
       )
     }

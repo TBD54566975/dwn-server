@@ -13,7 +13,7 @@ import { WebSocket } from 'ws';
 
 import type { JsonRpcResponse, JsonRpcRequest, JsonRpcId } from '../src/lib/json-rpc.js';
 import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
-import { JSONRPCSocket } from '../src/json-rpc-socket.js';
+import { JsonRpcClient } from '../src/json-rpc-socket.js';
 
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);
@@ -231,9 +231,9 @@ export async function subscriptionRequest(
 ): Promise<{ status: any, subscription?: { id: string, close: () => Promise<void> } }> {
   let resolved: boolean = false;
   const { id: requestId } = request;
-  const connection = await JSONRPCSocket.connect(url);
+  const connection = await JsonRpcClient.connect(url);
 
-  const closeSubscription = async (id: JsonRpcId, connection: JSONRPCSocket): Promise<JsonRpcResponse> => {
+  const closeSubscription = async (id: JsonRpcId, connection: JsonRpcClient): Promise<JsonRpcResponse> => {
     const requestId = uuidv4();
     const request = createJsonRpcRequest(requestId, 'subscription.close', { id });
     return await connection.request(request);

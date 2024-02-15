@@ -11,7 +11,7 @@ export type RequestContext = {
   socketConnection?: SocketConnection;
   /** The `MessageSubscriptionHandler` associated with a subscription request, only used in `ws` requests */
   subscriptionHandler?: MessageSubscriptionHandler;
-  /** The `Readable` stream associated with a `RecordsWrite` request only used in `ws` requests */
+  /** The `Readable` stream associated with a `RecordsWrite` request only used in `http` requests */
   dataStream?: Readable;
 };
 

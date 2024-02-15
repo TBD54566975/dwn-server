@@ -22,10 +22,10 @@ export interface JSONRPCSocketOptions {
 /**
  * JSONRPC Socket Client for WebSocket request/response and long-running subscriptions
  */
-export class JSONRPCSocket {
+export class JsonRpcClient {
   private constructor(private socket: WebSocket, private responseTimeout: number) {}
 
-  static async connect(url: string, options: JSONRPCSocketOptions = {}): Promise<JSONRPCSocket> {
+  static async connect(url: string, options: JSONRPCSocketOptions = {}): Promise<JsonRpcClient> {
     const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT, onclose, onerror } = options;
 
     const socket = new WebSocket(url);
@@ -44,9 +44,9 @@ export class JSONRPCSocket {
     socket.onclose = onclose;
     socket.onerror = onerror;
 
-    return new Promise<JSONRPCSocket>((resolve, reject) => {
+    return new Promise<JsonRpcClient>((resolve, reject) => {
       socket.on('open', () => {
-        resolve(new JSONRPCSocket(socket, responseTimeout));
+        resolve(new JsonRpcClient(socket, responseTimeout));
       });
 
       setTimeout(() => reject, connectTimeout);
@@ -91,7 +91,6 @@ export class JSONRPCSocket {
    */
   subscribe(request: JsonRpcRequest, listener: (response: JsonRpcResponse) => void): { close: () => void } {
     request.id ??= uuidv4();
-
     const messageHandler = (event: { data: any }):void => {
       const jsonRpcResponse = JSON.parse(event.data.toString()) as JsonRpcResponse;
       if (jsonRpcResponse.id === request.id) {

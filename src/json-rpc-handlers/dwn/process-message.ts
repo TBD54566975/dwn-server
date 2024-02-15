@@ -75,7 +75,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       } catch(error) {
         // close the subscription upon receiving an error here
         await close();
-        if (error.code === DwnServerErrorCode.ConnectionSubscriptionJsonRPCIdExists) {
+        if (error.code === DwnServerErrorCode.ConnectionSubscriptionJsonRpcIdExists) {
           // a subscription with this request id already exists
           const errorResponse = createJsonRpcErrorResponse(
             requestId,
