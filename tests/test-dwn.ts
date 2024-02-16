@@ -7,10 +7,17 @@ import {
 } from '@tbd54566975/dwn-sql-store';
 
 import { getDialectFromURI } from '../src/storage.js';
+import { DidDht, DidIon, DidKey, DidResolver } from '@web5/dids';
 
 export async function getTestDwn(
   tenantGate?: TenantGate
 ): Promise<Dwn> {
+
+  // NOTE: no resolver cache used here to avoid locking LevelDB
+  const didResolver = new DidResolver({
+    didResolvers : [DidDht, DidIon, DidKey],
+  });
+
   const db = getDialectFromURI(new URL('sqlite://'));
   const dataStore = new DataStoreSql(db);
   const eventLog = new EventLogSql(db);
@@ -22,7 +29,8 @@ export async function getTestDwn(
       eventLog,
       dataStore,
       messageStore,
-      tenantGate
+      tenantGate,
+      didResolver
     });
   } catch (e) {
     throw e;
