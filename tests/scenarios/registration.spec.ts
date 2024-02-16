@@ -533,7 +533,8 @@ describe('Registration scenarios', function () {
   });
 
   /**
-   * NOTE: The tests below instantiate their own server configs and should should take care to stop the original server
+   * NOTE: The tests below instantiate their own server configs and should should take care to stop the `dwnServer`
+   * This is done to avoid LevelDB locking for the default `DidResolver` cache.
    */
 
   it('should initialize ProofOfWorkManager with challenge nonce seed if given.', async function () {
