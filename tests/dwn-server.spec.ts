@@ -1,3 +1,5 @@
+import type { Dwn } from '@tbd54566975/dwn-sdk-js';
+
 import { expect } from 'chai';
 
 import { config } from '../src/config.js';
@@ -6,12 +8,12 @@ import { getTestDwn } from './test-dwn.js';
 
 describe('DwnServer', function () {
   const dwnServerConfig = { ...config };
+  let dwn: Dwn;
   
-
   it('starts with injected dwn', async function () {
-    const testDwn = await getTestDwn();
+    dwn = await getTestDwn();
 
-    const dwnServer = new DwnServer({ config: dwnServerConfig, dwn: testDwn });
+    const dwnServer = new DwnServer({ config: dwnServerConfig, dwn });
     await dwnServer.start();
 
     dwnServer.stop(() => console.log('server Stop'));
@@ -20,7 +22,9 @@ describe('DwnServer', function () {
 
   describe('webSocketServerEnabled config', function() {
     it('should not return a websocket server if disabled', async function() {
+      dwn = await getTestDwn({ withEvents: true });
       const withoutSocketServer = new DwnServer({
+        dwn,
         config: {
           ...dwnServerConfig,
           webSocketServerEnabled: false,
@@ -35,7 +39,9 @@ describe('DwnServer', function () {
     });
 
     it('should return a websocket server if enabled', async function() {
+      dwn = await getTestDwn({ withEvents: true });
       const withSocketServer = new DwnServer({
+        dwn,
         config: {
           ...dwnServerConfig,
           webSocketServerEnabled: true,
