@@ -9,6 +9,7 @@ import { webcrypto } from 'node:crypto';
 import { useFakeTimers } from 'sinon';
 import { v4 as uuidv4 } from 'uuid';
 
+import type { DwnServerConfig } from '../../src/config.js';
 import { config } from '../../src/config.js';
 import type {
   JsonRpcRequest,
@@ -27,6 +28,7 @@ import type { RegistrationManager } from '../../src/registration/registration-ma
 import { DwnServerErrorCode } from '../../src/dwn-error.js';
 import { ProofOfWorkManager } from '../../src/registration/proof-of-work-manager.js';
 import { DwnServer } from '../../src/dwn-server.js';
+import { randomBytes } from 'crypto';
 
 if (!globalThis.crypto) {
   // @ts-ignore
@@ -67,45 +69,17 @@ describe('Registration scenarios', function () {
     registrationManager = dwnServer.registrationManager;
   });
 
-  beforeEach(async function () {
-  });
-
-  afterEach(async function () {
-  });
-
   after(function () {
     dwnServer.stop(() => { });
     clock.restore();
   });
 
-  it('should allow tenant registration to be turned off to allow all DWN messages through.', async () => {
-    // Scenario:
-    // 1. There is a DWN that does not require tenant registration.
-    // 2. Alice can write to the DWN without registering as a tenant.
+  beforeEach(function () {
+    dwnServer.start();
+  });
 
-    const configClone = {
-      ...dwnServerConfig,
-      registrationStoreUrl: '', // set to empty to disable tenant registration
-      port: 3001,
-      registrationProofOfWorkEnabled: false,
-      termsOfServiceFilePath: undefined,
-    };
-    const dwnServer = new DwnServer({ config: configClone });
-    await dwnServer.start();
-
-    const { jsonRpcRequest, dataBytes } = await generateRecordsWriteJsonRpcRequest(alice);
-    const writeResponse = await fetch('http://localhost:3001', {
-      method: 'POST',
-      headers: {
-        'dwn-request': JSON.stringify(jsonRpcRequest),
-      },
-      body: new Blob([dataBytes]),
-    });
-    const writeResponseBody = await writeResponse.json() as JsonRpcResponse;
-    expect(writeResponse.status).to.equal(200);
-    expect(writeResponseBody.result.reply.status.code).to.equal(202);
-
-    dwnServer.stop(() => { });
+  afterEach(function () {
+    dwnServer.stop(() => {});
   });
 
   it('should facilitate tenant registration with terms-of-service and proof-or-work turned on', async () => {
@@ -556,6 +530,55 @@ describe('Registration scenarios', function () {
     expect(write3Response.status).to.equal(200);
     expect(write3ResponseBody.result.reply.status.code).to.equal(202);
 
+  });
+
+  /**
+   * NOTE: The tests below instantiate their own server configs and should should take care to stop the original server
+   */
+
+  it('should initialize ProofOfWorkManager with challenge nonce seed if given.', async function () {
+    dwnServer.stop(() => {});
+
+    const registrationProofOfWorkSeed = randomBytes(32).toString('hex');
+    const configWithProofOfWorkSeed: DwnServerConfig = {
+      ...dwnServerConfig,
+      registrationStoreUrl: 'sqlite://',
+      registrationProofOfWorkEnabled: true,
+      registrationProofOfWorkSeed,
+    };
+
+    dwnServer = new DwnServer({ config: configWithProofOfWorkSeed });
+    await dwnServer.start();
+    expect(dwnServer.registrationManager['proofOfWorkManager']['challengeSeed']).to.equal(registrationProofOfWorkSeed);
+  });
+
+  it('should allow tenant registration to be turned off to allow all DWN messages through.', async () => {
+    dwnServer.stop(() => {});
+
+    // Scenario:
+    // 1. There is a DWN that does not require tenant registration.
+    // 2. Alice can write to the DWN without registering as a tenant.
+    const configClone = {
+      ...dwnServerConfig,
+      registrationStoreUrl: '', // set to empty to disable tenant registration
+      port: 3002,
+      registrationProofOfWorkEnabled: false,
+      termsOfServiceFilePath: undefined,
+    };
+    dwnServer = new DwnServer({ config: configClone });
+    await dwnServer.start();
+
+    const { jsonRpcRequest, dataBytes } = await generateRecordsWriteJsonRpcRequest(alice);
+    const writeResponse = await fetch(dwnMessageEndpoint, {
+      method: 'POST',
+      headers: {
+        'dwn-request': JSON.stringify(jsonRpcRequest),
+      },
+      body: new Blob([dataBytes]),
+    });
+    const writeResponseBody = await writeResponse.json() as JsonRpcResponse;
+    expect(writeResponse.status).to.equal(200);
+    expect(writeResponseBody.result.reply.status.code).to.equal(202);
   });
 });
 
