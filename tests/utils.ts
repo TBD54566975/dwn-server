@@ -1,4 +1,4 @@
-import type { GenericMessage, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
+import type { GenericMessage, MessageEvent, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import type { ReadStream } from 'node:fs';
@@ -11,7 +11,7 @@ import type { Readable } from 'readable-stream';
 import { fileURLToPath } from 'url';
 import { WebSocket } from 'ws';
 
-import type { JsonRpcResponse, JsonRpcRequest, JsonRpcId } from '../src/lib/json-rpc.js';
+import type { JsonRpcResponse, JsonRpcRequest } from '../src/lib/json-rpc.js';
 import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { JsonRpcSocket } from '../src/json-rpc-socket.js';
 
@@ -222,60 +222,33 @@ export async function sendWsMessage(
   });
 }
 
-const MAX_RESPONSE_TIMEOUT = 1_500;
-
-export async function subscriptionRequest(
-  url: string,
+export async function sendWsRequest(options: {
+  url?: string,
+  connection?: JsonRpcSocket,
   request: JsonRpcRequest,
-  messageHandler: (message: GenericMessage) => void,
-): Promise<{ status: any, subscription?: { id: string, close: () => Promise<void> } }> {
-  const { id: requestId } = request;
-  const connection = await JsonRpcSocket.connect(url);
+  responseTimeout?: number,
+}): Promise<JsonRpcResponse> {
+  const { url, connection: incomingConnection , request, responseTimeout } = options;
+  const connection = incomingConnection ?? await JsonRpcSocket.connect(url, { responseTimeout });
+  return connection.request(request);
+}
 
-  const closeSubscription = async (id: JsonRpcId, connection: JsonRpcSocket): Promise<JsonRpcResponse> => {
-    const requestId = uuidv4();
-    const request = createJsonRpcRequest(requestId, 'subscription.close', { id });
-    return await connection.request(request);
-  }
+export async function subscriptionRequest(options: {
+  url?: string,
+  connection?: JsonRpcSocket,
+  request: JsonRpcRequest,
+  messageHandler: (event: MessageEvent) => void,
+  responseTimeout?: number;
+}): Promise<{ close?: () => Promise<void>, response: JsonRpcResponse, connection?: JsonRpcSocket }> {
+  const { url, connection: incomingConnection, request, messageHandler, responseTimeout } = options;
+  const connection = incomingConnection ?? await JsonRpcSocket.connect(url, { responseTimeout });
 
-  return new Promise<{ status: any, subscription?: { id: string, close: () => Promise<void> } }>((resolve, reject) => {
-    const { close: subscriptionClose } = connection.subscribe(request, (response) => {
-      const { result, error } = response;
-
-      // this is an error specific to the `JsonRpcRequest` requesting the subscription
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      // at this point the reply should be DwnRpcResponse
-      const { status, event, subscription } = result.reply;
-      if (event) {
-        messageHandler(event);
-        return;
-      }
-
-      if (subscription) {
-        resolve({
-          status,
-          subscription: {
-            ...subscription,
-            close: async (): Promise<void> => {
-              subscriptionClose();
-              const closeResponse = await closeSubscription(requestId, connection);
-              if (closeResponse.error?.message !== undefined) {
-                throw new Error(`unable to close subscription: ${closeResponse.error.message}`);
-              }
-            }
-          }
-        })
-      } 
-
-      resolve({ status });
-    });
-
-    setTimeout(() => {
-      return reject('subscription request timeout');
-    }, MAX_RESPONSE_TIMEOUT);
+  const { close, response } = await connection.subscribe(request, (response) => {
+    const { event } = response.result.reply;
+    messageHandler(event);
   });
+
+  return {
+    response, close, connection
+  }
 }

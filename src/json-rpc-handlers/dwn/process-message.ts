@@ -2,26 +2,27 @@ import type { GenericMessage } from '@tbd54566975/dwn-sdk-js';
 import { DwnInterfaceName, DwnMethodName } from '@tbd54566975/dwn-sdk-js';
 
 import type { Readable as IsomorphicReadable } from 'readable-stream';
+import log from 'loglevel';
 import { v4 as uuidv4 } from 'uuid';
 
+import type { JsonRpcSubscription } from '../../lib/json-rpc.js';
 import type {
   HandlerResponse,
   JsonRpcHandler,
 } from '../../lib/json-rpc-router.js';
 
-import { DwnServerErrorCode } from '../../dwn-error.js';
 import {
   createJsonRpcErrorResponse,
   createJsonRpcSuccessResponse,
   JsonRpcErrorCodes,
 } from '../../lib/json-rpc.js';
-import log from 'loglevel';
+
 
 export const handleDwnProcessMessage: JsonRpcHandler = async (
   dwnRequest,
   context,
 ) => {
-  const { dwn, dataStream, subscriptionHandler, socketConnection, transport } = context;
+  const { dwn, dataStream, subscriptionRequest, socketConnection, transport } = context;
   const { target, message } = dwnRequest.params as { target: string, message: GenericMessage };
   const requestId = dwnRequest.id ?? uuidv4();
 
@@ -41,23 +42,41 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       return { jsonRpcResponse };
     }
 
+    // subscribe methods must come with a subscriptionRequest context 
+    if (message.descriptor.method === DwnMethodName.Subscribe && subscriptionRequest === undefined) {
+      const jsonRpcResponse = createJsonRpcErrorResponse(
+        requestId,
+        JsonRpcErrorCodes.InvalidRequest,
+        `subscribe methods must contain a subscriptionRequest context`
+      );
+      return { jsonRpcResponse };
+    }
+
     // Subscribe methods are only supported on 'ws' (WebSockets)
-    if (transport !== 'ws' && message.descriptor.method === DwnMethodName.Subscribe) {
+    if (transport !== 'ws' && subscriptionRequest !== undefined) {
       const jsonRpcResponse = createJsonRpcErrorResponse(
         requestId,
         JsonRpcErrorCodes.InvalidParams,
-        `Subscribe not supported via ${context.transport}`
+        `subscriptions are not supported via ${context.transport}`
+      )
+      return { jsonRpcResponse };
+    }
+
+    if (subscriptionRequest !== undefined && socketConnection?.hasSubscription(subscriptionRequest.id)) {
+      const jsonRpcResponse = createJsonRpcErrorResponse(
+        requestId,
+        JsonRpcErrorCodes.InvalidParams,
+        `the subscribe id: ${subscriptionRequest.id} is in use by an active subscription`
       )
       return { jsonRpcResponse };
     }
 
     const reply = await dwn.processMessage(target, message, {
       dataStream: dataStream as IsomorphicReadable,
-      subscriptionHandler,
+      subscriptionHandler: subscriptionRequest?.subscriptionHandler,
     });
 
-    const { record, subscription } = reply;
-
+    const { record } = reply;
     // RecordsRead messages return record data as a stream to for accommodate large amounts of data
     let recordDataStream: IsomorphicReadable;
     if (record !== undefined && record.data !== undefined) {
@@ -66,29 +85,16 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
     }
 
     // Subscribe messages return a close function to facilitate closing the subscription
-    if (subscription !== undefined) {
-      const { close } = subscription;
-      try {
-        // adding a reference to the close function for this subscription request to the connection.
-        // this will facilitate closing the subscription later.
-        await socketConnection.addSubscription({ id: requestId, close });
-        delete reply.subscription.close // not serializable via JSON
-      } catch(error) {
-        // close the subscription upon receiving an error here
-        await close();
-        if (error.code === DwnServerErrorCode.ConnectionSubscriptionJsonRpcIdExists) {
-          // a subscription with this request id already exists
-          const errorResponse = createJsonRpcErrorResponse(
-            requestId,
-            JsonRpcErrorCodes.BadRequest,
-            `the request id ${requestId} already has an active subscription`
-          );
-          return { jsonRpcResponse: errorResponse };
-        } else {
-          // will catch as an unknown error below
-          throw new Error('unknown error adding subscription');
-        }
+    if (subscriptionRequest && reply.subscription) {
+      const { close } = reply.subscription;
+      // we add a reference to the close function for this subscription request to the socket connection.
+      // this will facilitate closing the subscription later.
+      const subscriptionReply: JsonRpcSubscription = {
+        id: subscriptionRequest.id,
+        close,
       }
+      await socketConnection.addSubscription(subscriptionReply);
+      delete reply.subscription.close // delete the close method from the reply as it's not JSON serializable and has a held reference.
     }
 
     const jsonRpcResponse = createJsonRpcSuccessResponse(requestId, { reply });
@@ -107,7 +113,6 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
 
     // log the error response
     log.error('handleDwnProcessMessage error', jsonRpcResponse);
-
     return { jsonRpcResponse } as HandlerResponse;
   }
 };

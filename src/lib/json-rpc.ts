@@ -15,6 +15,12 @@ export interface JsonRpcError {
   data?: any;
 }
 
+export interface JsonRpcSubscription {
+  /** JSON RPC Id of the Subscription Request */
+  id: JsonRpcId;
+  close: () => Promise<void>;
+}
+
 export enum JsonRpcErrorCodes {
   // JSON-RPC 2.0 pre-defined errors
   InvalidRequest = -32600,
@@ -37,7 +43,7 @@ export interface JsonRpcSuccessResponse {
   jsonrpc: JsonRpcVersion;
   id: JsonRpcId;
   result: any;
-  error?: undefined;
+  error?: never;
 }
 
 export interface JsonRpcErrorResponse {

@@ -4,7 +4,7 @@ import chai, { expect } from 'chai';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketServer } from 'ws';
 
-import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from '../src/lib/json-rpc.js';
+import type { JsonRpcId, JsonRpcRequest, JsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
 import { JsonRpcSocket } from '../src/json-rpc-socket.js';
 import { createJsonRpcRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
@@ -69,26 +69,34 @@ describe('JsonRpcSocket', () => {
     wsServer.addListener('connection', (socket) => {
       socket.on('message', (dataBuffer: Buffer) => {
         const request = JSON.parse(dataBuffer.toString()) as JsonRpcRequest;
+        // initial response 
+        const response = createJsonRpcSuccessResponse(request.id, { reply: {} })
+        socket.send(Buffer.from(JSON.stringify(response)));
+
+        const { params } = request;
+        const { subscribe } = params.rpc || {};
         // send 3 messages
         for (let i = 0; i < 3; i++) {
-          const response = createJsonRpcSuccessResponse(request.id, { count: i });
+          const response = createJsonRpcSuccessResponse(subscribe, { count: i });
           socket.send(Buffer.from(JSON.stringify(response)));
         }
       });
     });
-    const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003');
+    const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { responseTimeout: 5 });
     const requestId = uuidv4();
-    const request = createJsonRpcRequest(requestId, 'test.method', { param1: 'test-param1', param2: 'test-param2' });
+    const subscribeId = uuidv4();
+    const request = createJsonRpcRequest(requestId, 'rpc.subscribe.test.method', { param1: 'test-param1', param2: 'test-param2', rpc: { subscribe: subscribeId } });
 
     let responseCounter = 0;
-    const responseListener = (response: JsonRpcResponse): void => {
-      expect(response.id).to.equal(request.id);
+    const responseListener = (response: JsonRpcSuccessResponse): void => {
+      expect(response.id).to.equal(subscribeId);
       const { count } = response.result;
       expect(count).to.equal(responseCounter);
       responseCounter++;
     }
 
-    const subscription = client.subscribe(request, responseListener);
+    const subscription = await client.subscribe(request, responseListener);
+    expect(subscription.response.error).to.be.undefined;
     // wait for the messages to arrive
     await new Promise((resolve) => setTimeout(resolve, 5));
     // the original response 

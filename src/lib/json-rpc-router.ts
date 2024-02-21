@@ -1,16 +1,20 @@
-import type { Dwn, GenericMessage } from '@tbd54566975/dwn-sdk-js';
+import type { Dwn, MessageEvent } from '@tbd54566975/dwn-sdk-js';
 
 import type { Readable } from 'node:stream';
 
-import type { JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
+import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from './json-rpc.js';
 import type { SocketConnection } from '../connection/socket-connection.js';
 
 export type RequestContext = {
   transport: 'http' | 'ws';
   dwn: Dwn;
   socketConnection?: SocketConnection;
-  /** The `GenericMessage` handler associated with a subscription request, only used in `ws` requests */
-  subscriptionHandler?: (message: GenericMessage) => void;
+  subscriptionRequest?: {
+    /** The JsonRpcId of the subscription handler */
+    id: JsonRpcId; 
+    /** The `MessageEvent` handler associated with a subscription request, only used in `ws` requests */
+    subscriptionHandler: (message: MessageEvent) => void;
+  }
   /** The `Readable` stream associated with a `RecordsWrite` request only used in `http` requests */
   dataStream?: Readable;
 };

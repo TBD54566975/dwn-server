@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 
 import type { JsonRpcRequest, JsonRpcResponse } from "./lib/json-rpc.js";
+import { createJsonRpcRequest } from "./lib/json-rpc.js";
 
 // These were arbitrarily chosen, but can be modified via connect options
 const CONNECT_TIMEOUT = 3_000;
@@ -89,26 +90,61 @@ export class JsonRpcSocket {
    * Sends a JSON-RPC request through the socket and keeps a listener open to read associated responses as they arrive.
    * Returns a close method to clean up the listener.
    */
-  subscribe(request: JsonRpcRequest, listener: (response: JsonRpcResponse) => void): { close: () => void } {
-    request.id ??= uuidv4();
+  async subscribe(request: JsonRpcRequest, listener: (response: JsonRpcResponse) => void): Promise<{ 
+    response: JsonRpcResponse;
+    close?: () => Promise<void>;
+   }> {
+
+    if (!request.method.startsWith('rpc.subscribe.')) {
+      throw new Error('subscribe rpc messages must include the `rpc.subscribe` prefix');
+    }
+
+    // extract optional `rpc.subscribe` param
+    const { rpc } = request.params;
+    const { subscribe } = rpc || {};
+    const subscriptionId = subscribe || uuidv4();
+
+    // When subscribing to a JSON RPC Message, we want to generate the subscription update Json PRC Id ahead of time and create a listener.
+    // We then set the subscription Id within a special rpc.subscribe params namespace preserving any other properties 
+    request.params.rpc = {
+      ...rpc,
+      subscribe: subscriptionId,
+    };
+
     const messageHandler = (event: { data: any }):void => {
       const jsonRpcResponse = JSON.parse(event.data.toString()) as JsonRpcResponse;
-      if (jsonRpcResponse.id === request.id) {
-        // if the incoming response id matches the request id, trigger the listener
-        return listener(jsonRpcResponse);
+      if (jsonRpcResponse.id === subscriptionId) {
+        if (jsonRpcResponse.error !== undefined) {
+          // remove the event listener upon receipt of a JSON RPC Error.
+          this.socket.removeEventListener('message', messageHandler);
+        }
+
+        listener(jsonRpcResponse);
       }
     };
-
-    // subscribe to the listener before sending the request
     this.socket.addEventListener('message', messageHandler);
-    this.send(request);
+
+    const response = await this.request(request);
+    if (response.error) {
+      this.socket.removeEventListener('message', messageHandler);
+      return { response }
+    }
+
+    // clean up listener and create a `rpc.subscribe.close` message to use when closing this JSON RPC subscription
+    const close = async (): Promise<void> => {
+      this.socket.removeEventListener('message', messageHandler);
+      const requestId = uuidv4();
+      const request = createJsonRpcRequest(requestId, 'rpc.subscribe.close', { id: subscriptionId });
+      const response = await this.request(request);
+      if (response.error) {
+        throw response.error;
+      }
+    }
 
     return {
-      close: ():void => {
-        // removes the listener for this particular request
-        this.socket.removeEventListener('message', messageHandler);
-      }
-    };
+      response,
+      close
+    }
   }
 
   /**

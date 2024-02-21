@@ -1,4 +1,4 @@
-import type { Dwn, GenericMessage } from "@tbd54566975/dwn-sdk-js";
+import type { Dwn, GenericMessage, MessageEvent } from "@tbd54566975/dwn-sdk-js";
 import { DwnMethodName } from "@tbd54566975/dwn-sdk-js";
 
 import type { WebSocket } from "ws";
@@ -6,7 +6,7 @@ import log from 'loglevel';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { RequestContext } from "../lib/json-rpc-router.js";
-import type { JsonRpcErrorResponse, JsonRpcId, JsonRpcRequest, JsonRpcResponse } from "../lib/json-rpc.js";
+import type { JsonRpcErrorResponse, JsonRpcId, JsonRpcRequest, JsonRpcResponse, JsonRpcSubscription } from "../lib/json-rpc.js";
 
 import { requestCounter } from "../metrics.js";
 import { jsonRpcApi } from "../json-rpc-api.js";
@@ -14,12 +14,6 @@ import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResp
 import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 
 const HEARTBEAT_INTERVAL = 30_000;
-
-export interface JsonRpcSubscription {
-  /** JSON RPC Id of the Subscription Request */
-  id: JsonRpcId;
-  close: () => Promise<void>;
-}
 
 /**
  * SocketConnection handles a WebSocket connection to a DWN using JSON RPC.
@@ -52,6 +46,13 @@ export class SocketConnection {
       this.isAlive = false;
       this.socket.ping();
     }, HEARTBEAT_INTERVAL);
+  }
+
+  /**
+   * Checks to see if the incoming `JsonRpcId` is already in use for a subscription.
+   */
+  hasSubscription(id: JsonRpcId): boolean {
+    return this.subscriptions.has(id);
   }
 
   /**
@@ -182,7 +183,7 @@ export class SocketConnection {
    *
    * Wraps the incoming `message` in a `JSON RPC Success Response` using the original subscription`JSON RPC Id` to send through the WebSocket.
    */
-  private createSubscriptionHandler(id: JsonRpcId): (message: GenericMessage) => void {
+  private createSubscriptionHandler(id: JsonRpcId): (message: MessageEvent) => void {
     return (event) => {
       const response = createJsonRpcSuccessResponse(id, { reply: { event } });
       this.send(response);
@@ -195,17 +196,23 @@ export class SocketConnection {
    * Adds a `subscriptionHandler` for `Subscribe` messages.
    */
   private async buildRequestContext(request: JsonRpcRequest): Promise<RequestContext> {
-    const { id, params, method } = request;
+    const { params, method } = request;
+    const { subscribe } = params.rpc || {};
+
     const requestContext: RequestContext = {
       transport        : 'ws',
       dwn              : this.dwn,
       socketConnection : this,
     }
 
-    if (method === 'dwn.processMessage') {
+    if (method.startsWith('rpc.subscribe.') && subscribe) {
       const { message } = params as { message: GenericMessage };
       if (message.descriptor.method === DwnMethodName.Subscribe) {
-        requestContext.subscriptionHandler = this.createSubscriptionHandler(id).bind(this);
+        const handlerFunc = this.createSubscriptionHandler(subscribe);
+        requestContext.subscriptionRequest = {
+          id: subscribe,
+          subscriptionHandler: (message): void => handlerFunc(message),
+        }
       }
     }
 
