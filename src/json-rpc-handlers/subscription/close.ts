@@ -26,7 +26,7 @@ export const handleSubscriptionsClose: JsonRpcHandler = async (
 ) => {
   const requestId = dwnRequest.id ?? uuidv4();
   const { socketConnection } = context;
-  const { id } = dwnRequest.params as { id: JsonRpcId};
+  const { id } = dwnRequest.subscribe as { id: JsonRpcId };
 
   let jsonRpcResponse:JsonRpcResponse;
   try {

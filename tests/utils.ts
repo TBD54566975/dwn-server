@@ -242,6 +242,9 @@ export async function subscriptionRequest(options: {
 }): Promise<{ close?: () => Promise<void>, response: JsonRpcResponse, connection?: JsonRpcSocket }> {
   const { url, connection: incomingConnection, request, messageHandler, responseTimeout } = options;
   const connection = incomingConnection ?? await JsonRpcSocket.connect(url, { responseTimeout });
+  request.subscribe ??= {
+    id: uuidv4(),
+  };
 
   const { close, response } = await connection.subscribe(request, (response) => {
     const { event } = response.result.reply;

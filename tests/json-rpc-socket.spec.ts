@@ -7,7 +7,7 @@ import { WebSocketServer } from 'ws';
 import type { JsonRpcId, JsonRpcRequest, JsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
 import { JsonRpcSocket } from '../src/json-rpc-socket.js';
-import { createJsonRpcRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
+import { createJsonRpcRequest, createJsonRpcSubscribeRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
 chai.use(chaiAsPromised);
 
@@ -72,12 +72,10 @@ describe('JsonRpcSocket', () => {
         // initial response 
         const response = createJsonRpcSuccessResponse(request.id, { reply: {} })
         socket.send(Buffer.from(JSON.stringify(response)));
-
-        const { params } = request;
-        const { subscribe } = params.rpc || {};
+        const { subscribe } = request;
         // send 3 messages
         for (let i = 0; i < 3; i++) {
-          const response = createJsonRpcSuccessResponse(subscribe, { count: i });
+          const response = createJsonRpcSuccessResponse(subscribe.id, { count: i });
           socket.send(Buffer.from(JSON.stringify(response)));
         }
       });
@@ -85,7 +83,12 @@ describe('JsonRpcSocket', () => {
     const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { responseTimeout: 5 });
     const requestId = uuidv4();
     const subscribeId = uuidv4();
-    const request = createJsonRpcRequest(requestId, 'rpc.subscribe.test.method', { param1: 'test-param1', param2: 'test-param2', rpc: { subscribe: subscribeId } });
+    const request = createJsonRpcSubscribeRequest(
+      requestId,
+      'rpc.subscribe.test.method',
+      { param1: 'test-param1', param2: 'test-param2' },
+      subscribeId,
+    );
 
     let responseCounter = 0;
     const responseListener = (response: JsonRpcSuccessResponse): void => {
@@ -101,7 +104,7 @@ describe('JsonRpcSocket', () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     // the original response 
     expect(responseCounter).to.equal(3);
-    subscription.close();
+    await subscription.close();
   });
 
   it('sends message', async () => {

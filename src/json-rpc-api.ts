@@ -7,4 +7,5 @@ export const jsonRpcApi = new JsonRpcRouter();
 
 jsonRpcApi.on('dwn.processMessage', handleDwnProcessMessage);
 jsonRpcApi.on('rpc.subscribe.dwn.processMessage', handleDwnProcessMessage);
+
 jsonRpcApi.on('rpc.subscribe.close', handleSubscriptionsClose);

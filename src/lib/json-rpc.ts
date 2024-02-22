@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 export type JsonRpcId = string | number | null;
 export type JsonRpcParams = any;
 export type JsonRpcVersion = '2.0';
@@ -7,6 +9,10 @@ export interface JsonRpcRequest {
   id?: JsonRpcId;
   method: string;
   params?: JsonRpcParams;
+  /** JSON RPC Subscribe Extension Parameters */
+  subscribe?: { 
+    id: JsonRpcId
+  };
 }
 
 export interface JsonRpcError {
@@ -80,6 +86,23 @@ export const createJsonRpcNotification = (
     params,
   };
 };
+
+export const createJsonRpcSubscribeRequest = (
+  id: JsonRpcId,
+  method: string,
+  params?: JsonRpcParams,
+  subscriptionId?: JsonRpcId
+): JsonRpcRequest => {
+  return {
+    jsonrpc: '2.0',
+    id,
+    method,
+    params,
+    subscribe: {
+      id: subscriptionId ?? uuidv4(),
+    }
+  }
+}
 
 export const createJsonRpcRequest = (
   id: JsonRpcId,

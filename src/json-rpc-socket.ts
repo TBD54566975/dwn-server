@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 
 import type { JsonRpcRequest, JsonRpcResponse } from "./lib/json-rpc.js";
-import { createJsonRpcRequest } from "./lib/json-rpc.js";
+import { createJsonRpcSubscribeRequest } from "./lib/json-rpc.js";
 
 // These were arbitrarily chosen, but can be modified via connect options
 const CONNECT_TIMEOUT = 3_000;
@@ -73,7 +73,6 @@ export class JsonRpcSocket {
           return resolve(jsonRpsResponse);
         }
       };
-
       // subscribe to the listener before sending the request
       this.socket.addEventListener('message', handleResponse);
       this.send(request);
@@ -96,21 +95,14 @@ export class JsonRpcSocket {
    }> {
 
     if (!request.method.startsWith('rpc.subscribe.')) {
-      throw new Error('subscribe rpc messages must include the `rpc.subscribe` prefix');
+      throw new Error('subscribe rpc requests must include the `rpc.subscribe` prefix');
     }
 
-    // extract optional `rpc.subscribe` param
-    const { rpc } = request.params;
-    const { subscribe } = rpc || {};
-    const subscriptionId = subscribe || uuidv4();
+    if (!request.subscribe) {
+      throw new Error('subscribe rpc requests must include subscribe options');
+    }
 
-    // When subscribing to a JSON RPC Message, we want to generate the subscription update Json PRC Id ahead of time and create a listener.
-    // We then set the subscription Id within a special rpc.subscribe params namespace preserving any other properties 
-    request.params.rpc = {
-      ...rpc,
-      subscribe: subscriptionId,
-    };
-
+    const subscriptionId = request.subscribe.id;
     const messageHandler = (event: { data: any }):void => {
       const jsonRpcResponse = JSON.parse(event.data.toString()) as JsonRpcResponse;
       if (jsonRpcResponse.id === subscriptionId) {
@@ -134,7 +126,7 @@ export class JsonRpcSocket {
     const close = async (): Promise<void> => {
       this.socket.removeEventListener('message', messageHandler);
       const requestId = uuidv4();
-      const request = createJsonRpcRequest(requestId, 'rpc.subscribe.close', { id: subscriptionId });
+      const request = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.close', {}, subscriptionId)
       const response = await this.request(request);
       if (response.error) {
         throw response.error;

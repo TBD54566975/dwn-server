@@ -196,8 +196,7 @@ export class SocketConnection {
    * Adds a `subscriptionHandler` for `Subscribe` messages.
    */
   private async buildRequestContext(request: JsonRpcRequest): Promise<RequestContext> {
-    const { params, method } = request;
-    const { subscribe } = params.rpc || {};
+    const { params, method, subscribe } = request;
 
     const requestContext: RequestContext = {
       transport        : 'ws',
@@ -206,11 +205,11 @@ export class SocketConnection {
     }
 
     if (method.startsWith('rpc.subscribe.') && subscribe) {
-      const { message } = params as { message: GenericMessage };
-      if (message.descriptor.method === DwnMethodName.Subscribe) {
-        const handlerFunc = this.createSubscriptionHandler(subscribe);
+      const { message } = params as { message?: GenericMessage };
+      if (message?.descriptor.method === DwnMethodName.Subscribe) {
+        const handlerFunc = this.createSubscriptionHandler(subscribe.id);
         requestContext.subscriptionRequest = {
-          id: subscribe,
+          id: subscribe.id,
           subscriptionHandler: (message): void => handlerFunc(message),
         }
       }

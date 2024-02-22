@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import {
   createJsonRpcRequest,
+  createJsonRpcSubscribeRequest,
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
 import { config } from '../src/config.js';
@@ -111,7 +112,7 @@ describe('websocket api', function () {
     };
 
     const requestId = uuidv4();
-    const dwnRequest = createJsonRpcRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
+    const dwnRequest = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
       message: message,
       target: alice.did,
     });
@@ -262,11 +263,10 @@ describe('websocket api', function () {
 
     const requestId = uuidv4();
     const subscribeId = uuidv4();
-    const dwnRequest = createJsonRpcRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
+    const dwnRequest = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
       message: message,
-      target: alice.did,
-      rpc: { subscribe: subscribeId }
-    });
+      target: alice.did
+    }, subscribeId);
 
     const { response, close, connection } = await subscriptionRequest({
       url            : 'ws://127.0.0.1:9002',
@@ -282,11 +282,10 @@ describe('websocket api', function () {
 
     // We are checking for the subscription Id not the request Id
     const request2Id = uuidv4();
-    const dwnRequest2 = createJsonRpcRequest(request2Id, 'rpc.subscribe.dwn.processMessage', {
+    const dwnRequest2 = createJsonRpcSubscribeRequest(request2Id, 'rpc.subscribe.dwn.processMessage', {
       message: message2,
-      target: alice.did,
-      rpc: { subscribe: subscribeId }
-    });
+      target: alice.did
+    }, subscribeId);
 
     const { response: response2 } = await subscriptionRequest({
       connection,
