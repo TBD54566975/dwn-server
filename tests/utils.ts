@@ -1,4 +1,4 @@
-import type { EventSubscriptionHandler, GenericMessage, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
+import type { GenericMessage, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import type { ReadStream } from 'node:fs';
@@ -11,9 +11,8 @@ import type { Readable } from 'readable-stream';
 import { fileURLToPath } from 'url';
 import { WebSocket } from 'ws';
 
-import type { JsonRpcResponse, JsonRpcRequest } from '../src/lib/json-rpc.js';
+import type { JsonRpcResponse } from '../src/lib/json-rpc.js';
 import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
-import { JsonRpcSocket } from '../src/json-rpc-socket.js';
 
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);
@@ -220,50 +219,4 @@ export async function sendWsMessage(
       socket.send(message);
     };
   });
-}
-
-export async function sendWsRequest(options: {
-  url?: string,
-  connection?: JsonRpcSocket,
-  request: JsonRpcRequest,
-  responseTimeout?: number,
-}): Promise<JsonRpcResponse> {
-  const { url, connection: incomingConnection , request, responseTimeout } = options;
-  const connection = incomingConnection ?? await JsonRpcSocket.connect(url, { responseTimeout });
-  return connection.request(request);
-}
-
-/**
- * A helper method for testing JSON RPC socket subscription requests to the DWN.
- * 
- * If a connection is not provided, creates a new connection to the url provided.
- * If no subscribe options are provided, creates a subscribe id.
- * Attempts to subscribe and returns the response, close function and connection.
- */
-export async function subscribeToMessageEvents(options: {
-  /** json rpc socket connection, mutually exclusive with url */
-  connection?: JsonRpcSocket,
-  /** url to connect to if no connection is provided */
-  url?: string,
-  /** the request to use for subscription */
-  request: JsonRpcRequest,
-  /** the message handler to use for incoming events */
-  messageHandler: EventSubscriptionHandler,
-  /** optional response timeout for new connections */
-  responseTimeout?: number,
-}): Promise<{ close?: () => Promise<void>, response: JsonRpcResponse, connection?: JsonRpcSocket }> {
-  const { url, connection: incomingConnection, request, messageHandler, responseTimeout } = options;
-  const connection = incomingConnection ?? await JsonRpcSocket.connect(url, { responseTimeout });
-  request.subscribe ??= {
-    id: uuidv4(),
-  };
-
-  const { close, response } = await connection.subscribe(request, (response) => {
-    const { event } = response.result;
-    messageHandler(event);
-  });
-
-  return {
-    response, close, connection
-  }
 }

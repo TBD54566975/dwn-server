@@ -18,8 +18,9 @@ import {
 import { config } from '../src/config.js';
 import { WsApi } from '../src/ws-api.js';
 import { getTestDwn } from './test-dwn.js';
-import { createRecordsWriteMessage, sendWsMessage, sendHttpMessage, subscribeToMessageEvents, sendWsRequest } from './utils.js';
+import { createRecordsWriteMessage, sendWsMessage, sendHttpMessage } from './utils.js';
 import { HttpApi } from '../src/http-api.js';
+import { JsonRpcSocket } from '../src/json-rpc-socket.js';
 
 
 describe('websocket api', function () {
@@ -85,10 +86,9 @@ describe('websocket api', function () {
       encodedData,
     });
 
-    const response = await sendWsRequest({
-      url:'ws://127.0.0.1:9002',
-      request: dwnRequest,
-    });
+    const connection = await JsonRpcSocket.connect('ws://127.0.0.1:9002');
+    const response = await connection.request(dwnRequest);
+    
     expect(response.id).to.equal(requestId);
     expect(response.error).to.not.be.undefined;
     expect(response.error.code).to.equal(JsonRpcErrorCodes.InvalidParams);
@@ -117,11 +117,12 @@ describe('websocket api', function () {
       target: alice.did,
     });
 
-    const { response, close } = await subscribeToMessageEvents({
-      url            : 'ws://127.0.0.1:9002',
-      request        : dwnRequest,
-      messageHandler : subscriptionHandler
+    const connection = await JsonRpcSocket.connect('ws://127.0.0.1:9002');
+    const { response, close } = await connection.subscribe(dwnRequest, (response) => {
+      const { event } = response.result;
+      subscriptionHandler(event);
     });
+    
     expect(response.error).to.be.undefined;
     expect(response.result.reply.status.code).to.equal(200);
     expect(close).to.not.be.undefined;
@@ -181,16 +182,18 @@ describe('websocket api', function () {
     };
 
     const requestId = uuidv4();
-    const dwnRequest = createJsonRpcRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
+    const subscribeId = uuidv4();
+    const dwnRequest = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
       message: message,
       target: alice.did,
+    }, subscribeId);
+
+    const connection = await JsonRpcSocket.connect('ws://127.0.0.1:9002');
+    const { response, close } = await connection.subscribe(dwnRequest, (response) => {
+      const { event } = response.result;
+      subscriptionHandler(event);
     });
 
-    const { response, close } = await subscribeToMessageEvents({
-      url            : 'ws://127.0.0.1:9002',
-      request        : dwnRequest,
-      messageHandler : subscriptionHandler
-    });
     expect(response.error).to.be.undefined;
     expect(response.result.reply.status.code).to.equal(200);
     expect(close).to.not.be.undefined;
@@ -268,15 +271,11 @@ describe('websocket api', function () {
       target: alice.did
     }, subscribeId);
 
-    const { response, close, connection } = await subscribeToMessageEvents({
-      url            : 'ws://127.0.0.1:9002',
-      request        : dwnRequest,
-      messageHandler : subscriptionHandler
+    const connection = await JsonRpcSocket.connect('ws://127.0.0.1:9002');
+    const { close } = await connection.subscribe(dwnRequest, (response) => {
+      const { event } = response.result;
+      subscriptionHandler(event);
     });
-    expect(response.error).to.be.undefined;
-    expect(response.result.reply.status.code).to.equal(200);
-    expect(close).to.not.be.undefined;
-
 
     const { message: message2 } = await TestDataGenerator.generateRecordsSubscribe({ filter: { schema: 'bar/baz' }, author: alice });
 
@@ -287,11 +286,11 @@ describe('websocket api', function () {
       target: alice.did
     }, subscribeId);
 
-    const { response: response2 } = await subscribeToMessageEvents({
-      connection,
-      request: dwnRequest2,
-      messageHandler: subscriptionHandler,
+    const { response: response2 } = await connection.subscribe(dwnRequest2, (response) => {
+      const { event } = response.result;
+      subscriptionHandler(event);
     });
+
     expect(response2.error.code).to.equal(JsonRpcErrorCodes.InvalidParams);
     expect(response2.error.message).to.contain(`${subscribeId} is in use by an active subscription`);
 
