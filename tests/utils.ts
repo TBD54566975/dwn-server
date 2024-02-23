@@ -1,4 +1,4 @@
-import type { GenericMessage, MessageEvent, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
+import type { EventSubscriptionHandler, GenericMessage, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import type { ReadStream } from 'node:fs';
@@ -233,12 +233,24 @@ export async function sendWsRequest(options: {
   return connection.request(request);
 }
 
-export async function subscriptionRequest(options: {
-  url?: string,
+/**
+ * A helper method for testing JSON RPC socket subscription requests to the DWN.
+ * 
+ * If a connection is not provided, creates a new connection to the url provided.
+ * If no subscribe options are provided, creates a subscribe id.
+ * Attempts to subscribe and returns the response, close function and connection.
+ */
+export async function subscribeToMessageEvents(options: {
+  /** json rpc socket connection, mutually exclusive with url */
   connection?: JsonRpcSocket,
+  /** url to connect to if no connection is provided */
+  url?: string,
+  /** the request to use for subscription */
   request: JsonRpcRequest,
-  messageHandler: (event: MessageEvent) => void,
-  responseTimeout?: number;
+  /** the message handler to use for incoming events */
+  messageHandler: EventSubscriptionHandler,
+  /** optional response timeout for new connections */
+  responseTimeout?: number,
 }): Promise<{ close?: () => Promise<void>, response: JsonRpcResponse, connection?: JsonRpcSocket }> {
   const { url, connection: incomingConnection, request, messageHandler, responseTimeout } = options;
   const connection = incomingConnection ?? await JsonRpcSocket.connect(url, { responseTimeout });
@@ -247,7 +259,7 @@ export async function subscriptionRequest(options: {
   };
 
   const { close, response } = await connection.subscribe(request, (response) => {
-    const { event } = response.result.reply;
+    const { event } = response.result;
     messageHandler(event);
   });
 

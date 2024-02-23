@@ -7,7 +7,7 @@ import { WebSocketServer } from 'ws';
 import type { JsonRpcId, JsonRpcRequest, JsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
 import { JsonRpcSocket } from '../src/json-rpc-socket.js';
-import { createJsonRpcRequest, createJsonRpcSubscribeRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
+import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcRequest, createJsonRpcSubscribeRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
 chai.use(chaiAsPromised);
 
@@ -80,6 +80,7 @@ describe('JsonRpcSocket', () => {
         }
       });
     });
+
     const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { responseTimeout: 5 });
     const requestId = uuidv4();
     const subscribeId = uuidv4();
@@ -126,9 +127,87 @@ describe('JsonRpcSocket', () => {
     await expect(receivedPromise).to.eventually.eql({ reply: { id: request.id }});
   });
 
+  it('closes subscription upon receiving a JsonRpc Error for a long running subscription', async () => {
+    let closed = true; 
+    wsServer.addListener('connection', (socket) => {
+      closed = false;
+      socket.on('message', (dataBuffer: Buffer) => {
+        const request = JSON.parse(dataBuffer.toString()) as JsonRpcRequest;
+        if (request.method.startsWith('rpc.subscribe') && request.method !== 'rpc.subscribe.close') {
+          // initial response 
+          const response = createJsonRpcSuccessResponse(request.id, { reply: {} })
+          socket.send(Buffer.from(JSON.stringify(response)));
+          const { subscribe } = request;
+
+          // send 1 valid message
+          const message1 = createJsonRpcSuccessResponse(subscribe.id, { message: 1 });
+          socket.send(Buffer.from(JSON.stringify(message1)));
+
+          // send a json rpc error
+          const jsonRpcError = createJsonRpcErrorResponse(subscribe.id, JsonRpcErrorCodes.InternalError, 'some error');
+          socket.send(Buffer.from(JSON.stringify(jsonRpcError)));
+
+          // send a 2nd message that shouldn't be handled
+          const message2 = createJsonRpcSuccessResponse(subscribe.id, { message: 2 });
+          socket.send(Buffer.from(JSON.stringify(message2)));
+        } else if (request.method === 'rpc.subscribe.close') {
+          closed = true;
+        }
+      });
+    });
+
+    const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { responseTimeout: 5 });
+    const requestId = uuidv4();
+    const subscribeId = uuidv4();
+    const request = createJsonRpcSubscribeRequest(
+      requestId,
+      'rpc.subscribe.test.method',
+      { param1: 'test-param1', param2: 'test-param2' },
+      subscribeId,
+    );
+
+    let responseCounter = 0;
+    let errorCounter = 0;
+    const responseListener = (response: JsonRpcSuccessResponse): void => {
+      expect(response.id).to.equal(subscribeId);
+      if (response.error) {
+        errorCounter++;
+      }
+
+      if (response.result) {
+        responseCounter++;
+      }
+    }
+
+    const subscription = await client.subscribe(request, responseListener);
+    expect(subscription.response.error).to.be.undefined;
+    // wait for the messages to arrive
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    // the original response 
+    expect(responseCounter).to.equal(1);
+    expect(errorCounter).to.equal(1);
+    expect(closed).to.equal(true);
+  });
+
+  it('only JSON RPC Methods prefixed with `rpc.subscribe.` are accepted for a subscription', async () => {
+    const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003');
+    const requestId = uuidv4();
+    const request = createJsonRpcRequest(requestId, 'test.method', { param1: 'test-param1', param2: 'test-param2' }); 
+    const subscribePromise = client.subscribe(request, () => {});
+    await expect(subscribePromise).to.eventually.be.rejectedWith('subscribe rpc requests must include the `rpc.subscribe` prefix');
+  });
+
+  it('subscribe methods must contain a subscribe object within the request which contains the subscription JsonRpcId', async () => {
+    const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003');
+    const requestId = uuidv4();
+    const request = createJsonRpcRequest(requestId, 'rpc.subscribe.test.method', { param1: 'test-param1', param2: 'test-param2' }); 
+    const subscribePromise = client.subscribe(request, () => {});
+    await expect(subscribePromise).to.eventually.be.rejectedWith('subscribe rpc requests must include subscribe options');
+  });
+
   xit('calls onerror handler', async () => {
   });
 
-  xit('calls onclose handler', async () => {
+  xit('calls onclose hanhler', async () => {
   });
 });

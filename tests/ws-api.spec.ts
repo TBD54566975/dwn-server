@@ -18,7 +18,7 @@ import {
 import { config } from '../src/config.js';
 import { WsApi } from '../src/ws-api.js';
 import { getTestDwn } from './test-dwn.js';
-import { createRecordsWriteMessage, sendWsMessage, sendHttpMessage, subscriptionRequest, sendWsRequest } from './utils.js';
+import { createRecordsWriteMessage, sendWsMessage, sendHttpMessage, subscribeToMessageEvents, sendWsRequest } from './utils.js';
 import { HttpApi } from '../src/http-api.js';
 
 
@@ -117,7 +117,7 @@ describe('websocket api', function () {
       target: alice.did,
     });
 
-    const { response, close } = await subscriptionRequest({
+    const { response, close } = await subscribeToMessageEvents({
       url            : 'ws://127.0.0.1:9002',
       request        : dwnRequest,
       messageHandler : subscriptionHandler
@@ -186,7 +186,7 @@ describe('websocket api', function () {
       target: alice.did,
     });
 
-    const { response, close } = await subscriptionRequest({
+    const { response, close } = await subscribeToMessageEvents({
       url            : 'ws://127.0.0.1:9002',
       request        : dwnRequest,
       messageHandler : subscriptionHandler
@@ -268,7 +268,7 @@ describe('websocket api', function () {
       target: alice.did
     }, subscribeId);
 
-    const { response, close, connection } = await subscriptionRequest({
+    const { response, close, connection } = await subscribeToMessageEvents({
       url            : 'ws://127.0.0.1:9002',
       request        : dwnRequest,
       messageHandler : subscriptionHandler
@@ -287,7 +287,7 @@ describe('websocket api', function () {
       target: alice.did
     }, subscribeId);
 
-    const { response: response2 } = await subscriptionRequest({
+    const { response: response2 } = await subscribeToMessageEvents({
       connection,
       request: dwnRequest2,
       messageHandler: subscriptionHandler,

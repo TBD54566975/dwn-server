@@ -127,11 +127,3 @@ export const createJsonRpcSuccessResponse = (
     result: result ?? null,
   };
 };
-
-export function parseJson(text: string): object | null {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}

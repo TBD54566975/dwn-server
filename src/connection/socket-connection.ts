@@ -148,7 +148,6 @@ export class SocketConnection {
         JsonRpcErrorCodes.BadRequest,
         (error as Error).message
       );
-
       return this.send(errorResponse);
     };
 
@@ -166,16 +165,10 @@ export class SocketConnection {
   }
 
   /**
-   * Sends a JSON encoded Buffer through the Websocket. Accepts a callback, if none is provided an error logger is used.
+   * Sends a JSON encoded Buffer through the Websocket.
    */
-  private send(response: JsonRpcResponse | JsonRpcErrorResponse, cb?: (error?: Error) => void): void {
-    if (!cb) {
-      cb = (error):void => {
-        if(error) { log.error('socket send error', error, response); }
-      }
-    }
-
-    this.socket.send(Buffer.from(JSON.stringify(response)), cb);
+  private send(response: JsonRpcResponse | JsonRpcErrorResponse): void {
+    this.socket.send(Buffer.from(JSON.stringify(response)));
   }
 
   /**
@@ -185,7 +178,7 @@ export class SocketConnection {
    */
   private createSubscriptionHandler(id: JsonRpcId): (message: MessageEvent) => void {
     return (event) => {
-      const response = createJsonRpcSuccessResponse(id, { reply: { event } });
+      const response = createJsonRpcSuccessResponse(id, { event });
       this.send(response);
     }
   }

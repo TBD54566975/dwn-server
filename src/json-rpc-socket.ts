@@ -2,7 +2,7 @@ import log from 'loglevel';
 import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 
-import type { JsonRpcRequest, JsonRpcResponse } from "./lib/json-rpc.js";
+import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from "./lib/json-rpc.js";
 import { createJsonRpcSubscribeRequest } from "./lib/json-rpc.js";
 
 // These were arbitrarily chosen, but can be modified via connect options
@@ -89,7 +89,7 @@ export class JsonRpcSocket {
    * Sends a JSON-RPC request through the socket and keeps a listener open to read associated responses as they arrive.
    * Returns a close method to clean up the listener.
    */
-  async subscribe(request: JsonRpcRequest, listener: (response: JsonRpcResponse) => void): Promise<{ 
+  async subscribe(request: JsonRpcRequest, listener: (response: JsonRpcResponse) => void): Promise<{
     response: JsonRpcResponse;
     close?: () => Promise<void>;
    }> {
@@ -109,8 +109,8 @@ export class JsonRpcSocket {
         if (jsonRpcResponse.error !== undefined) {
           // remove the event listener upon receipt of a JSON RPC Error.
           this.socket.removeEventListener('message', messageHandler);
+          this.closeSubscription(subscriptionId);
         }
-
         listener(jsonRpcResponse);
       }
     };
@@ -125,12 +125,7 @@ export class JsonRpcSocket {
     // clean up listener and create a `rpc.subscribe.close` message to use when closing this JSON RPC subscription
     const close = async (): Promise<void> => {
       this.socket.removeEventListener('message', messageHandler);
-      const requestId = uuidv4();
-      const request = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.close', {}, subscriptionId)
-      const response = await this.request(request);
-      if (response.error) {
-        throw response.error;
-      }
+      await this.closeSubscription(subscriptionId);
     }
 
     return {
@@ -139,11 +134,16 @@ export class JsonRpcSocket {
     }
   }
 
+  private closeSubscription(id: JsonRpcId): Promise<JsonRpcResponse> {
+    const requestId = uuidv4();
+    const request = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.close', {}, id);
+    return this.request(request);
+  }
+
   /**
    * Sends a JSON-RPC request through the socket. You must subscribe to a message listener separately to capture the response.
    */
   send(request: JsonRpcRequest):void {
     this.socket.send(Buffer.from(JSON.stringify(request)));
-    return;
   }
 }

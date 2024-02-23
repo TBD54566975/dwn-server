@@ -1,4 +1,4 @@
-import type { Dwn, MessageEvent } from '@tbd54566975/dwn-sdk-js';
+import type { Dwn, EventSubscriptionHandler } from '@tbd54566975/dwn-sdk-js';
 
 import type { Readable } from 'node:stream';
 
@@ -13,7 +13,7 @@ export type RequestContext = {
     /** The JsonRpcId of the subscription handler */
     id: JsonRpcId; 
     /** The `MessageEvent` handler associated with a subscription request, only used in `ws` requests */
-    subscriptionHandler: (message: MessageEvent) => void;
+    subscriptionHandler: EventSubscriptionHandler;
   }
   /** The `Readable` stream associated with a `RecordsWrite` request only used in `http` requests */
   dataStream?: Readable;

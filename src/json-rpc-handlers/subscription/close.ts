@@ -25,6 +25,16 @@ export const handleSubscriptionsClose: JsonRpcHandler = async (
   context,
 ) => {
   const requestId = dwnRequest.id ?? uuidv4();
+  if (context.socketConnection === undefined) {
+    const jsonRpcResponse = createJsonRpcErrorResponse(requestId, JsonRpcErrorCodes.InvalidRequest, 'socket connection does not exist');
+    return { jsonRpcResponse };
+  }
+
+  if (dwnRequest.subscribe === undefined) {
+    const jsonRpcResponse = createJsonRpcErrorResponse(requestId, JsonRpcErrorCodes.InvalidRequest, 'subscribe options do not exist');
+    return { jsonRpcResponse };
+  }
+
   const { socketConnection } = context;
   const { id } = dwnRequest.subscribe as { id: JsonRpcId };
 
