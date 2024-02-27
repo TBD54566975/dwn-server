@@ -18,8 +18,6 @@ export interface JsonRpcSocketOptions {
   onclose?: () => void;
   /** optional socket error handler */
   onerror?: (error?: any) => void;
-  /** optional already connected socket to inject */
-  socket?: WebSocket;
 }
 
 /**
