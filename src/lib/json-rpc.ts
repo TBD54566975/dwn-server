@@ -1,18 +1,27 @@
 export type JsonRpcId = string | number | null;
-export type JsonRpcParams = any;
 export type JsonRpcVersion = '2.0';
 
 export interface JsonRpcRequest {
   jsonrpc: JsonRpcVersion;
   id?: JsonRpcId;
   method: string;
-  params?: JsonRpcParams;
+  params?: any;
+  /** JSON RPC Subscription Extension Parameters */
+  subscription?: {
+    id: JsonRpcId
+  };
 }
 
 export interface JsonRpcError {
   code: JsonRpcErrorCodes;
   message: string;
   data?: any;
+}
+
+export interface JsonRpcSubscription {
+  /** JSON RPC Id of the Subscription Request */
+  id: JsonRpcId;
+  close: () => Promise<void>;
 }
 
 export enum JsonRpcErrorCodes {
@@ -23,10 +32,12 @@ export enum JsonRpcErrorCodes {
   InternalError = -32603,
   ParseError = -32700,
 
-  // App defined errors
-  BadRequest = -50400, // equivalent to HTTP Status 400
-  Unauthorized = -50401, // equivalent to HTTP Status 401
-  Forbidden = -50403, // equivalent to HTTP Status 403
+  /** App defined error equivalent to HTTP Status 400 */
+  BadRequest = -50400,
+  /** App defined error equivalent to HTTP Status 401 */
+  Unauthorized = -50401,
+  /** App defined error equivalent to HTTP Status 403 */
+  Forbidden = -50403,
 }
 
 export type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse;
@@ -35,7 +46,7 @@ export interface JsonRpcSuccessResponse {
   jsonrpc: JsonRpcVersion;
   id: JsonRpcId;
   result: any;
-  error?: undefined;
+  error?: never;
 }
 
 export interface JsonRpcErrorResponse {
@@ -64,7 +75,7 @@ export const createJsonRpcErrorResponse = (
 
 export const createJsonRpcNotification = (
   method: string,
-  params?: JsonRpcParams,
+  params?: any,
 ): JsonRpcRequest => {
   return {
     jsonrpc: '2.0',
@@ -73,10 +84,27 @@ export const createJsonRpcNotification = (
   };
 };
 
+export const createJsonRpcSubscriptionRequest = (
+  id: JsonRpcId,
+  method: string,
+  params?: any,
+  subscriptionId?: JsonRpcId
+): JsonRpcRequest => {
+  return {
+    jsonrpc: '2.0',
+    id,
+    method,
+    params,
+    subscription: {
+      id: subscriptionId,
+    }
+  }
+}
+
 export const createJsonRpcRequest = (
   id: JsonRpcId,
   method: string,
-  params?: JsonRpcParams,
+  params?: any,
 ): JsonRpcRequest => {
   return {
     jsonrpc: '2.0',
@@ -96,11 +124,3 @@ export const createJsonRpcSuccessResponse = (
     result: result ?? null,
   };
 };
-
-export function parseJson(text: string): object | null {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}

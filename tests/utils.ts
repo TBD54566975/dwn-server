@@ -1,13 +1,18 @@
-import type { Persona } from '@tbd54566975/dwn-sdk-js';
+import type { GenericMessage, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import type { ReadStream } from 'node:fs';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import fetch from 'node-fetch';
 import type { Readable } from 'readable-stream';
 import { fileURLToPath } from 'url';
 import { WebSocket } from 'ws';
+
+import type { JsonRpcResponse } from '../src/lib/json-rpc.js';
+import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 
 // __filename and __dirname are not defined in ES module scope
 const __filename = fileURLToPath(import.meta.url);
@@ -137,6 +142,65 @@ export function streamHttpRequest(
 
     bodyStream.pipe(request);
   });
+}
+
+export async function sendHttpMessage(options: {
+  url: string,
+  target: string,
+  message: GenericMessage,
+  data?: any,
+}): Promise<UnionMessageReply> {
+  const { url, target, message, data } = options;
+  // First RecordsWrite that creates the record.
+  const requestId = uuidv4();
+  const jsonRpcRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+    target,
+    message,
+  });
+
+  const fetchOpts = {
+    method  : 'POST',
+    headers : {
+      'dwn-request': JSON.stringify(jsonRpcRequest)
+    }
+  };
+
+  if (data !== undefined) {
+    fetchOpts.headers['content-type'] = 'application/octet-stream';
+    fetchOpts['body'] = data;
+  }
+
+  const resp = await fetch(url, fetchOpts);
+  let dwnRpcResponse: JsonRpcResponse;
+
+  // check to see if response is in header first. if it is, that means the response is a ReadableStream
+  let dataStream;
+  const { headers } = resp;
+  if (headers.has('dwn-response')) {
+    const jsonRpcResponse = JSON.parse(headers.get('dwn-response')) as JsonRpcResponse;
+
+    if (jsonRpcResponse == null) {
+      throw new Error(`failed to parse json rpc response. dwn url: ${url}`);
+    }
+
+    dataStream = resp.body;
+    dwnRpcResponse = jsonRpcResponse;
+  } else {
+    const responseBody = await resp.text();
+    dwnRpcResponse = JSON.parse(responseBody);
+  }
+
+  if (dwnRpcResponse.error) {
+    const { code, message } = dwnRpcResponse.error;
+    throw new Error(`(${code}) - ${message}`);
+  }
+
+  const { reply } = dwnRpcResponse.result;
+  if (dataStream) {
+    reply['record']['data'] = dataStream;
+  }
+
+  return reply as UnionMessageReply;
 }
 
 export async function sendWsMessage(

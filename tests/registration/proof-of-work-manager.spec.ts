@@ -46,8 +46,8 @@ describe('ProofOfWorkManager', function () {
       }
     };
 
-    const challengeNonceRefreshSpy = sinon.stub(proofOfWorkManager, 'refreshChallengeNonce').callsFake(stub);
-    const maximumAllowedHashValueRefreshSpy = sinon.stub(proofOfWorkManager, 'refreshMaximumAllowedHashValue').callsFake(stub);
+    const challengeNonceRefreshSpy = sinon.stub(proofOfWorkManager as any, 'refreshChallengeNonce').callsFake(stub);
+    const maximumAllowedHashValueRefreshSpy = sinon.stub(proofOfWorkManager as any, 'refreshMaximumAllowedHashValue').callsFake(stub);
 
     clock.tick(60 * 60 * 1000);
 

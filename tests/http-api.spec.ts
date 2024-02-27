@@ -62,7 +62,7 @@ describe('http api', function () {
     const proofOfWorkInitialMaximumAllowedHash = config.registrationProofOfWorkInitialMaxHash;
     registrationManager = await RegistrationManager.create({ registrationStoreUrl, termsOfServiceFilePath, proofOfWorkInitialMaximumAllowedHash });
 
-    dwn = await getTestDwn(registrationManager);
+    dwn = await getTestDwn({ tenantGate: registrationManager });
 
     httpApi = new HttpApi(config, dwn, registrationManager);
 

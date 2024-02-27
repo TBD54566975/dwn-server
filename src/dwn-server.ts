@@ -1,4 +1,5 @@
-import { Dwn } from '@tbd54566975/dwn-sdk-js';
+import type { EventStream } from '@tbd54566975/dwn-sdk-js';
+import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
 
 import type { Server } from 'http';
 import log from 'loglevel';
@@ -39,10 +40,9 @@ export class DwnServer {
     prefix.apply(log);
   }
 
-  async start(callback?: () => void): Promise<void> {
+  async start(): Promise<void> {
     await this.#setupServer();
     setProcessHandlers(this);
-    callback?.();
   }
 
   /**
@@ -61,7 +61,17 @@ export class DwnServer {
         proofOfWorkInitialMaximumAllowedHash: this.config.registrationProofOfWorkInitialMaxHash,
       });
 
-      this.dwn = await Dwn.create(getDWNConfig(this.config, registrationManager));
+      let eventStream: EventStream | undefined;
+      if (this.config.webSocketServerEnabled) {
+        // setting `EventEmitterStream` as default the default `EventStream
+        // if an alternate implementation is needed, instantiate a `Dwn` with a custom `EventStream` and add it to server options. 
+        eventStream = new EventEmitterStream();
+      }
+
+      this.dwn = await Dwn.create(getDWNConfig(this.config, {
+        tenantGate: registrationManager,
+        eventStream,
+      }));
     }
 
     this.#httpApi = new HttpApi(this.config, this.dwn, registrationManager);
@@ -76,7 +86,8 @@ export class DwnServer {
 
     if (this.config.webSocketServerEnabled) {
       this.#wsApi = new WsApi(this.#httpApi.server, this.dwn);
-      this.#wsApi.start(() => log.info(`WebSocketServer ready...`));
+      this.#wsApi.start();
+      log.info('WebSocketServer ready...');
     }
   }
 
@@ -88,8 +99,8 @@ export class DwnServer {
     return this.#httpApi.server;
   }
 
-  get wsServer(): WebSocketServer {
-    return this.#wsApi.server;
+  get wsServer(): WebSocketServer | undefined {
+    return this.#wsApi?.server;
   }
 
   /**

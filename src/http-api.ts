@@ -17,7 +17,7 @@ import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js
 import type { DwnServerConfig } from './config.js';
 import { config } from './config.js';
 import { type DwnServerError } from './dwn-error.js';
-import { jsonRpcApi } from './json-rpc-api.js';
+import { jsonRpcRouter } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
 import type { RegistrationManager } from './registration/registration-manager.js';
 
@@ -30,7 +30,7 @@ export class HttpApi {
   registrationManager: RegistrationManager;
   dwn: Dwn;
 
-  constructor(config: DwnServerConfig, dwn: Dwn, registrationManager: RegistrationManager) {
+  constructor(config: DwnServerConfig, dwn: Dwn, registrationManager?: RegistrationManager) {
     console.log(config);
 
     this.#config = config;
@@ -149,7 +149,7 @@ export class HttpApi {
         transport  : 'http',
         dataStream : requestDataStream,
       };
-      const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcApi.handle(dwnRpcRequest, requestContext as RequestContext);
+      const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcRouter.handle(dwnRpcRequest, requestContext as RequestContext);
 
       // If the handler catches a thrown exception and returns a JSON RPC InternalError, return the equivalent
       // HTTP 500 Internal Server Error with the response.
