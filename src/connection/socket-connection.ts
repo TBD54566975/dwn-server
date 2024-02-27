@@ -129,12 +129,8 @@ export class SocketConnection {
    */
   private async error(error:Error): Promise<void>{
     log.error(`SocketConnection error, terminating connection`, error);
-    try {
-      this.socket.terminate();
-      await this.close();
-    } catch(error) {
-      console.log('error within error call');
-    }
+    this.socket.terminate();
+    await this.close();
   }
 
   /**
