@@ -64,6 +64,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
 
     // if this is a subscription request, we first check if the connection has a subscription with this Id
     // we do this ahead of time to prevent opening a subscription on the dwn only to close it after attempting to add it to the subscription manager
+    // otherwise the subscription manager would throw an error that the Id is already in use and we would close the open subscription on the DWN.
     if (subscriptionRequest !== undefined && socketConnection?.hasSubscription(subscriptionRequest.id)) {
       const jsonRpcResponse = createJsonRpcErrorResponse(
         requestId,
