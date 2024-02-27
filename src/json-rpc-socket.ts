@@ -29,7 +29,7 @@ export class JsonRpcSocket {
   static async connect(url: string, options: JsonRpcSocketOptions = {}): Promise<JsonRpcSocket> {
     const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT, onclose, onerror } = options;
 
-    const socket = new WebSocket(url);
+    const socket = new WebSocket(url, { timeout: connectTimeout });
 
     socket.onclose = onclose;
     socket.onerror = onerror;

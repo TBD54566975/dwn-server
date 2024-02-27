@@ -1,12 +1,11 @@
 export type JsonRpcId = string | number | null;
-export type JsonRpcParams = any;
 export type JsonRpcVersion = '2.0';
 
 export interface JsonRpcRequest {
   jsonrpc: JsonRpcVersion;
   id?: JsonRpcId;
   method: string;
-  params?: JsonRpcParams;
+  params?: any;
   /** JSON RPC Subscription Extension Parameters */
   subscription?: {
     id: JsonRpcId
@@ -76,7 +75,7 @@ export const createJsonRpcErrorResponse = (
 
 export const createJsonRpcNotification = (
   method: string,
-  params?: JsonRpcParams,
+  params?: any,
 ): JsonRpcRequest => {
   return {
     jsonrpc: '2.0',
@@ -88,7 +87,7 @@ export const createJsonRpcNotification = (
 export const createJsonRpcSubscriptionRequest = (
   id: JsonRpcId,
   method: string,
-  params?: JsonRpcParams,
+  params?: any,
   subscriptionId?: JsonRpcId
 ): JsonRpcRequest => {
   return {
@@ -105,7 +104,7 @@ export const createJsonRpcSubscriptionRequest = (
 export const createJsonRpcRequest = (
   id: JsonRpcId,
   method: string,
-  params?: JsonRpcParams,
+  params?: any,
 ): JsonRpcRequest => {
   return {
     jsonrpc: '2.0',

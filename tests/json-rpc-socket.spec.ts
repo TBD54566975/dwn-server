@@ -234,7 +234,9 @@ describe('JsonRpcSocket', () => {
     const onErrorHandler = { onerror: ():void => {} };
     const onErrorSpy = sinon.spy(onErrorHandler, 'onerror');
 
-    await JsonRpcSocket.connect('ws://127.0.0.1:9003', { onerror: onErrorHandler.onerror });
+    await JsonRpcSocket.connect('ws://127.0.0.1:9003', { onerror: onErrorHandler.onerror, connectTimeout: 1 });
+    // const serverSocket = [...wsServer.clients][0];
+    // serverSocket.emit('error', { type: 'error', target: null, message: 'unknown error' });
 
     await new Promise((resolve) => setTimeout(resolve, 5)); // wait for close event to arrive
     expect(onErrorSpy.callCount).to.equal(1, 'error');
