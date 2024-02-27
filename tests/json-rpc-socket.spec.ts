@@ -9,6 +9,7 @@ import type { JsonRpcId, JsonRpcRequest, JsonRpcSuccessResponse } from '../src/l
 
 import { JsonRpcSocket } from '../src/json-rpc-socket.js';
 import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcRequest, createJsonRpcSubscriptionRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
+import log from 'loglevel';
 
 chai.use(chaiAsPromised);
 
@@ -207,6 +208,7 @@ describe('JsonRpcSocket', () => {
   });
 
   it('calls onclose handler', async () => {
+    // test injected handler
     const onCloseHandler = { onclose: ():void => {} };
     const onCloseSpy = sinon.spy(onCloseHandler, 'onclose');
     const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { onclose: onCloseHandler.onclose });
@@ -214,6 +216,18 @@ describe('JsonRpcSocket', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 5)); // wait for close event to arrive
     expect(onCloseSpy.callCount).to.equal(1);
+
+    // test default logger
+    const logInfoSpy = sinon.spy(log, 'info');
+    const defaultClient = await JsonRpcSocket.connect('ws://127.0.0.1:9003');
+    defaultClient.close();
+
+    await new Promise((resolve) => setTimeout(resolve, 5)); // wait for close event to arrive
+    expect(logInfoSpy.callCount).to.equal(1);
+
+    // extract log message from argument
+    const logMessage:string = logInfoSpy.args[0][0]!;
+    expect(logMessage).to.equal('JSON RPC Socket close ws://127.0.0.1:9003');
   });
 
   xit('calls onerror handler', async () => {

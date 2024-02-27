@@ -18,6 +18,8 @@ export interface JsonRpcSocketOptions {
   onclose?: () => void;
   /** optional socket error handler */
   onerror?: (error?: any) => void;
+  /** optional already connected socket to inject */
+  socket?: WebSocket;
 }
 
 /**
@@ -34,13 +36,13 @@ export class JsonRpcSocket {
     socket.onclose = onclose;
     socket.onerror = onerror;
 
-    if (socket.onclose === undefined) {
+    if (!socket.onclose) {
       socket.onclose = ():void => {
         log.info(`JSON RPC Socket close ${url}`);
       }
     }
 
-    if (socket.onerror === undefined) {
+    if (!socket.onerror) {
       socket.onerror = (error?: any):void => {
         log.error(`JSON RPC Socket error ${url}`, error);
       }
