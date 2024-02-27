@@ -73,10 +73,10 @@ describe('JsonRpcSocket', () => {
         // initial response 
         const response = createJsonRpcSuccessResponse(request.id, { reply: {} })
         socket.send(Buffer.from(JSON.stringify(response)));
-        const { subscribe } = request;
+        const { subscription } = request;
         // send 3 messages
         for (let i = 0; i < 3; i++) {
-          const response = createJsonRpcSuccessResponse(subscribe.id, { count: i });
+          const response = createJsonRpcSuccessResponse(subscription.id, { count: i });
           socket.send(Buffer.from(JSON.stringify(response)));
         }
       });
@@ -138,18 +138,18 @@ describe('JsonRpcSocket', () => {
           // initial response 
           const response = createJsonRpcSuccessResponse(request.id, { reply: {} })
           socket.send(Buffer.from(JSON.stringify(response)));
-          const { subscribe } = request;
+          const { subscription } = request;
 
           // send 1 valid message
-          const message1 = createJsonRpcSuccessResponse(subscribe.id, { message: 1 });
+          const message1 = createJsonRpcSuccessResponse(subscription.id, { message: 1 });
           socket.send(Buffer.from(JSON.stringify(message1)));
 
           // send a json rpc error
-          const jsonRpcError = createJsonRpcErrorResponse(subscribe.id, JsonRpcErrorCodes.InternalError, 'some error');
+          const jsonRpcError = createJsonRpcErrorResponse(subscription.id, JsonRpcErrorCodes.InternalError, 'some error');
           socket.send(Buffer.from(JSON.stringify(jsonRpcError)));
 
           // send a 2nd message that shouldn't be handled
-          const message2 = createJsonRpcSuccessResponse(subscribe.id, { message: 2 });
+          const message2 = createJsonRpcSuccessResponse(subscription.id, { message: 2 });
           socket.send(Buffer.from(JSON.stringify(message2)));
         } else if (request.method === 'rpc.subscribe.close') {
           closed = true;

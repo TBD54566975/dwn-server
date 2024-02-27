@@ -99,11 +99,11 @@ export class JsonRpcSocket {
       throw new Error('subscribe rpc requests must include the `rpc.subscribe` prefix');
     }
 
-    if (!request.subscribe) {
+    if (!request.subscription) {
       throw new Error('subscribe rpc requests must include subscribe options');
     }
 
-    const subscriptionId = request.subscribe.id;
+    const subscriptionId = request.subscription.id;
     const messageHandler = (event: { data: any }):void => {
       const jsonRpcResponse = JSON.parse(event.data.toString()) as JsonRpcResponse;
       if (jsonRpcResponse.id === subscriptionId) {

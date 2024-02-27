@@ -9,7 +9,7 @@ import type { RequestContext } from "../lib/json-rpc-router.js";
 import type { JsonRpcErrorResponse, JsonRpcId, JsonRpcRequest, JsonRpcResponse, JsonRpcSubscription } from "../lib/json-rpc.js";
 
 import { requestCounter } from "../metrics.js";
-import { jsonRpcApi } from "../json-rpc-api.js";
+import { jsonRpcRouter } from "../json-rpc-api.js";
 import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcSuccessResponse } from "../lib/json-rpc.js";
 import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 
@@ -163,7 +163,7 @@ export class SocketConnection {
     };
 
     const requestContext = await this.buildRequestContext(jsonRequest);
-    const { jsonRpcResponse } = await jsonRpcApi.handle(jsonRequest, requestContext);
+    const { jsonRpcResponse } = await jsonRpcRouter.handle(jsonRequest, requestContext);
     if (jsonRpcResponse.error) {
       requestCounter.inc({ method: jsonRequest.method, error: 1 });
     } else {
@@ -200,7 +200,7 @@ export class SocketConnection {
    * Adds a `subscriptionHandler` for `Subscribe` messages.
    */
   private async buildRequestContext(request: JsonRpcRequest): Promise<RequestContext> {
-    const { params, method, subscribe } = request;
+    const { params, method, subscription } = request;
 
     const requestContext: RequestContext = {
       transport        : 'ws',
@@ -209,12 +209,12 @@ export class SocketConnection {
     }
 
     // methods that expect a long-running subscription begin with `rpc.subscribe.`
-    if (method.startsWith('rpc.subscribe.') && subscribe) {
+    if (method.startsWith('rpc.subscribe.') && subscription) {
       const { message } = params as { message?: GenericMessage };
       if (message?.descriptor.method === DwnMethodName.Subscribe) {
-        const handlerFunc = this.createSubscriptionHandler(subscribe.id);
+        const handlerFunc = this.createSubscriptionHandler(subscription.id);
         requestContext.subscriptionRequest = {
-          id: subscribe.id,
+          id: subscription.id,
           subscriptionHandler: (message): void => handlerFunc(message),
         }
       }

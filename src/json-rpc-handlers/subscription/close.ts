@@ -16,27 +16,27 @@ import {
 /**
  * Closes a subscription tied to a specific `SocketConnection`.
  *
- * @param dwnRequest must include JsonRpcId of the subscription request within the `params`.
+ * @param jsonRpcRequest must include JsonRpcId of the subscription request within a `subscription object`.
  * @param context must include the associated `SocketConnection`.
  *
  */
 export const handleSubscriptionsClose: JsonRpcHandler = async (
-  dwnRequest,
+  jsonRpcRequest,
   context,
 ) => {
-  const requestId = dwnRequest.id ?? uuidv4();
+  const requestId = jsonRpcRequest.id ?? uuidv4();
   if (context.socketConnection === undefined) {
     const jsonRpcResponse = createJsonRpcErrorResponse(requestId, JsonRpcErrorCodes.InvalidRequest, 'socket connection does not exist');
     return { jsonRpcResponse };
   }
 
-  if (dwnRequest.subscribe === undefined) {
+  if (jsonRpcRequest.subscription === undefined) {
     const jsonRpcResponse = createJsonRpcErrorResponse(requestId, JsonRpcErrorCodes.InvalidRequest, 'subscribe options do not exist');
     return { jsonRpcResponse };
   }
 
   const { socketConnection } = context;
-  const { id } = dwnRequest.subscribe as { id: JsonRpcId };
+  const { id } = jsonRpcRequest.subscription as { id: JsonRpcId };
 
   let jsonRpcResponse:JsonRpcResponse;
   try {
