@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import {
   createJsonRpcRequest,
-  createJsonRpcSubscribeRequest,
+  createJsonRpcSubscriptionRequest,
   JsonRpcErrorCodes,
 } from '../src/lib/json-rpc.js';
 import { config } from '../src/config.js';
@@ -112,7 +112,7 @@ describe('websocket api', function () {
     };
 
     const requestId = uuidv4();
-    const dwnRequest = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
+    const dwnRequest = createJsonRpcSubscriptionRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
       message: message,
       target: alice.did,
     });
@@ -183,7 +183,7 @@ describe('websocket api', function () {
 
     const requestId = uuidv4();
     const subscribeId = uuidv4();
-    const dwnRequest = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
+    const dwnRequest = createJsonRpcSubscriptionRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
       message: message,
       target: alice.did,
     }, subscribeId);
@@ -266,7 +266,7 @@ describe('websocket api', function () {
 
     const requestId = uuidv4();
     const subscribeId = uuidv4();
-    const dwnRequest = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
+    const dwnRequest = createJsonRpcSubscriptionRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
       message: message,
       target: alice.did
     }, subscribeId);
@@ -281,7 +281,7 @@ describe('websocket api', function () {
 
     // We are checking for the subscription Id not the request Id
     const request2Id = uuidv4();
-    const dwnRequest2 = createJsonRpcSubscribeRequest(request2Id, 'rpc.subscribe.dwn.processMessage', {
+    const dwnRequest2 = createJsonRpcSubscriptionRequest(request2Id, 'rpc.subscribe.dwn.processMessage', {
       message: message2,
       target: alice.did
     }, subscribeId);
@@ -369,7 +369,7 @@ describe('websocket api', function () {
 
     const requestId = uuidv4();
     const subscribeId = uuidv4();
-    const dwnRequest = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
+    const dwnRequest = createJsonRpcSubscriptionRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
       message: message,
       target: alice.did
     }, subscribeId);

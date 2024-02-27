@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 
 import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from "./lib/json-rpc.js";
-import { createJsonRpcSubscribeRequest } from "./lib/json-rpc.js";
+import { createJsonRpcSubscriptionRequest } from "./lib/json-rpc.js";
 
 // These were arbitrarily chosen, but can be modified via connect options
 const CONNECT_TIMEOUT = 3_000;
@@ -104,28 +104,28 @@ export class JsonRpcSocket {
     }
 
     const subscriptionId = request.subscription.id;
-    const messageHandler = (event: { data: any }):void => {
+    const socketEventListener = (event: { data: any }):void => {
       const jsonRpcResponse = JSON.parse(event.data.toString()) as JsonRpcResponse;
       if (jsonRpcResponse.id === subscriptionId) {
         if (jsonRpcResponse.error !== undefined) {
           // remove the event listener upon receipt of a JSON RPC Error.
-          this.socket.removeEventListener('message', messageHandler);
+          this.socket.removeEventListener('message', socketEventListener);
           this.closeSubscription(subscriptionId);
         }
         listener(jsonRpcResponse);
       }
     };
-    this.socket.addEventListener('message', messageHandler);
+    this.socket.addEventListener('message', socketEventListener);
 
     const response = await this.request(request);
     if (response.error) {
-      this.socket.removeEventListener('message', messageHandler);
+      this.socket.removeEventListener('message', socketEventListener);
       return { response }
     }
 
     // clean up listener and create a `rpc.subscribe.close` message to use when closing this JSON RPC subscription
     const close = async (): Promise<void> => {
-      this.socket.removeEventListener('message', messageHandler);
+      this.socket.removeEventListener('message', socketEventListener);
       await this.closeSubscription(subscriptionId);
     }
 
@@ -137,7 +137,7 @@ export class JsonRpcSocket {
 
   private closeSubscription(id: JsonRpcId): Promise<JsonRpcResponse> {
     const requestId = uuidv4();
-    const request = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.close', {}, id);
+    const request = createJsonRpcSubscriptionRequest(requestId, 'rpc.subscribe.close', {}, id);
     return this.request(request);
   }
 

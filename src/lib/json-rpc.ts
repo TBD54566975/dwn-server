@@ -85,7 +85,7 @@ export const createJsonRpcNotification = (
   };
 };
 
-export const createJsonRpcSubscribeRequest = (
+export const createJsonRpcSubscriptionRequest = (
   id: JsonRpcId,
   method: string,
   params?: JsonRpcParams,

@@ -8,7 +8,7 @@ import { WebSocketServer } from 'ws';
 import type { JsonRpcId, JsonRpcRequest, JsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
 import { JsonRpcSocket } from '../src/json-rpc-socket.js';
-import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcRequest, createJsonRpcSubscribeRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
+import { JsonRpcErrorCodes, createJsonRpcErrorResponse, createJsonRpcRequest, createJsonRpcSubscriptionRequest, createJsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
 
 chai.use(chaiAsPromised);
 
@@ -85,7 +85,7 @@ describe('JsonRpcSocket', () => {
     const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { responseTimeout: 5 });
     const requestId = uuidv4();
     const subscribeId = uuidv4();
-    const request = createJsonRpcSubscribeRequest(
+    const request = createJsonRpcSubscriptionRequest(
       requestId,
       'rpc.subscribe.test.method',
       { param1: 'test-param1', param2: 'test-param2' },
@@ -160,7 +160,7 @@ describe('JsonRpcSocket', () => {
     const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { responseTimeout: 5 });
     const requestId = uuidv4();
     const subscribeId = uuidv4();
-    const request = createJsonRpcSubscribeRequest(
+    const request = createJsonRpcSubscriptionRequest(
       requestId,
       'rpc.subscribe.test.method',
       { param1: 'test-param1', param2: 'test-param2' },
