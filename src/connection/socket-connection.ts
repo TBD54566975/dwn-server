@@ -26,7 +26,8 @@ export class SocketConnection {
 
   constructor(
     private socket: WebSocket,
-    private dwn: Dwn
+    private dwn: Dwn,
+    private onClose?: () => void
   ){
     socket.on('message', this.message.bind(this));
     socket.on('close', this.close.bind(this));
@@ -93,6 +94,7 @@ export class SocketConnection {
    */
   async close(): Promise<void> {
     clearInterval(this.heartbeatInterval);
+
     // clean up all socket event listeners
     this.socket.removeAllListeners();
 
@@ -107,6 +109,11 @@ export class SocketConnection {
 
     // close the socket.
     this.socket.close();
+
+    // if there was a close handler passed call it after the connection has been closed
+    if (this.onClose !== undefined) {
+      this.onClose();
+    }
   }
 
   /**
@@ -122,8 +129,12 @@ export class SocketConnection {
    */
   private async error(error:Error): Promise<void>{
     log.error(`SocketConnection error, terminating connection`, error);
-    this.socket.terminate();
-    await this.close();
+    try {
+      this.socket.terminate();
+      await this.close();
+    } catch(error) {
+      console.log('error within error call');
+    }
   }
 
   /**
@@ -197,6 +208,7 @@ export class SocketConnection {
       socketConnection : this,
     }
 
+    // methods that expect a long-running subscription begin with `rpc.subscribe.`
     if (method.startsWith('rpc.subscribe.') && subscribe) {
       const { message } = params as { message?: GenericMessage };
       if (message?.descriptor.method === DwnMethodName.Subscribe) {

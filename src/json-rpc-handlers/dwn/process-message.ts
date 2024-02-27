@@ -62,6 +62,8 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       return { jsonRpcResponse };
     }
 
+    // if this is a subscription request, we first check if the connection has a subscription with this Id
+    // we do this ahead of time to prevent opening a subscription on the dwn only to close it after attempting to add it to the subscription manager
     if (subscriptionRequest !== undefined && socketConnection?.hasSubscription(subscriptionRequest.id)) {
       const jsonRpcResponse = createJsonRpcErrorResponse(
         requestId,
@@ -84,9 +86,9 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       delete reply.record.data; // not serializable via JSON
     }
 
-    // Subscribe messages return a close function to facilitate closing the subscription
     if (subscriptionRequest && reply.subscription) {
       const { close } = reply.subscription;
+      // Subscribe messages return a close function to facilitate closing the subscription
       // we add a reference to the close function for this subscription request to the socket connection.
       // this will facilitate closing the subscription later.
       const subscriptionReply: JsonRpcSubscription = {
@@ -111,8 +113,8 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       e.message,
     );
 
-    // log the error response
-    log.error('handleDwnProcessMessage error', jsonRpcResponse);
+    // log the unhandled error response
+    log.error('handleDwnProcessMessage error', jsonRpcResponse, e);
     return { jsonRpcResponse } as HandlerResponse;
   }
 };

@@ -331,4 +331,81 @@ describe('websocket api', function () {
       await Message.getCid(write2Message.message)
     ]);
   });
+
+  it('should receive an updated message as well as the initial write when subscribing to a record', async () => {
+    const alice = await TestDataGenerator.generateDidKeyPersona();
+
+    // write an initial message
+    const initialWrite = await TestDataGenerator.generateRecordsWrite({
+      author     : alice,
+      schema     : 'foo/bar',
+      dataFormat : 'text/plain'
+    });
+
+    const writeResult1 = await sendHttpMessage({
+      url       : 'http://localhost:9002',
+      target    : alice.did,
+      message   : initialWrite.message,
+      data      : initialWrite.dataBytes,
+    });
+    expect(writeResult1.status.code).to.equal(202);
+
+    // subscribe to 'foo/bar' messages
+    const { message } = await TestDataGenerator.generateRecordsSubscribe({
+      author: alice,
+      filter: {
+        schema: 'foo/bar'
+      }
+    });
+
+    const records: string[] = [];
+    const subscriptionHandler = async (event: MessageEvent): Promise<void> => {
+      const { message, initialWrite } = event
+      if (initialWrite)  {
+        records.push(await Message.getCid(initialWrite));
+      }
+      records.push(await Message.getCid(message));
+    };
+
+    const requestId = uuidv4();
+    const subscribeId = uuidv4();
+    const dwnRequest = createJsonRpcSubscribeRequest(requestId, 'rpc.subscribe.dwn.processMessage', {
+      message: message,
+      target: alice.did
+    }, subscribeId);
+
+    const connection = await JsonRpcSocket.connect('ws://127.0.0.1:9002');
+    const { close } = await connection.subscribe(dwnRequest, (response) => {
+      const { event } = response.result;
+      subscriptionHandler(event);
+    });
+
+    // wait for potential records to process and confirm that initial write has not been processed
+    await new Promise(resolve => setTimeout(resolve, 5));
+    expect(records.length).length.to.equal(0);
+
+    // update the initial message
+    const updatedMessage = await TestDataGenerator.generateFromRecordsWrite({
+      author        : alice,
+      existingWrite : initialWrite.recordsWrite,
+    });
+
+    const updateResult = await sendHttpMessage({
+      url       : 'http://localhost:9002',
+      target    : alice.did,
+      message   : updatedMessage.message,
+      data      : updatedMessage.dataBytes,
+    });
+    expect(updateResult.status.code).to.equal(202);
+
+    await close();
+
+    await new Promise(resolve => setTimeout(resolve, 5)); // wait for records to be processed
+
+    // both initial and update should exist now
+    expect(records).to.have.members([
+      await Message.getCid(initialWrite.message),
+      await Message.getCid(updatedMessage.message)
+    ]);
+  });
 });

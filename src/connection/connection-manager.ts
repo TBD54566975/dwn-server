@@ -23,13 +23,12 @@ export class InMemoryConnectionManager implements ConnectionManager {
   constructor(private dwn: Dwn, private connections: Map<WebSocket, SocketConnection> = new Map()) {}
 
   async connect(socket: WebSocket): Promise<void> {
-    const connection = new SocketConnection(socket, this.dwn);
-    this.connections.set(socket, connection);
-    // attach to the socket's close handler to clean up this connection.
-    socket.on('close', () => {
-      // the connection internally already cleans itself up upon a socket close event, we just ned to remove it from our set.
+    const connection = new SocketConnection(socket, this.dwn, () => {
+      // this is the onClose handler to clean up any closed connections.
       this.connections.delete(socket);
     });
+
+    this.connections.set(socket, connection);
   }
 
   async closeAll(): Promise<void> {

@@ -8,6 +8,7 @@ import type { SocketConnection } from '../connection/socket-connection.js';
 export type RequestContext = {
   transport: 'http' | 'ws';
   dwn: Dwn;
+  /** the socket connection associated with this request if over sockets */
   socketConnection?: SocketConnection;
   subscriptionRequest?: {
     /** The JsonRpcId of the subscription handler */

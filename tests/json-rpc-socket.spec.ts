@@ -2,6 +2,7 @@ import chaiAsPromised from 'chai-as-promised';
 import chai, { expect } from 'chai';
 
 import { v4 as uuidv4 } from 'uuid';
+import sinon from 'sinon';
 import { WebSocketServer } from 'ws';
 
 import type { JsonRpcId, JsonRpcRequest, JsonRpcSuccessResponse } from '../src/lib/json-rpc.js';
@@ -205,9 +206,23 @@ describe('JsonRpcSocket', () => {
     await expect(subscribePromise).to.eventually.be.rejectedWith('subscribe rpc requests must include subscribe options');
   });
 
-  xit('calls onerror handler', async () => {
+  it('calls onclose handler', async () => {
+    const onCloseHandler = { onclose: ():void => {} };
+    const onCloseSpy = sinon.spy(onCloseHandler, 'onclose');
+    const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { onclose: onCloseHandler.onclose });
+    client.close();
+
+    await new Promise((resolve) => setTimeout(resolve, 5)); // wait for close event to arrive
+    expect(onCloseSpy.callCount).to.equal(1);
   });
 
-  xit('calls onclose hanhler', async () => {
+  xit('calls onerror handler', async () => {
+    const onErrorHandler = { onerror: ():void => {} };
+    const onErrorSpy = sinon.spy(onErrorHandler, 'onerror');
+
+    await JsonRpcSocket.connect('ws://127.0.0.1:9003', { onerror: onErrorHandler.onerror });
+
+    await new Promise((resolve) => setTimeout(resolve, 5)); // wait for close event to arrive
+    expect(onErrorSpy.callCount).to.equal(1, 'error');
   });
 });

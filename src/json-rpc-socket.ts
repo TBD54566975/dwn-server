@@ -30,20 +30,21 @@ export class JsonRpcSocket {
     const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT, onclose, onerror } = options;
 
     const socket = new WebSocket(url);
-    if (onclose === undefined) {
+
+    socket.onclose = onclose;
+    socket.onerror = onerror;
+
+    if (socket.onclose === undefined) {
       socket.onclose = ():void => {
         log.info(`JSON RPC Socket close ${url}`);
       }
     }
 
-    if (onerror === undefined) {
+    if (socket.onerror === undefined) {
       socket.onerror = (error?: any):void => {
         log.error(`JSON RPC Socket error ${url}`, error);
       }
     }
-
-    socket.onclose = onclose;
-    socket.onerror = onerror;
 
     return new Promise<JsonRpcSocket>((resolve, reject) => {
       socket.on('open', () => {

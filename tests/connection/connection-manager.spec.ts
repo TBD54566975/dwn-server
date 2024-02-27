@@ -4,41 +4,56 @@ import chaiAsPromised from 'chai-as-promised';
 import chai, { expect } from 'chai';
 
 import sinon from 'sinon';
-import { WebSocket } from 'ws';
 import { getTestDwn } from '../test-dwn.js';
 import { InMemoryConnectionManager } from '../../src/connection/connection-manager.js';
+import { config } from '../../src/config.js';
+import { WsApi } from '../../src/ws-api.js';
+import type { Server } from 'http';
+import { HttpApi } from '../../src/http-api.js';
+import { JsonRpcSocket } from '../../src/json-rpc-socket.js';
 
 chai.use(chaiAsPromised);
 
 describe('InMemoryConnectionManager', () => {
   let dwn: Dwn;
-  let connectionManager: InMemoryConnectionManager; 
+  let connectionManager: InMemoryConnectionManager;
+  let server: Server
+  let wsApi: WsApi;
 
   beforeEach(async () => {
     dwn = await getTestDwn({ withEvents: true });
     connectionManager = new InMemoryConnectionManager(dwn);
+    const httpApi = new HttpApi(config, dwn);
+    server = await httpApi.start(9002);
+    wsApi = new WsApi(server, dwn, connectionManager);
+    wsApi.start();
   });
 
   afterEach(async () => {
     await connectionManager.closeAll();
     await dwn.close();
+    await wsApi.close();
+    server.close();
+    server.closeAllConnections();
     sinon.restore();
   });
 
-  it('adds connection to the connections map and closes all', async () => {
-    const socket1 = sinon.createStubInstance(WebSocket);
-    await connectionManager.connect(socket1);
+  it('adds connection to the connections and removes it if that connection is closed', async () => {
+    const connection = await JsonRpcSocket.connect('ws://127.0.0.1:9002');
     expect((connectionManager as any).connections.size).to.equal(1);
+    connection.close();
 
-    const socket2 = sinon.createStubInstance(WebSocket);
-    await connectionManager.connect(socket2);
-    expect((connectionManager as any).connections.size).to.equal(2);
+    await new Promise((resolve) => setTimeout(resolve, 5)); // wait for close event to be fired
+    expect((connectionManager as any).connections.size).to.equal(0);
   });
 
-  xit('closes all connections', async () => {
-    const socket = sinon.createStubInstance(WebSocket);
-    await connectionManager.connect(socket);
+  it('closes all connections on `closeAll`', async () => {
+    await JsonRpcSocket.connect('ws://127.0.0.1:9002');
     expect((connectionManager as any).connections.size).to.equal(1);
+
+    await JsonRpcSocket.connect('ws://127.0.0.1:9002');
+    expect((connectionManager as any).connections.size).to.equal(2);
+
     await connectionManager.closeAll();
     expect((connectionManager as any).connections.size).to.equal(0);
   });
