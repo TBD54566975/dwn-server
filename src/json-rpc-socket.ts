@@ -29,26 +29,31 @@ export class JsonRpcSocket {
   static async connect(url: string, options: JsonRpcSocketOptions = {}): Promise<JsonRpcSocket> {
     const { connectTimeout = CONNECT_TIMEOUT, responseTimeout = RESPONSE_TIMEOUT, onclose, onerror } = options;
 
-    const socket = new WebSocket(url, { timeout: connectTimeout });
+    const socket = new WebSocket(url);
 
-    socket.onclose = onclose;
-    socket.onerror = onerror;
-
-    if (!socket.onclose) {
+    if (!onclose) {
       socket.onclose = ():void => {
         log.info(`JSON RPC Socket close ${url}`);
-      }
+      };
+    } else {
+      socket.onclose = onclose;
     }
 
-    if (!socket.onerror) {
+    if (!onerror) {
       socket.onerror = (error?: any):void => {
         log.error(`JSON RPC Socket error ${url}`, error);
-      }
+      };
+    } else {
+      socket.onerror = onerror;
     }
 
     return new Promise<JsonRpcSocket>((resolve, reject) => {
-      socket.on('open', () => {
+      socket.addEventListener('open', () => {
         resolve(new JsonRpcSocket(socket, responseTimeout));
+      });
+
+      socket.addEventListener('error', (error) => {
+        reject(error);
       });
 
       setTimeout(() => reject, connectTimeout);
@@ -67,7 +72,7 @@ export class JsonRpcSocket {
       request.id ??= uuidv4();
 
       const handleResponse = (event: { data: any }):void => {
-        const jsonRpsResponse = JSON.parse(event.data.toString()) as JsonRpcResponse;
+        const jsonRpsResponse = JSON.parse(event.data) as JsonRpcResponse;
         if (jsonRpsResponse.id === request.id) {
           // if the incoming response id matches the request id, we will remove the listener and resolve the response
           this.socket.removeEventListener('message', handleResponse);
@@ -120,19 +125,19 @@ export class JsonRpcSocket {
     const response = await this.request(request);
     if (response.error) {
       this.socket.removeEventListener('message', socketEventListener);
-      return { response }
+      return { response };
     }
 
     // clean up listener and create a `rpc.subscribe.close` message to use when closing this JSON RPC subscription
     const close = async (): Promise<void> => {
       this.socket.removeEventListener('message', socketEventListener);
       await this.closeSubscription(subscriptionId);
-    }
+    };
 
     return {
       response,
       close
-    }
+    };
   }
 
   private closeSubscription(id: JsonRpcId): Promise<JsonRpcResponse> {
@@ -145,6 +150,6 @@ export class JsonRpcSocket {
    * Sends a JSON-RPC request through the socket. You must subscribe to a message listener separately to capture the response.
    */
   send(request: JsonRpcRequest):void {
-    this.socket.send(Buffer.from(JSON.stringify(request)));
+    this.socket.send(JSON.stringify(request));
   }
 }
