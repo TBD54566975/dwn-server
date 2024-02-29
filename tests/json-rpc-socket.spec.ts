@@ -67,6 +67,33 @@ describe('JsonRpcSocket', () => {
     await expect(requestPromise).to.eventually.be.rejectedWith('timed out');
   });
 
+  it('removes listener if subscription json rpc is rejected ', async () => {
+    wsServer.addListener('connection', (socket) => {
+      socket.on('message', (dataBuffer: Buffer) => {
+        const request = JSON.parse(dataBuffer.toString()) as JsonRpcRequest;
+        // initial response
+        const response = createJsonRpcErrorResponse(request.id, JsonRpcErrorCodes.BadRequest, 'bad request');
+        socket.send(Buffer.from(JSON.stringify(response)));
+      });
+    });
+
+    const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { responseTimeout: 5 });
+    const requestId = uuidv4();
+    const subscribeId = uuidv4();
+    const request = createJsonRpcSubscriptionRequest(
+      requestId,
+      'rpc.subscribe.test.method',
+      { param1: 'test-param1', param2: 'test-param2' },
+      subscribeId,
+    );
+
+    const responseListener = (_response: JsonRpcSuccessResponse): void => {}
+
+    const subscription = await client.subscribe(request, responseListener);
+    expect(subscription.response.error).to.not.be.undefined;
+    expect(client['socket'].listenerCount('message')).to.equal(0);
+  });
+
   it('opens a subscription', async () => {
     wsServer.addListener('connection', (socket) => {
       socket.on('message', (dataBuffer: Buffer) => {
@@ -230,5 +257,26 @@ describe('JsonRpcSocket', () => {
     expect(logMessage).to.equal('JSON RPC Socket close ws://127.0.0.1:9003');
   });
 
-  xit('calls onerror handler', async () => {});
+  it('calls onerror handler', async () => {
+    // test injected handler
+    const onErrorHandler = { onerror: ():void => {} };
+    const onErrorSpy = sinon.spy(onErrorHandler, 'onerror');
+    const client = await JsonRpcSocket.connect('ws://127.0.0.1:9003', { onerror: onErrorHandler.onerror });
+    client['socket'].emit('error', 'some error');
+
+    await new Promise((resolve) => setTimeout(resolve, 5)); // wait for close event to arrive
+    expect(onErrorSpy.callCount).to.equal(1, 'error');
+
+    // test default logger
+    const logInfoSpy = sinon.spy(log, 'error');
+    const defaultClient = await JsonRpcSocket.connect('ws://127.0.0.1:9003');
+    defaultClient['socket'].emit('error', 'some error');
+
+    await new Promise((resolve) => setTimeout(resolve, 5)); // wait for close event to arrive
+    expect(logInfoSpy.callCount).to.equal(1, 'log');
+
+    // extract log message from argument
+    const logMessage:string = logInfoSpy.args[0][0]!;
+    expect(logMessage).to.equal('JSON RPC Socket error ws://127.0.0.1:9003');
+  });
 });

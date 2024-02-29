@@ -175,7 +175,7 @@ export class SocketConnection {
    * Sends a JSON encoded Buffer through the Websocket.
    */
   private send(response: JsonRpcResponse | JsonRpcErrorResponse): void {
-    this.socket.send(Buffer.from(JSON.stringify(response)));
+    this.socket.send(JSON.stringify(response));
   }
 
   /**

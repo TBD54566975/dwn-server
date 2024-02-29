@@ -62,7 +62,7 @@ export class DwnServer {
       });
 
       let eventStream: EventStream | undefined;
-      if (this.config.webSocketServerEnabled) {
+      if (this.config.webSocketSupport) {
         // setting `EventEmitterStream` as default the default `EventStream
         // if an alternate implementation is needed, instantiate a `Dwn` with a custom `EventStream` and add it to server options. 
         eventStream = new EventEmitterStream();
@@ -84,7 +84,7 @@ export class DwnServer {
       this.#httpApi.server,
     );
 
-    if (this.config.webSocketServerEnabled) {
+    if (this.config.webSocketSupport) {
       this.#wsApi = new WsApi(this.#httpApi.server, this.dwn);
       this.#wsApi.start();
       log.info('WebSocketServer ready...');

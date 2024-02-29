@@ -8,7 +8,7 @@ export const config = {
   // port that server listens on
   port: parseInt(process.env.DS_PORT || '3000'),
   // whether to enable 'ws:'
-  webSocketServerEnabled: { on: true, off: false }[process.env.DS_WEBSOCKET_SERVER] ?? true,
+  webSocketSupport: { on: true, off: false }[process.env.DS_WEBSOCKET_SERVER] ?? true,
   // where to store persistent data
   messageStore: process.env.DWN_STORAGE_MESSAGES || process.env.DWN_STORAGE || 'level://data',
   dataStore: process.env.DWN_STORAGE_DATA || process.env.DWN_STORAGE || 'level://data',

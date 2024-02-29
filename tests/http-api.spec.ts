@@ -537,5 +537,30 @@ describe('http api', function () {
         'proof-of-work-sha256-v0',
       );
     });
+
+    it('verify /info signals websocket support', async function() {
+      let resp = await fetch(`http://localhost:3000/info`);
+      expect(resp.status).to.equal(200);
+
+      let info = await resp.json();
+      expect(info['server']).to.equal('@web5/dwn-server');
+      expect(info['webSocketSupport']).to.equal(true);
+
+
+      // start server without websocket support enabled
+      server.close();
+      server.closeAllConnections();
+
+      config.webSocketSupport = false;
+      httpApi = new HttpApi(config, dwn, registrationManager);
+      server = await httpApi.start(3000);
+
+      resp = await fetch(`http://localhost:3000/info`);
+      expect(resp.status).to.equal(200);
+
+      info = await resp.json();
+      expect(info['server']).to.equal('@web5/dwn-server');
+      expect(info['webSocketSupport']).to.equal(false);
+    });
   });
 });

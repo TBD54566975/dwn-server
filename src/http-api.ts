@@ -190,6 +190,7 @@ export class HttpApi {
         registrationRequirements : registrationRequirements,
         version                  : packageJson.version,
         sdkVersion               : packageJson.dependencies['@tbd54566975/dwn-sdk-js'],
+        webSocketSupport         : config.webSocketSupport,
       });
     });
   }
