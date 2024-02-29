@@ -544,7 +544,7 @@ describe('http api', function () {
 
       let info = await resp.json();
       expect(info['server']).to.equal('@web5/dwn-server');
-      expect(info['webSocketServerEnabled']).to.equal(true);
+      expect(info['webSocketSupport']).to.equal(true);
 
 
       // start server without websocket support enabled
@@ -560,7 +560,7 @@ describe('http api', function () {
 
       info = await resp.json();
       expect(info['server']).to.equal('@web5/dwn-server');
-      expect(info['webSocketServerEnabled']).to.equal(false);
+      expect(info['webSocketSupport']).to.equal(false);
     });
   });
 });
