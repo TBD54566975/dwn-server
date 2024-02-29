@@ -551,7 +551,7 @@ describe('http api', function () {
       server.close();
       server.closeAllConnections();
 
-      config.webSocketServerEnabled = false;
+      config.webSocketSupport = false;
       httpApi = new HttpApi(config, dwn, registrationManager);
       server = await httpApi.start(3000);
 

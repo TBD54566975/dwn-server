@@ -20,14 +20,14 @@ describe('DwnServer', function () {
     expect(dwnServer.httpServer.listening).to.be.false;
   });
 
-  describe('webSocketServerEnabled config', function() {
+  describe('webSocketSupport config', function() {
     it('should not return a websocket server if disabled', async function() {
       dwn = await getTestDwn({ withEvents: true });
       const withoutSocketServer = new DwnServer({
         dwn,
         config: {
           ...dwnServerConfig,
-          webSocketServerEnabled: false,
+          webSocketSupport: false,
         }
       });
 
@@ -44,7 +44,7 @@ describe('DwnServer', function () {
         dwn,
         config: {
           ...dwnServerConfig,
-          webSocketServerEnabled: true,
+          webSocketSupport: true,
         }
       });
 
