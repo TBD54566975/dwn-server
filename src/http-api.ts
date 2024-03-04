@@ -21,7 +21,16 @@ import { jsonRpcRouter } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
 import type { RegistrationManager } from './registration/registration-manager.js';
 
-const packageJson = process.env.npm_package_json ? JSON.parse(readFileSync(process.env.npm_package_json).toString()) : {};
+const packageJson = process.env.npm_package_json ? JSON.parse(readFileSync(process.env.npm_package_json).toString()) : {
+  dependencies: {}
+};
+
+// when this server runs as a docker container, it is not run using the `npm` package, so `npm_package_json` env does not exist.
+// we inject the versions using the respective environment variables.
+const packageVersions = {
+  version    : packageJson.version || process.env.DWN_VERSION,
+  sdkVersion : packageJson.dependencies['@tbd54566975/dwn-sdk-js'] || process.env.DWN_SDK_VERSION
+}
 
 export class HttpApi {
   #config: DwnServerConfig;
@@ -188,8 +197,8 @@ export class HttpApi {
         server                   : process.env.npm_package_name,
         maxFileSize              : config.maxRecordDataSize,
         registrationRequirements : registrationRequirements,
-        version                  : packageJson.version,
-        sdkVersion               : packageJson.dependencies['@tbd54566975/dwn-sdk-js'],
+        version                  : packageVersions.version,
+        sdkVersion               : packageVersions.sdkVersion,
         webSocketSupport         : config.webSocketSupport,
       });
     });

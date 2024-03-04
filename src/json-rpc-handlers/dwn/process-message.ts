@@ -115,7 +115,7 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
     );
 
     // log the unhandled error response
-    log.error('handleDwnProcessMessage error', jsonRpcResponse, e);
+    log.error('handleDwnProcessMessage error', jsonRpcResponse, dwnRequest, e);
     return { jsonRpcResponse } as HandlerResponse;
   }
 };
