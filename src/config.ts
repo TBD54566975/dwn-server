@@ -3,7 +3,9 @@ import bytes from 'bytes';
 export type DwnServerConfig = typeof config;
 
 export const config = {
+  // the `server` property returned by the `/info` endpoint.
   serverName: process.env.DWN_SERVER_PACKAGE_NAME || '@web5/dwn-server',
+  // used to populate the `version` and `sdkVersion` properties returned by the `/info` endpoint.
   packageJsonFile:  process.env.npm_package_json ||  process.env.DWN_SERVER_PACKAGE_JSON || '/dwn-server/package.json',
   // max size of data that can be provided with a RecordsWrite
   maxRecordDataSize: bytes(process.env.MAX_RECORD_DATA_SIZE || '1gb'),

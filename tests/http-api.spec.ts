@@ -574,8 +574,10 @@ describe('http api', function () {
       server.close();
       server.closeAllConnections();
 
+      // set up spy to check for an error log by the server
       const logSpy = sinon.spy(log, 'error');
 
+      // set the config to an invalid file path
       const packageJsonConfig = config.packageJsonFile;
       config.packageJsonFile = '/some/invalid/file.json';
       httpApi = new HttpApi(config, dwn, registrationManager);
@@ -584,10 +586,17 @@ describe('http api', function () {
       const resp = await fetch(`http://localhost:3000/info`);
       const info = await resp.json();
       expect(resp.status).to.equal(200);
+
+      // check that server name exists in the info object
       expect(info['server']).to.equal('@web5/dwn-server');
+
+      // check that `sdkVersion` and `version` are undefined as they were not abel to be retrieved from the invalid file.
       expect(info['sdkVersion']).to.be.undefined;
       expect(info['version']).to.be.undefined;
+
+      // check the logSpy was called
       expect(logSpy.callCount).to.equal(1);
+      expect(logSpy.args[0][0]).to.contain('could not read `package.json` for version info');
 
       // restore old config path
       config.packageJsonFile = packageJsonConfig;
@@ -597,6 +606,7 @@ describe('http api', function () {
       server.close();
       server.closeAllConnections();
 
+      // set a custom name for the `serverName`
       const serverName = config.serverName;
       config.serverName = '@web5/dwn-server-2'
       httpApi = new HttpApi(config, dwn, registrationManager);
@@ -605,7 +615,11 @@ describe('http api', function () {
       const resp = await fetch(`http://localhost:3000/info`);
       const info = await resp.json();
       expect(resp.status).to.equal(200);
+      
+      // verify that the custom server name was passed to the info endpoint
       expect(info['server']).to.equal('@web5/dwn-server-2');
+
+      // verify that `sdkVersion` and `version` exist.
       expect(info['sdkVersion']).to.not.be.undefined;
       expect(info['version']).to.not.be.undefined;
 
