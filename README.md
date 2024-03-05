@@ -321,6 +321,7 @@ the server exposes information about itself via the `/info` endpoint, which retu
   "maxFileSize": 1073741824,
   "registrationRequirements": ["proof-of-work-sha256-v0", "terms-of-service"],
   "version": "0.1.5",
-  "sdkVersion": "0.2.6"
+  "sdkVersion": "0.2.6",
+  "webSocketSupport": "true"
 }
 ```

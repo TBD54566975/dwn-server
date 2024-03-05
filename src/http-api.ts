@@ -21,17 +21,25 @@ import { jsonRpcRouter } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
 import type { RegistrationManager } from './registration/registration-manager.js';
 
-const packageVersions: { version?: string, sdkVersion?: string } = {};
+
+const packageVersions: { version?: string, sdkVersion?: string, server: string } = {
+  server: process.env.npm_package_name || process.env.DWN_SERVER_PACKAGE_NAME || '@web5/dwn-server',
+};
+
 // Server and SDK versions are pulled from `package.json` at runtime.
-// If running using `npm` the `process.env.npm_package_json` variable exists.
-// Otherwise within the docker server image it is located in `/dwn-server/package.json`
+// If running using `npm` the `process.env.npm_package_json` variable exists as the filepath, so we use that.
+// Otherwise we check to see if a specific `DWN_SERVER_PACKAGE_JSON` exists, if it does we use that.
+// Finally if both of those options don't exist we resort to the path within the docker server image, located at `/dwn-server/package.json`
 try {
-  const packageJsonFile = process.env.npm_package_json ? process.env.npm_package_json : '/dwn-server/package.json';
+  const packageJsonFile = process.env.npm_package_json ? process.env.npm_package_json : 
+    process.env.DWN_SERVER_PACKAGE_JSON ? process.env.DWN_SERVER_PACKAGE_JSON :
+    '/dwn-server/package.json';
+
   const packageJson = JSON.parse(readFileSync(packageJsonFile).toString());
   packageVersions.version = packageJson.version;
   packageVersions.sdkVersion = packageJson.dependencies ? packageJson.dependencies['@tbd54566975/dwn-sdk-js'] : undefined;
 } catch (error: any) {
-  log.error('could not read package.json for version info', error);
+  log.error('could not read `package.json` for version info', error);
 }
 
 export class HttpApi {
@@ -196,7 +204,7 @@ export class HttpApi {
       }
 
       res.json({
-        server                   : process.env.npm_package_name,
+        server                   : packageVersions.server,
         maxFileSize              : config.maxRecordDataSize,
         registrationRequirements : registrationRequirements,
         version                  : packageVersions.version,
