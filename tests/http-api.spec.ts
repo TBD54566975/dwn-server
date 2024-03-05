@@ -578,8 +578,8 @@ describe('http api', function () {
       const logSpy = sinon.spy(log, 'error');
 
       // set the config to an invalid file path
-      const packageJsonConfig = config.packageJsonFile;
-      config.packageJsonFile = '/some/invalid/file.json';
+      const packageJsonConfig = config.packageJsonPath;
+      config.packageJsonPath = '/some/invalid/file.json';
       httpApi = new HttpApi(config, dwn, registrationManager);
       server = await httpApi.start(3000);
 
@@ -599,7 +599,7 @@ describe('http api', function () {
       expect(logSpy.args[0][0]).to.contain('could not read `package.json` for version info');
 
       // restore old config path
-      config.packageJsonFile = packageJsonConfig;
+      config.packageJsonPath = packageJsonConfig;
     });
 
     it('verify /info returns server name from config', async function () {

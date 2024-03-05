@@ -37,12 +37,9 @@ export class HttpApi {
       server: config.serverName,
     };
     
-    // Server and SDK versions are pulled from `package.json` at runtime.
-    // If running using `npm` the `process.env.npm_package_json` variable exists as the filepath, so we use that.
-    // Otherwise we check to see if a specific `DWN_SERVER_PACKAGE_JSON` exists, if it does we use that.
-    // Finally if both of those options don't exist we resort to the path within the docker server image, located at `/dwn-server/package.json`
     try {
-      const packageJson = JSON.parse(readFileSync(config.packageJsonFile).toString());
+      // We populate the `version` and `sdkVersion` properties from the `package.json` file.
+      const packageJson = JSON.parse(readFileSync(config.packageJsonPath).toString());
       this.#packageInfo.version = packageJson.version;
       this.#packageInfo.sdkVersion = packageJson.dependencies ? packageJson.dependencies['@tbd54566975/dwn-sdk-js'] : undefined;
     } catch (error: any) {
