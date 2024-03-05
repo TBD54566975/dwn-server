@@ -321,6 +321,10 @@ the server exposes information about itself via the `/info` endpoint, which retu
   "maxFileSize": 1073741824,
   "registrationRequirements": ["proof-of-work-sha256-v0", "terms-of-service"],
   "version": "0.1.5",
-  "sdkVersion": "0.2.6"
+  "sdkVersion": "0.2.6",
+  "webSocketSupport": "true"
 }
 ```
+
+- `server` is read from the `process.env.npm_package_name` variable that `npm` provides. If that does not exist, it will check for a `DWN_SERVER_PACKAGE_NAME` environment variable set by the user, or otherwise it will default to `@web5/dwn-server`.
+- `version` and `sdkVersion` are read from the `package.json` file. It will locate the file's path either from the `process.env.npm_package_json` variable that `npm` provides. If that does not exist, it will check for a `DWN_SERVER_PACKAGE_JSON` environment variable set by the user, or otherwise it will default to `/dwn-server/package.json` which is the path within the default Docker container build.
