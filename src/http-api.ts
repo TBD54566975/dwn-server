@@ -21,15 +21,17 @@ import { jsonRpcRouter } from './json-rpc-api.js';
 import { requestCounter, responseHistogram } from './metrics.js';
 import type { RegistrationManager } from './registration/registration-manager.js';
 
-const packageJson = process.env.npm_package_json ? JSON.parse(readFileSync(process.env.npm_package_json).toString()) : {
-  dependencies: {}
-};
-
-// when this server runs as a docker container, it is not run using the `npm` package, so `npm_package_json` env does not exist.
-// we inject the versions using the respective environment variables.
-const packageVersions = {
-  version    : packageJson.version || process.env.DWN_SERVER_VERSION,
-  sdkVersion : packageJson.dependencies['@tbd54566975/dwn-sdk-js'] || process.env.DWN_SDK_VERSION
+const packageVersions: { version?: string, sdkVersion?: string } = {};
+// Server and SDK versions are pulled from `package.json` at runtime.
+// If running using `npm` the `process.env.npm_package_json` variable exists.
+// Otherwise within the docker server image it is located in `/dwn-server/package.json`
+try {
+  const packageJsonFile = process.env.npm_package_json ? process.env.npm_package_json : '/dwn-server/package.json';
+  const packageJson = JSON.parse(readFileSync(packageJsonFile).toString());
+  packageVersions.version = packageJson.version;
+  packageVersions.sdkVersion = packageJson.dependencies ? packageJson.dependencies['@tbd54566975/dwn-sdk-js'] : undefined;
+} catch (error: any) {
+  log.error('could not read package.json for version info', error);
 }
 
 export class HttpApi {
