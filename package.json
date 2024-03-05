@@ -1,7 +1,7 @@
 {
   "name": "@web5/dwn-server",
   "type": "module",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "files": [
     "dist",
     "src"
