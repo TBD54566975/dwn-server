@@ -28,7 +28,7 @@ const packageJson = process.env.npm_package_json ? JSON.parse(readFileSync(proce
 // when this server runs as a docker container, it is not run using the `npm` package, so `npm_package_json` env does not exist.
 // we inject the versions using the respective environment variables.
 const packageVersions = {
-  version    : packageJson.version || process.env.DWN_VERSION,
+  version    : packageJson.version || process.env.DWN_SERVER_VERSION,
   sdkVersion : packageJson.dependencies['@tbd54566975/dwn-sdk-js'] || process.env.DWN_SDK_VERSION
 }
 
