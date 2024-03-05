@@ -1,4 +1,5 @@
 // node.js 18 and earlier,  needs globalThis.crypto polyfill
+import sinon from 'sinon';
 import {
   Cid,
   DataStream,
@@ -18,6 +19,7 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 
 import { config } from '../src/config.js';
+import log from 'loglevel';
 import { HttpApi } from '../src/http-api.js';
 import type {
   JsonRpcErrorResponse,
@@ -71,6 +73,7 @@ describe('http api', function () {
   });
 
   beforeEach(async function () {
+    sinon.restore();
     server = await httpApi.start(3000);
   });
 
@@ -80,6 +83,7 @@ describe('http api', function () {
   });
 
   after(function () {
+    sinon.restore();
     clock.restore();
   });
 
@@ -561,6 +565,52 @@ describe('http api', function () {
       info = await resp.json();
       expect(info['server']).to.equal('@web5/dwn-server');
       expect(info['webSocketSupport']).to.equal(false);
+
+      // restore old config value
+      config.webSocketSupport = true;
+    });
+
+    it('verify /info still returns when package.json file does not exist', async function () {
+      server.close();
+      server.closeAllConnections();
+
+      const logSpy = sinon.spy(log, 'error');
+
+      const packageJsonConfig = config.packageJsonFile;
+      config.packageJsonFile = '/some/invalid/file.json';
+      httpApi = new HttpApi(config, dwn, registrationManager);
+      server = await httpApi.start(3000);
+
+      const resp = await fetch(`http://localhost:3000/info`);
+      const info = await resp.json();
+      expect(resp.status).to.equal(200);
+      expect(info['server']).to.equal('@web5/dwn-server');
+      expect(info['sdkVersion']).to.be.undefined;
+      expect(info['version']).to.be.undefined;
+      expect(logSpy.callCount).to.equal(1);
+
+      // restore old config path
+      config.packageJsonFile = packageJsonConfig;
+    });
+
+    it('verify /info returns server name from config', async function () {
+      server.close();
+      server.closeAllConnections();
+
+      const serverName = config.serverName;
+      config.serverName = '@web5/dwn-server-2'
+      httpApi = new HttpApi(config, dwn, registrationManager);
+      server = await httpApi.start(3000);
+
+      const resp = await fetch(`http://localhost:3000/info`);
+      const info = await resp.json();
+      expect(resp.status).to.equal(200);
+      expect(info['server']).to.equal('@web5/dwn-server-2');
+      expect(info['sdkVersion']).to.not.be.undefined;
+      expect(info['version']).to.not.be.undefined;
+
+      // restore server name config
+      config.serverName = serverName;
     });
   });
 });
