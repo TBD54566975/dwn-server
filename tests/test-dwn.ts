@@ -7,7 +7,7 @@ import {
 } from '@tbd54566975/dwn-sql-store';
 
 import { getDialectFromURI } from '../src/storage.js';
-import { DidDht, DidIon, DidKey, DidResolver } from '@web5/dids';
+import { DidDht, DidIon, DidKey, UniversalResolver } from '@web5/dids';
 
 export async function getTestDwn(options: {
   tenantGate?: TenantGate,
@@ -21,7 +21,7 @@ export async function getTestDwn(options: {
   const eventStream = withEvents ? new EventEmitterStream() : undefined;
 
   // NOTE: no resolver cache used here to avoid locking LevelDB
-  const didResolver = new DidResolver({
+  const didResolver = new UniversalResolver({
     didResolvers : [DidDht, DidIon, DidKey],
   });
 
