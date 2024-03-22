@@ -5,7 +5,7 @@ ENV DS_PORT=${DS_PORT:-3000}
 
 WORKDIR /dwn-server
 
-COPY package.json tsconfig.json entrypoint.sh ./
+COPY package.json package-lock.json tsconfig.json entrypoint.sh ./
 COPY src ./src
 
 # DWN's levelDB has issues running on m1 when using an alpine base image, 
