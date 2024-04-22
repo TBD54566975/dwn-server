@@ -1,4 +1,4 @@
-import { type Dwn, RecordsRead, type RecordsReadReply } from '@tbd54566975/dwn-sdk-js';
+import { type Dwn, RecordsRead, type RecordsReadReply, RecordsQuery, type RecordsQueryReply  } from '@tbd54566975/dwn-sdk-js';
 
 import cors from 'cors';
 import type { Express, Request, Response } from 'express';
@@ -121,6 +121,29 @@ export class HttpApi {
         } else {
           return res.sendStatus(400);
         }
+      } else if (reply.status.code === 401) {
+        return res.sendStatus(404);
+      } else {
+        return res.status(reply.status.code).send(reply);
+      }
+    });
+
+    this.#api.get('/:did/query', async (req, res) => {
+      const options = {} as any;
+      for (const param in req.query as object) {
+        const keys = param.split('.');
+        const lastKey = keys.pop();
+        keys.reduce((obj, key) => obj[key] = obj[key] || {}, options)[lastKey] = req.query[param]
+      }
+      const record = await RecordsQuery.create({
+        filter: options.filter,
+        pagination: options.pagination,
+        dateSort: options.dateSort,
+      });
+      const reply = (await this.dwn.processMessage(req.params.did, record.toJSON())) as RecordsQueryReply;
+      if (reply.status.code === 200) { 
+        res.setHeader('content-type', 'application/json');
+        return res.json(reply)
       } else if (reply.status.code === 401) {
         return res.sendStatus(404);
       } else {
