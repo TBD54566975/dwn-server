@@ -108,7 +108,7 @@ export class HttpApi {
       const record = await RecordsRead.create({
         filter: { recordId: req.params.id },
       });
-      const reply = (await this.dwn.processMessage(req.params.did, record.message));
+      const reply = await this.dwn.processMessage(req.params.did, record.message);
 
       if (reply.status.code === 200) {
         if (reply?.record?.data) {
@@ -130,29 +130,38 @@ export class HttpApi {
     });
 
     this.#api.get('/:did/query', async (req, res) => {
-      const options = {} as any;
+      
+      try {
+        // builds a nested object from flat keys with dot notation which may share the same parent path
+        // e.g. "filter.protocol=foo&filter.protocolPath=bar" becomes
+        // {
+        //   filter: {
+        //     protocol: 'foo',
+        //     protocolPath: 'bar'
+        //   }
+        // }
+        const recordsQueryOptions = {} as any;
+        for (const param in req.query) {
+          const keys = param.split('.');
+          const lastKey = keys.pop();
+          const lastLevelObject = keys.reduce((obj, key) => obj[key] = obj[key] || {}, recordsQueryOptions)
+          lastLevelObject[lastKey] = req.query[param];
+        }
+    
+        const recordsQuery = await RecordsQuery.create({
+          filter: recordsQueryOptions.filter,
+          pagination: recordsQueryOptions.pagination,
+          dateSort: recordsQueryOptions.dateSort,
+        });
 
-      // builds a nested object from flat keys with dot notation which may share the same parent path
-      for (const param in req.query) {
-        const keys = param.split('.');
-        const lastKey = keys.pop();
-        // Set up the branch-path to the last dot-delimited key, if the path is not already present
-        const lastLevel = keys.reduce((obj, key) => obj[key] = obj[key] || {}, options)
-        lastLevel[lastKey] = req.query[param];
-      }
-      const record = await RecordsQuery.create({
-        filter: options.filter,
-        pagination: options.pagination,
-        dateSort: options.dateSort,
-      });
-      const reply = (await this.dwn.processMessage(req.params.did, record.message));
-      if (reply.status.code === 200) { 
+        // should always return a 200 status code with a JSON response
+        const reply = await this.dwn.processMessage(req.params.did, recordsQuery.message);
+
         res.setHeader('content-type', 'application/json');
-        return res.json(reply)
-      } else if (reply.status.code === 401) {
-        return res.sendStatus(404);
-      } else {
-        return res.status(reply.status.code).send(reply);
+        return res.json(reply);
+      } catch (error) {
+        // error should only occur when we are unable to create the RecordsQuery message internally, making it a client error
+        return res.status(400).send(error);
       }
     });
 
