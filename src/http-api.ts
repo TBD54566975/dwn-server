@@ -133,7 +133,7 @@ export class HttpApi {
       for (const param in req.query) {
         const keys = param.split('.');
         const lastKey = keys.pop();
-        // Set up the object tree, if it isn't already present
+        // Set up the branch-path to the last dot-delimited key, if the path is not already present
         const lastLevel = keys.reduce((obj, key) => obj[key] = obj[key] || {}, options)
         lastLevel[lastKey] = req.query[param];
       }
