@@ -1,4 +1,4 @@
-import { type Dwn, RecordsRead, type RecordsReadReply, RecordsQuery, type RecordsQueryReply  } from '@tbd54566975/dwn-sdk-js';
+import { type Dwn, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
 
 import cors from 'cors';
 import type { Express, Request, Response } from 'express';
@@ -86,7 +86,8 @@ export class HttpApi {
     );
   }
 
-  /* setupRoutes configures the HTTP server's request handlers
+  /**
+   * Configures the HTTP server's request handlers.
    */
   #setupRoutes(): void {
     this.#api.get('/health', (_req, res) => {
@@ -107,7 +108,7 @@ export class HttpApi {
       const record = await RecordsRead.create({
         filter: { recordId: req.params.id },
       });
-      const reply = (await this.dwn.processMessage(req.params.did, record.toJSON())) as RecordsReadReply;
+      const reply = (await this.dwn.processMessage(req.params.did, record.message));
 
       if (reply.status.code === 200) {
         if (reply?.record?.data) {
@@ -130,6 +131,8 @@ export class HttpApi {
 
     this.#api.get('/:did/query', async (req, res) => {
       const options = {} as any;
+
+      // builds a nested object from flat keys with dot notation which may share the same parent path
       for (const param in req.query) {
         const keys = param.split('.');
         const lastKey = keys.pop();
@@ -142,7 +145,7 @@ export class HttpApi {
         pagination: options.pagination,
         dateSort: options.dateSort,
       });
-      const reply = (await this.dwn.processMessage(req.params.did, record.message)) as RecordsQueryReply;
+      const reply = (await this.dwn.processMessage(req.params.did, record.message));
       if (reply.status.code === 200) { 
         res.setHeader('content-type', 'application/json');
         return res.json(reply)
