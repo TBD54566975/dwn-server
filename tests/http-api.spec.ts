@@ -582,7 +582,7 @@ describe('http api', function () {
       expect(response.status).to.equal(400);
 
       const responseBody = await response.json() as DwnError;
-      expect(responseBody.code).to.equal(DwnErrorCode.SchemaValidationFailure);
+      expect(responseBody.code).to.equal(DwnErrorCode.SchemaValidatorAdditionalPropertyNotAllowed);
     });
   });
 
