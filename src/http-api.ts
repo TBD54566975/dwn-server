@@ -130,17 +130,19 @@ export class HttpApi {
 
     this.#api.get('/:did/query', async (req, res) => {
       const options = {} as any;
-      for (const param in req.query as object) {
+      for (const param in req.query) {
         const keys = param.split('.');
         const lastKey = keys.pop();
-        keys.reduce((obj, key) => obj[key] = obj[key] || {}, options)[lastKey] = req.query[param]
+        // Set up the object tree
+        const lastLevel = keys.reduce((obj, key) => obj[key] = obj[key] || {}, options)
+        lastLevel[lastKey] = req.query[param];
       }
       const record = await RecordsQuery.create({
         filter: options.filter,
         pagination: options.pagination,
         dateSort: options.dateSort,
       });
-      const reply = (await this.dwn.processMessage(req.params.did, record.toJSON())) as RecordsQueryReply;
+      const reply = (await this.dwn.processMessage(req.params.did, record.message)) as RecordsQueryReply;
       if (reply.status.code === 200) { 
         res.setHeader('content-type', 'application/json');
         return res.json(reply)

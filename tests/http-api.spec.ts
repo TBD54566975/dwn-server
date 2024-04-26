@@ -529,6 +529,52 @@ describe('http api', function () {
     });
   });
 
+  describe('/:did/query', function () {
+    it('returns record data if record is published', async function () {
+      const filePath = './fixtures/test.jpeg';
+      const {
+        cid: expectedCid,
+        size,
+        stream,
+      } = await getFileAsReadStream(filePath);
+
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
+        dataCid: expectedCid,
+        dataSize: size,
+        published: true,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: recordsWrite.toJSON(),
+        target: alice.did,
+      });
+
+      const response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+        body: stream,
+      });
+
+      expect(response.status).to.equal(200);
+
+      const body = (await response.json()) as JsonRpcResponse;
+      expect(body.id).to.equal(requestId);
+      expect(body.error).to.not.exist;
+
+      const { reply } = body.result;
+      expect(reply.status.code).to.equal(202);
+
+      const { entries } = await fetch(
+        `http://localhost:3000/${alice.did}/query?filter.recordId=${recordsWrite.message.recordId}&foo.bar=1337`,
+      ).then(response => response.json()) as any;
+
+      expect(entries?.length).to.equal(1);
+    });
+  });
+
   describe('/info', function () {
     it('verify /info has some of the fields it is supposed to have', async function () {
       const resp = await fetch(`http://localhost:3000/info`);
