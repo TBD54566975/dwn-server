@@ -1,4 +1,10 @@
-import { type Dwn, RecordsRead, type RecordsReadReply, RecordsQuery, type RecordsQueryReply  } from '@tbd54566975/dwn-sdk-js';
+import {
+  type Dwn,
+  DateSort,
+  RecordsRead, type RecordsReadReply,
+  RecordsQuery, type RecordsQueryReply,
+  ProtocolsQuery, type ProtocolsQueryReply 
+} from '@tbd54566975/dwn-sdk-js';
 
 import cors from 'cors';
 import type { Express, Request, Response } from 'express';
@@ -89,6 +95,31 @@ export class HttpApi {
   /* setupRoutes configures the HTTP server's request handlers
    */
   #setupRoutes(): void {
+
+    const leadTailSlashRegex = /^\/|\/$/;
+
+    function readReplyHandler(res, reply): any {
+      if (reply.status.code === 200) {
+        if (reply?.record?.data) {
+          const stream = reply.record.data;
+          delete reply.record.data;
+
+          res.setHeader('content-type', reply.record.descriptor.dataFormat);
+          res.setHeader('dwn-response', JSON.stringify(reply));
+
+          return stream.pipe(res);
+        } else {
+          return res.sendStatus(400);
+        }
+      }
+      else if (reply.status.code === 401) {
+        return res.sendStatus(404);
+      }
+      else {
+        return res.status(reply.status.code).send(reply);
+      }
+    }
+
     this.#api.get('/health', (_req, res) => {
       // return 200 ok
       return res.json({ ok: true });
@@ -103,28 +134,78 @@ export class HttpApi {
       }
     });
 
-    this.#api.get('/:did/records/:id', async (req, res) => {
+    this.#api.get('/:did/read/protocols/:protocol/*', async (req, res) => {
+      const query = await RecordsQuery.create({
+        filter: {
+          protocol: req.params.protocol,
+          protocolPath: (req.params[0] || '').replace(leadTailSlashRegex)
+        },
+        pagination: { limit: 1 },
+        dateSort: DateSort.PublishedDescending
+      });
+
+      const { entries, status } = (await this.dwn.processMessage(req.params.did, query.message)) as RecordsQueryReply;
+
+      if (status.code === 200 && entries[0]) {
+        const record = await RecordsRead.create({
+          filter: { recordId: entries[0].recordId },
+        });
+        const reply = (await this.dwn.processMessage(req.params.did, record.toJSON())) as RecordsReadReply;
+        return readReplyHandler(res, reply);
+      }
+      else if (status.code === 401) {
+        return res.sendStatus(404);
+      }
+      else {
+        return res.sendStatus(status.code);
+      }
+    })
+
+    this.#api.get('/:did/read/protocols/:protocol', async (req, res) => {
+      const query = await ProtocolsQuery.create({
+        filter: { protocol: req.params.protocol }
+      });
+      const { entries, status } = (await this.dwn.processMessage(req.params.did, query.message)) as ProtocolsQueryReply;
+      if (status.code === 200) {
+        if (entries.length) {
+          res.status(status.code);
+          res.json(entries[0]);
+        }
+        else {
+          return res.sendStatus(404);
+        }
+      }
+      else if (status.code === 401) {
+        return res.sendStatus(404);
+      }
+      else {
+        return res.sendStatus(status.code);
+      }
+    })
+
+    const recordsReadHandler = async (req, res): Promise<any> => {
       const record = await RecordsRead.create({
         filter: { recordId: req.params.id },
       });
       const reply = (await this.dwn.processMessage(req.params.did, record.toJSON())) as RecordsReadReply;
+      return readReplyHandler(res, reply);
+    }
 
-      if (reply.status.code === 200) {
-        if (reply?.record?.data) {
-          const stream = reply.record.data;
-          delete reply.record.data;
+    this.#api.get('/:did/read/records/:id', recordsReadHandler);
+    this.#api.get('/:did/records/:id', recordsReadHandler);
 
-          res.setHeader('content-type', reply.record.descriptor.dataFormat);
-          res.setHeader('dwn-response', JSON.stringify(reply));
-
-          return stream.pipe(res);
-        } else {
-          return res.sendStatus(400);
-        }
-      } else if (reply.status.code === 401) {
+    this.#api.get('/:did/query/protocols', async (req, res) => {
+      const query = await ProtocolsQuery.create({});
+      const { entries, status } = (await this.dwn.processMessage(req.params.did, query.message)) as ProtocolsQueryReply;
+      if (status.code === 200) {
+        res.status(status.code);
+        res.json(entries);
+      }
+      else if (status.code === 401) {
         return res.sendStatus(404);
-      } else {
-        return res.status(reply.status.code).send(reply);
+      }
+      else {
+        return res.sendStatus(status.code);
       }
     });
 
