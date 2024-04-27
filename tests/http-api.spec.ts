@@ -3,12 +3,13 @@ import sinon from 'sinon';
 import {
   Cid,
   DataStream,
+  DwnErrorCode,
   RecordsQuery,
   RecordsRead,
   TestDataGenerator,
   Time,
 } from '@tbd54566975/dwn-sdk-js';
-import type { Dwn, Persona } from '@tbd54566975/dwn-sdk-js';
+import type { Dwn, DwnError, Persona, RecordsQueryReply } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
 import type { Server } from 'http';
@@ -568,10 +569,20 @@ describe('http api', function () {
       expect(reply.status.code).to.equal(202);
 
       const { entries } = await fetch(
-        `http://localhost:3000/${alice.did}/query?filter.recordId=${recordsWrite.message.recordId}&foo.bar=1337`,
-      ).then(response => response.json()) as any;
+        `http://localhost:3000/${alice.did}/query?filter.recordId=${recordsWrite.message.recordId}&other.random.param=unused-value`,
+      ).then(response => response.json()) as RecordsQueryReply;
 
       expect(entries?.length).to.equal(1);
+    });
+
+    it('should return 400 if user provide invalid query', async function () {
+      const response = await fetch(
+        `http://localhost:3000/${alice.did}/query?filter=invalid-filter`,
+      );
+      expect(response.status).to.equal(400);
+
+      const responseBody = await response.json() as DwnError;
+      expect(responseBody.code).to.equal(DwnErrorCode.SchemaValidatorAdditionalPropertyNotAllowed);
     });
   });
 

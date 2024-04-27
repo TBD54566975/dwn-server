@@ -1,10 +1,4 @@
-import {
-  type Dwn,
-  DateSort,
-  RecordsRead, type RecordsReadReply,
-  RecordsQuery, type RecordsQueryReply,
-  ProtocolsQuery, type ProtocolsQueryReply 
-} from '@tbd54566975/dwn-sdk-js';
+import { type Dwn, DateSort, RecordsRead, RecordsQuery, ProtocolsQuery } from '@tbd54566975/dwn-sdk-js';
 
 import cors from 'cors';
 import type { Express, Request, Response } from 'express';
@@ -92,7 +86,8 @@ export class HttpApi {
     );
   }
 
-  /* setupRoutes configures the HTTP server's request handlers
+  /**
+   * Configures the HTTP server's request handlers.
    */
   #setupRoutes(): void {
 
@@ -144,14 +139,19 @@ export class HttpApi {
         dateSort: DateSort.PublishedDescending
       });
 
-      const { entries, status } = (await this.dwn.processMessage(req.params.did, query.message)) as RecordsQueryReply;
+      const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
 
-      if (status.code === 200 && entries[0]) {
-        const record = await RecordsRead.create({
-          filter: { recordId: entries[0].recordId },
-        });
-        const reply = (await this.dwn.processMessage(req.params.did, record.toJSON())) as RecordsReadReply;
-        return readReplyHandler(res, reply);
+      if (status.code === 200) {
+        if (entries[0]) {
+          const record = await RecordsRead.create({
+            filter: { recordId: entries[0].recordId },
+          });
+          const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
+          return readReplyHandler(res, reply);
+        }
+        else {
+          return res.sendStatus(404);
+        }
       }
       else if (status.code === 401) {
         return res.sendStatus(404);
@@ -165,7 +165,7 @@ export class HttpApi {
       const query = await ProtocolsQuery.create({
         filter: { protocol: req.params.protocol }
       });
-      const { entries, status } = (await this.dwn.processMessage(req.params.did, query.message)) as ProtocolsQueryReply;
+      const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
       if (status.code === 200) {
         if (entries.length) {
           res.status(status.code);
@@ -187,7 +187,7 @@ export class HttpApi {
       const record = await RecordsRead.create({
         filter: { recordId: req.params.id },
       });
-      const reply = (await this.dwn.processMessage(req.params.did, record.toJSON())) as RecordsReadReply;
+      const reply = await this.dwn.processMessage(req.params.did, record.message);
       return readReplyHandler(res, reply);
     }
 
@@ -196,7 +196,7 @@ export class HttpApi {
 
     this.#api.get('/:did/query/protocols', async (req, res) => {
       const query = await ProtocolsQuery.create({});
-      const { entries, status } = (await this.dwn.processMessage(req.params.did, query.message)) as ProtocolsQueryReply;
+      const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
       if (status.code === 200) {
         res.status(status.code);
         res.json(entries);
@@ -210,27 +210,38 @@ export class HttpApi {
     });
 
     this.#api.get('/:did/query', async (req, res) => {
-      const options = {} as any;
-      for (const param in req.query) {
-        const keys = param.split('.');
-        const lastKey = keys.pop();
-        // Set up the branch-path to the last dot-delimited key, if the path is not already present
-        const lastLevel = keys.reduce((obj, key) => obj[key] = obj[key] || {}, options)
-        lastLevel[lastKey] = req.query[param];
-      }
-      const record = await RecordsQuery.create({
-        filter: options.filter,
-        pagination: options.pagination,
-        dateSort: options.dateSort,
-      });
-      const reply = (await this.dwn.processMessage(req.params.did, record.message)) as RecordsQueryReply;
-      if (reply.status.code === 200) { 
+      
+      try {
+        // builds a nested object from flat keys with dot notation which may share the same parent path
+        // e.g. "filter.protocol=foo&filter.protocolPath=bar" becomes
+        // {
+        //   filter: {
+        //     protocol: 'foo',
+        //     protocolPath: 'bar'
+        //   }
+        // }
+        const recordsQueryOptions = {} as any;
+        for (const param in req.query) {
+          const keys = param.split('.');
+          const lastKey = keys.pop();
+          const lastLevelObject = keys.reduce((obj, key) => obj[key] = obj[key] || {}, recordsQueryOptions)
+          lastLevelObject[lastKey] = req.query[param];
+        }
+    
+        const recordsQuery = await RecordsQuery.create({
+          filter: recordsQueryOptions.filter,
+          pagination: recordsQueryOptions.pagination,
+          dateSort: recordsQueryOptions.dateSort,
+        });
+
+        // should always return a 200 status code with a JSON response
+        const reply = await this.dwn.processMessage(req.params.did, recordsQuery.message);
+
         res.setHeader('content-type', 'application/json');
-        return res.json(reply)
-      } else if (reply.status.code === 401) {
-        return res.sendStatus(404);
-      } else {
-        return res.status(reply.status.code).send(reply);
+        return res.json(reply);
+      } catch (error) {
+        // error should only occur when we are unable to create the RecordsQuery message internally, making it a client error
+        return res.status(400).send(error);
       }
     });
 

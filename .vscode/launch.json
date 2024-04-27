@@ -5,7 +5,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "runtimeVersion": "18",
       "type": "node",
       "request": "launch",
       "name": "Tests - Node",
