@@ -3,12 +3,13 @@ import sinon from 'sinon';
 import {
   Cid,
   DataStream,
+  DwnErrorCode,
   RecordsQuery,
   RecordsRead,
   TestDataGenerator,
   Time,
 } from '@tbd54566975/dwn-sdk-js';
-import type { Dwn, Persona } from '@tbd54566975/dwn-sdk-js';
+import type { Dwn, DwnError, Persona, RecordsQueryReply } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
 import type { Server } from 'http';
@@ -526,6 +527,62 @@ describe('http api', function () {
         `http://localhost:3000/${alice.did}/records/kaka`,
       );
       expect(response.status).to.equal(404);
+    });
+  });
+
+  describe('/:did/query', function () {
+    it('returns record data if record is published', async function () {
+      const filePath = './fixtures/test.jpeg';
+      const {
+        cid: expectedCid,
+        size,
+        stream,
+      } = await getFileAsReadStream(filePath);
+
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
+        dataCid: expectedCid,
+        dataSize: size,
+        published: true,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: recordsWrite.toJSON(),
+        target: alice.did,
+      });
+
+      const response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+        body: stream,
+      });
+
+      expect(response.status).to.equal(200);
+
+      const body = (await response.json()) as JsonRpcResponse;
+      expect(body.id).to.equal(requestId);
+      expect(body.error).to.not.exist;
+
+      const { reply } = body.result;
+      expect(reply.status.code).to.equal(202);
+
+      const { entries } = await fetch(
+        `http://localhost:3000/${alice.did}/query?filter.recordId=${recordsWrite.message.recordId}&other.random.param=unused-value`,
+      ).then(response => response.json()) as RecordsQueryReply;
+
+      expect(entries?.length).to.equal(1);
+    });
+
+    it('should return 400 if user provide invalid query', async function () {
+      const response = await fetch(
+        `http://localhost:3000/${alice.did}/query?filter=invalid-filter`,
+      );
+      expect(response.status).to.equal(400);
+
+      const responseBody = await response.json() as DwnError;
+      expect(responseBody.code).to.equal(DwnErrorCode.SchemaValidatorAdditionalPropertyNotAllowed);
     });
   });
 
