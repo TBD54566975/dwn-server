@@ -87,45 +87,93 @@ export class HttpApi {
   }
 
   /**
-   * Handles RecordsRead of a particular `recordId`. Abstracted out because we have 2 routes that handle the same request.
-   */
-  #recordsReadHandler = async (req, res): Promise<any> => {
-    const record = await RecordsRead.create({
-      filter: { recordId: req.params.id },
-    });
-    const reply = await this.dwn.processMessage(req.params.did, record.message);
-    return HttpApi.#readReplyHandler(res, reply);
-  }
-
-  /**
-   * Handles the reply of a `RecordsRead`.
-   */
-  static #readReplyHandler(res, reply): any {
-    if (reply.status.code === 200) {
-      if (reply?.record?.data) {
-        const stream = reply.record.data;
-        delete reply.record.data;
-
-        res.setHeader('content-type', reply.record.descriptor.dataFormat);
-        res.setHeader('dwn-response', JSON.stringify(reply));
-
-        return stream.pipe(res);
-      } else {
-        return res.sendStatus(400);
-      }
-    }
-    else if (reply.status.code === 401) {
-      return res.sendStatus(404);
-    }
-    else {
-      return res.status(reply.status.code).send(reply);
-    }
-  }
-
-  /**
    * Configures the HTTP server's request handlers.
    */
   #setupRoutes(): void {
+    // JSON-PRC API
+    this.#api.post('/', async (req: Request, res) => {
+      const dwnRequest = req.headers['dwn-request'] as any;
+
+      if (!dwnRequest) {
+        const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, 'request payload required.');
+
+        return res.status(400).json(reply);
+      }
+
+      let dwnRpcRequest: JsonRpcRequest;
+      try {
+        dwnRpcRequest = JSON.parse(dwnRequest);
+      } catch (e) {
+        const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
+
+        return res.status(400).json(reply);
+      }
+
+      // Check whether data was provided in the request body
+      const contentLength = req.headers['content-length'];
+      const transferEncoding = req.headers['transfer-encoding'];
+      const requestDataStream = parseInt(contentLength) > 0 || transferEncoding !== undefined ? req : undefined;
+
+      const requestContext: RequestContext = {
+        dwn        : this.dwn,
+        transport  : 'http',
+        dataStream : requestDataStream,
+      };
+      const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcRouter.handle(dwnRpcRequest, requestContext as RequestContext);
+
+      // If the handler catches a thrown exception and returns a JSON RPC InternalError, return the equivalent
+      // HTTP 500 Internal Server Error with the response.
+      if (jsonRpcResponse.error) {
+        requestCounter.inc({ method: dwnRpcRequest.method, error: 1 });
+        return res.status(500).json(jsonRpcResponse);
+      }
+
+      requestCounter.inc({
+        method : dwnRpcRequest.method,
+        status : jsonRpcResponse?.result?.reply?.status?.code || 0,
+      });
+      if (responseDataStream) {
+        res.setHeader('content-type', 'application/octet-stream');
+        res.setHeader('dwn-response', JSON.stringify(jsonRpcResponse));
+
+        return responseDataStream.pipe(res);
+      } else {
+        return res.json(jsonRpcResponse);
+      }
+    });
+
+    this.#setupPublishedRecordAndProtocolRoutes();
+
+    this.#setupRegistrationRoutes();
+
+    this.#setupDevOpsRoutes();
+  }
+
+  #setupDevOpsRoutes(): void {
+    this.#api.get('/', (_req, res) => {
+      res.setHeader('content-type', 'text/plain');
+      return res.send('See https://github.com/TBD54566975/dwn-server/ for API documentation.');
+    });
+
+    this.#api.get('/info', (req, res) => {
+      res.setHeader('content-type', 'application/json');
+      const registrationRequirements: string[] = [];
+      if (config.registrationProofOfWorkEnabled) {
+        registrationRequirements.push('proof-of-work-sha256-v0');
+      }
+      if (config.termsOfServiceFilePath !== undefined) {
+        registrationRequirements.push('terms-of-service');
+      }
+
+      res.json({
+        server                   : this.#packageInfo.server,
+        maxFileSize              : config.maxRecordDataSize,
+        registrationRequirements : registrationRequirements,
+        version                  : this.#packageInfo.version,
+        sdkVersion               : this.#packageInfo.sdkVersion,
+        webSocketSupport         : config.webSocketSupport,
+      });
+    });
 
     this.#api.get('/health', (_req, res) => {
       // return 200 ok
@@ -140,6 +188,9 @@ export class HttpApi {
         res.status(500).end(e);
       }
     });
+  }
+
+  #setupPublishedRecordAndProtocolRoutes(): void {
 
     this.#api.get('/:did/read/protocols/:protocol/*', async (req, res) => {
       const query = await RecordsQuery.create({
@@ -248,89 +299,6 @@ export class HttpApi {
         return res.status(400).send(error);
       }
     });
-
-    this.#api.get('/', (_req, res) => {
-      // return a plain text string
-      res.setHeader('content-type', 'text/plain');
-      return res.send('please use a web5 client, for example: https://github.com/TBD54566975/web5-js ');
-    });
-
-    this.#api.post('/', async (req: Request, res) => {
-      const dwnRequest = req.headers['dwn-request'] as any;
-
-      if (!dwnRequest) {
-        const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, 'request payload required.');
-
-        return res.status(400).json(reply);
-      }
-
-      let dwnRpcRequest: JsonRpcRequest;
-      try {
-        dwnRpcRequest = JSON.parse(dwnRequest);
-      } catch (e) {
-        const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
-
-        return res.status(400).json(reply);
-      }
-
-      // Check whether data was provided in the request body
-      const contentLength = req.headers['content-length'];
-      const transferEncoding = req.headers['transfer-encoding'];
-      const requestDataStream = parseInt(contentLength) > 0 || transferEncoding !== undefined ? req : undefined;
-
-      const requestContext: RequestContext = {
-        dwn        : this.dwn,
-        transport  : 'http',
-        dataStream : requestDataStream,
-      };
-      const { jsonRpcResponse, dataStream: responseDataStream } = await jsonRpcRouter.handle(dwnRpcRequest, requestContext as RequestContext);
-
-      // If the handler catches a thrown exception and returns a JSON RPC InternalError, return the equivalent
-      // HTTP 500 Internal Server Error with the response.
-      if (jsonRpcResponse.error) {
-        requestCounter.inc({ method: dwnRpcRequest.method, error: 1 });
-        return res.status(500).json(jsonRpcResponse);
-      }
-
-      requestCounter.inc({
-        method : dwnRpcRequest.method,
-        status : jsonRpcResponse?.result?.reply?.status?.code || 0,
-      });
-      if (responseDataStream) {
-        res.setHeader('content-type', 'application/octet-stream');
-        res.setHeader('dwn-response', JSON.stringify(jsonRpcResponse));
-
-        return responseDataStream.pipe(res);
-      } else {
-        return res.json(jsonRpcResponse);
-      }
-    });
-
-    this.#setupRegistrationRoutes();
-
-    this.#api.get('/info', (req, res) => {
-      res.setHeader('content-type', 'application/json');
-      const registrationRequirements: string[] = [];
-      if (config.registrationProofOfWorkEnabled) {
-        registrationRequirements.push('proof-of-work-sha256-v0');
-      }
-      if (config.termsOfServiceFilePath !== undefined) {
-        registrationRequirements.push('terms-of-service');
-      }
-
-      res.json({
-        server                   : this.#packageInfo.server,
-        maxFileSize              : config.maxRecordDataSize,
-        registrationRequirements : registrationRequirements,
-        version                  : this.#packageInfo.version,
-        sdkVersion               : this.#packageInfo.sdkVersion,
-        webSocketSupport         : config.webSocketSupport,
-      });
-    });
-  }
-
-  #listen(port: number, callback?: () => void): void {
-    this.#server.listen(port, callback);
   }
 
   #setupRegistrationRoutes(): void {
@@ -365,6 +333,46 @@ export class HttpApi {
         }
       });
     }
+  }
+
+  /**
+   * Handles RecordsRead of a particular `recordId`. Abstracted out because we have 2 routes that handle the same request.
+   */
+  #recordsReadHandler = async (req, res): Promise<any> => {
+    const record = await RecordsRead.create({
+      filter: { recordId: req.params.id },
+    });
+    const reply = await this.dwn.processMessage(req.params.did, record.message);
+    return HttpApi.#readReplyHandler(res, reply);
+  }
+
+  /**
+   * Handles the reply of a `RecordsRead`.
+   */
+  static #readReplyHandler(res, reply): any {
+    if (reply.status.code === 200) {
+      if (reply?.record?.data) {
+        const stream = reply.record.data;
+        delete reply.record.data;
+
+        res.setHeader('content-type', reply.record.descriptor.dataFormat);
+        res.setHeader('dwn-response', JSON.stringify(reply));
+
+        return stream.pipe(res);
+      } else {
+        return res.sendStatus(400);
+      }
+    }
+    else if (reply.status.code === 401) {
+      return res.sendStatus(404);
+    }
+    else {
+      return res.status(reply.status.code).send(reply);
+    }
+  }
+
+  #listen(port: number, callback?: () => void): void {
+    this.#server.listen(port, callback);
   }
 
   async start(port: number, callback?: () => void): Promise<http.Server> {
