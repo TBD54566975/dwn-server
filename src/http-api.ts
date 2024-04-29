@@ -87,33 +87,45 @@ export class HttpApi {
   }
 
   /**
+   * Handles RecordsRead of a particular `recordId`. Abstracted out because we have 2 routes that handle the same request.
+   */
+  #recordsReadHandler = async (req, res): Promise<any> => {
+    const record = await RecordsRead.create({
+      filter: { recordId: req.params.id },
+    });
+    const reply = await this.dwn.processMessage(req.params.did, record.message);
+    return HttpApi.#readReplyHandler(res, reply);
+  }
+
+  /**
+   * Handles the reply of a `RecordsRead`.
+   */
+  static #readReplyHandler(res, reply): any {
+    if (reply.status.code === 200) {
+      if (reply?.record?.data) {
+        const stream = reply.record.data;
+        delete reply.record.data;
+
+        res.setHeader('content-type', reply.record.descriptor.dataFormat);
+        res.setHeader('dwn-response', JSON.stringify(reply));
+
+        return stream.pipe(res);
+      } else {
+        return res.sendStatus(400);
+      }
+    }
+    else if (reply.status.code === 401) {
+      return res.sendStatus(404);
+    }
+    else {
+      return res.status(reply.status.code).send(reply);
+    }
+  }
+
+  /**
    * Configures the HTTP server's request handlers.
    */
   #setupRoutes(): void {
-
-    const leadTailSlashRegex = /^\/|\/$/;
-
-    function readReplyHandler(res, reply): any {
-      if (reply.status.code === 200) {
-        if (reply?.record?.data) {
-          const stream = reply.record.data;
-          delete reply.record.data;
-
-          res.setHeader('content-type', reply.record.descriptor.dataFormat);
-          res.setHeader('dwn-response', JSON.stringify(reply));
-
-          return stream.pipe(res);
-        } else {
-          return res.sendStatus(400);
-        }
-      }
-      else if (reply.status.code === 401) {
-        return res.sendStatus(404);
-      }
-      else {
-        return res.status(reply.status.code).send(reply);
-      }
-    }
 
     this.#api.get('/health', (_req, res) => {
       // return 200 ok
@@ -133,7 +145,7 @@ export class HttpApi {
       const query = await RecordsQuery.create({
         filter: {
           protocol: req.params.protocol,
-          protocolPath: (req.params[0] || '').replace(leadTailSlashRegex)
+          protocolPath: (req.params[0] || '').replace(/^\/|\/$/) // removes leading and trailing slashes from the path
         },
         pagination: { limit: 1 },
         dateSort: DateSort.PublishedDescending
@@ -147,7 +159,7 @@ export class HttpApi {
             filter: { recordId: entries[0].recordId },
           });
           const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
-          return readReplyHandler(res, reply);
+          return HttpApi.#readReplyHandler(res, reply);
         }
         else {
           return res.sendStatus(404);
@@ -183,16 +195,8 @@ export class HttpApi {
       }
     })
 
-    const recordsReadHandler = async (req, res): Promise<any> => {
-      const record = await RecordsRead.create({
-        filter: { recordId: req.params.id },
-      });
-      const reply = await this.dwn.processMessage(req.params.did, record.message);
-      return readReplyHandler(res, reply);
-    }
-
-    this.#api.get('/:did/read/records/:id', recordsReadHandler);
-    this.#api.get('/:did/records/:id', recordsReadHandler);
+    this.#api.get('/:did/read/records/:id', this.#recordsReadHandler);
+    this.#api.get('/:did/records/:id', this.#recordsReadHandler);
 
     this.#api.get('/:did/query/protocols', async (req, res) => {
       const query = await ProtocolsQuery.create({});
