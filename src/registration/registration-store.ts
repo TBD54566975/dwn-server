@@ -30,7 +30,7 @@ export class RegistrationStore {
     .createTable(RegistrationStore.registeredTenantTableName)
     .ifNotExists()
     .addColumn('did', 'text', (column) => column.primaryKey())
-    .addColumn('termsOfServiceHash', 'boolean')
+    .addColumn('termsOfServiceHash', 'text')
     .execute();
   }
 
