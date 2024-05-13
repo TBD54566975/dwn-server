@@ -106,11 +106,9 @@ export class HttpApi {
         } else {
           return res.sendStatus(400);
         }
-      }
-      else if (reply.status.code === 401) {
+      } else if (reply.status.code === 401) {
         return res.sendStatus(404);
-      }
-      else {
+      } else {
         return res.status(reply.status.code).send(reply);
       }
     }
@@ -129,6 +127,7 @@ export class HttpApi {
       }
     });
 
+    // Returns the data for the most recently published record under a given protocol path collection, if one is present
     this.#api.get('/:did/read/protocols/:protocol/*', async (req, res) => {
       const query = await RecordsQuery.create({
         filter: {
@@ -148,15 +147,12 @@ export class HttpApi {
           });
           const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
           return readReplyHandler(res, reply);
-        }
-        else {
+        } else {
           return res.sendStatus(404);
         }
-      }
-      else if (status.code === 401) {
+      } else if (status.code === 401) {
         return res.sendStatus(404);
-      }
-      else {
+      } else {
         return res.sendStatus(status.code);
       }
     })
@@ -170,15 +166,12 @@ export class HttpApi {
         if (entries.length) {
           res.status(status.code);
           res.json(entries[0]);
-        }
-        else {
+        } else {
           return res.sendStatus(404);
         }
-      }
-      else if (status.code === 401) {
+      } else if (status.code === 401) {
         return res.sendStatus(404);
-      }
-      else {
+      } else {
         return res.sendStatus(status.code);
       }
     })
@@ -200,11 +193,9 @@ export class HttpApi {
       if (status.code === 200) {
         res.status(status.code);
         res.json(entries);
-      }
-      else if (status.code === 401) {
+      } else if (status.code === 401) {
         return res.sendStatus(404);
-      }
-      else {
+      } else {
         return res.sendStatus(status.code);
       }
     });
