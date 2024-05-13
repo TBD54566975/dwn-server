@@ -213,7 +213,7 @@ export class HttpApi {
       
       try {
         // builds a nested object from flat keys with dot notation which may share the same parent path
-        // e.g. "filter.protocol=foo&filter.protocolPath=bar" becomes
+        // e.g. "did:dht:123/query?filter.protocol=foo&filter.protocolPath=bar" becomes
         // {
         //   filter: {
         //     protocol: 'foo',
