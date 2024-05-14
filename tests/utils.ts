@@ -1,4 +1,5 @@
 import type { GenericMessage, Persona, UnionMessageReply } from '@tbd54566975/dwn-sdk-js';
+import type { Response } from 'node-fetch';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
 import type { ReadStream } from 'node:fs';
@@ -25,6 +26,8 @@ export type CreateRecordsWriteOverrides =
       dateCreated?: string;
       published?: boolean;
       recordId?: string;
+      protocol?: string;
+      protocolPath?: string;
     } & { data?: never })
   | ({
       dataCid?: never;
@@ -32,9 +35,11 @@ export type CreateRecordsWriteOverrides =
       dateCreated?: string;
       published?: boolean;
       recordId?: string;
+      protocol?: string;
+      protocolPath?: string;
     } & { data?: Uint8Array });
 
-export type GenerateProtocolsConfigureOutput = {
+export type GenerateRecordsWriteOutput = {
   recordsWrite: RecordsWrite;
   dataStream: Readable | undefined;
 };
@@ -42,7 +47,7 @@ export type GenerateProtocolsConfigureOutput = {
 export async function createRecordsWriteMessage(
   signer: Persona,
   overrides: CreateRecordsWriteOverrides = {},
-): Promise<GenerateProtocolsConfigureOutput> {
+): Promise<GenerateRecordsWriteOutput> {
   if (!overrides.dataCid && !overrides.data) {
     overrides.data = randomBytes(32);
   }
@@ -96,6 +101,10 @@ export async function getFileAsReadStream(
       });
     });
   });
+}
+
+export function getDwnResponse(response: Response): UnionMessageReply {
+  return JSON.parse(response.headers.get('dwn-response') as string) as UnionMessageReply;
 }
 
 type HttpResponse = {

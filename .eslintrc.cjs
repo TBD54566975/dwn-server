@@ -14,6 +14,7 @@ module.exports = {
   },
   rules: {
     'max-len': ['error', { code: 150, ignoreStrings: true }],
+    'brace-style': ['error', '1tbs', { 'allowSingleLine': false }],
     curly: ['error', 'all'],
     'no-console': 'off',
     '@typescript-eslint/explicit-function-return-type': ['error'],

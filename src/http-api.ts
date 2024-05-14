@@ -1,4 +1,4 @@
-import { type Dwn, RecordsRead, RecordsQuery } from '@tbd54566975/dwn-sdk-js';
+import { type Dwn, DateSort, RecordsRead, RecordsQuery, ProtocolsQuery } from '@tbd54566975/dwn-sdk-js';
 
 import cors from 'cors';
 import type { Express, Request, Response } from 'express';
@@ -90,26 +90,10 @@ export class HttpApi {
    * Configures the HTTP server's request handlers.
    */
   #setupRoutes(): void {
-    this.#api.get('/health', (_req, res) => {
-      // return 200 ok
-      return res.json({ ok: true });
-    });
 
-    this.#api.get('/metrics', async (req, res) => {
-      try {
-        res.set('Content-Type', register.contentType);
-        res.end(await register.metrics());
-      } catch (e) {
-        res.status(500).end(e);
-      }
-    });
+    const leadTailSlashRegex = /^\/|\/$/;
 
-    this.#api.get('/:did/records/:id', async (req, res) => {
-      const record = await RecordsRead.create({
-        filter: { recordId: req.params.id },
-      });
-      const reply = await this.dwn.processMessage(req.params.did, record.message);
-
+    function readReplyHandler(res, reply): any {
       if (reply.status.code === 200) {
         if (reply?.record?.data) {
           const stream = reply.record.data;
@@ -127,13 +111,107 @@ export class HttpApi {
       } else {
         return res.status(reply.status.code).send(reply);
       }
+    }
+
+    this.#api.get('/health', (_req, res) => {
+      // return 200 ok
+      return res.json({ ok: true });
+    });
+
+    this.#api.get('/metrics', async (req, res) => {
+      try {
+        res.set('Content-Type', register.contentType);
+        res.end(await register.metrics());
+      } catch (e) {
+        res.status(500).end(e);
+      }
+    });
+
+    // Returns the data for the most recently published record under a given protocol path collection, if one is present
+    this.#api.get('/:did/read/protocols/:protocol/*', async (req, res) => {
+      if (!req.params[0]) {
+        return res.status(400).send('protocol path is required');
+      }
+
+      const protocolPath = req.params[0].replace(leadTailSlashRegex, '');
+      const protocol = req.params.protocol;
+
+      const query = await RecordsQuery.create({
+        filter: {
+          protocol,
+          protocolPath,
+        },
+        pagination: { limit: 1 },
+        dateSort: DateSort.PublishedDescending
+      });
+
+      const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
+
+      if (status.code === 200) {
+        if (entries[0]) {
+          const record = await RecordsRead.create({
+            filter: { recordId: entries[0].recordId },
+          });
+          const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
+          return readReplyHandler(res, reply);
+        } else {
+          return res.sendStatus(404);
+        }
+      } else if (status.code === 401) {
+        return res.sendStatus(404);
+      } else {
+        return res.sendStatus(status.code);
+      }
+    })
+
+    this.#api.get('/:did/read/protocols/:protocol', async (req, res) => {
+      const query = await ProtocolsQuery.create({
+        filter: { protocol: req.params.protocol }
+      });
+      const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
+      if (status.code === 200) {
+        if (entries.length) {
+          res.status(status.code);
+          res.json(entries[0]);
+        } else {
+          return res.sendStatus(404);
+        }
+      } else if (status.code === 401) {
+        return res.sendStatus(404);
+      } else {
+        return res.sendStatus(status.code);
+      }
+    })
+
+    const recordsReadHandler = async (req, res): Promise<any> => {
+      const record = await RecordsRead.create({
+        filter: { recordId: req.params.id },
+      });
+      const reply = await this.dwn.processMessage(req.params.did, record.message);
+      return readReplyHandler(res, reply);
+    }
+
+    this.#api.get('/:did/read/records/:id', recordsReadHandler);
+    this.#api.get('/:did/records/:id', recordsReadHandler);
+
+    this.#api.get('/:did/query/protocols', async (req, res) => {
+      const query = await ProtocolsQuery.create({});
+      const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
+      if (status.code === 200) {
+        res.status(status.code);
+        res.json(entries);
+      } else if (status.code === 401) {
+        return res.sendStatus(404);
+      } else {
+        return res.sendStatus(status.code);
+      }
     });
 
     this.#api.get('/:did/query', async (req, res) => {
       
       try {
         // builds a nested object from flat keys with dot notation which may share the same parent path
-        // e.g. "filter.protocol=foo&filter.protocolPath=bar" becomes
+        // e.g. "did:dht:123/query?filter.protocol=foo&filter.protocolPath=bar" becomes
         // {
         //   filter: {
         //     protocol: 'foo',
