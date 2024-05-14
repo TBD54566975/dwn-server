@@ -129,10 +129,17 @@ export class HttpApi {
 
     // Returns the data for the most recently published record under a given protocol path collection, if one is present
     this.#api.get('/:did/read/protocols/:protocol/*', async (req, res) => {
+      if (!req.params[0]) {
+        return res.status(400).send('protocol path is required');
+      }
+
+      const protocolPath = req.params[0].replace(leadTailSlashRegex, '');
+      const protocol = req.params.protocol;
+
       const query = await RecordsQuery.create({
         filter: {
-          protocol: req.params.protocol,
-          protocolPath: (req.params[0] || '').replace(leadTailSlashRegex)
+          protocol,
+          protocolPath,
         },
         pagination: { limit: 1 },
         dateSort: DateSort.PublishedDescending

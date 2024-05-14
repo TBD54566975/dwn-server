@@ -887,6 +887,19 @@ describe('http api', function () {
       expect(record.recordId).to.equal(recordsWrite.message.recordId);
     });
 
+    it('removes the trailing slash from the protocol path', async function () {
+      const recordsQueryCreateSpy = sinon.spy(RecordsQuery, 'create');
+
+      const urlEncodedProtocol = encodeURIComponent('http://example.com/protocol');
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/foo/`; // trailing slash
+      const recordReadResponse = await fetch(protocolUrl);
+      expect(recordReadResponse.status).to.equal(404);
+
+      expect(recordsQueryCreateSpy.calledOnce).to.be.true;
+      const recordsQueryFilter = recordsQueryCreateSpy.getCall(0).args[0].filter;
+      expect(recordsQueryFilter.protocolPath).to.equal('foo');
+    });
+
     it('returns a 404 if record for a given protocol and protocolPath is not published', async function () {
       // Create and publish a protocol
       const protocolConfigure = await ProtocolsConfigure.create({
@@ -955,6 +968,15 @@ describe('http api', function () {
       const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/foo`;
       const recordReadResponse = await fetch(protocolUrl);
       expect(recordReadResponse.status).to.equal(404);
+    });
+
+    it('returns a 400 if protocol path is not provided', async function () {
+      // Fetch a protocol record without providing a protocol path 
+      const urlEncodedProtocol = encodeURIComponent('http://example.com/protocol');
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/`; // missing protocol path
+      const recordReadResponse = await fetch(protocolUrl);
+      expect(recordReadResponse.status).to.equal(400);
+      expect(await recordReadResponse.text()).to.equal('protocol path is required');
     });
   });
 
