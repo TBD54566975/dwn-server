@@ -4,6 +4,7 @@ import {
   DataStoreSql,
   EventLogSql,
   MessageStoreSql,
+  ResumableTaskStoreSql,
 } from '@tbd54566975/dwn-sql-store';
 
 import { getDialectFromURI } from '../src/storage.js';
@@ -18,6 +19,7 @@ export async function getTestDwn(options: {
   const dataStore = new DataStoreSql(db);
   const eventLog = new EventLogSql(db);
   const messageStore = new MessageStoreSql(db);
+  const resumableTaskStore = new ResumableTaskStoreSql(db);
   const eventStream = withEvents ? new EventEmitterStream() : undefined;
 
   // NOTE: no resolver cache used here to avoid locking LevelDB
@@ -31,6 +33,7 @@ export async function getTestDwn(options: {
       eventLog,
       dataStore,
       messageStore,
+      resumableTaskStore,
       eventStream,
       tenantGate,
       didResolver

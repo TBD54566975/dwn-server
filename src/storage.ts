@@ -4,6 +4,7 @@ import {
   DataStoreLevel,
   EventLogLevel,
   MessageStoreLevel,
+  ResumableTaskStoreLevel,
 } from '@tbd54566975/dwn-sdk-js';
 import type {
   DataStore,
@@ -11,6 +12,7 @@ import type {
   EventLog,
   EventStream,
   MessageStore,
+  ResumableTaskStore,
   TenantGate,
 } from '@tbd54566975/dwn-sdk-js';
 import type { Dialect } from '@tbd54566975/dwn-sql-store';
@@ -20,6 +22,7 @@ import {
   MessageStoreSql,
   MysqlDialect,
   PostgresDialect,
+  ResumableTaskStoreSql,
   SqliteDialect,
 } from '@tbd54566975/dwn-sql-store';
 
@@ -34,6 +37,7 @@ export enum EStoreType {
   DataStore,
   MessageStore,
   EventLog,
+  ResumableTaskStore,
 }
 
 export enum BackendTypes {
@@ -43,7 +47,7 @@ export enum BackendTypes {
   POSTGRES = 'postgres',
 }
 
-export type StoreType = DataStore | EventLog | MessageStore;
+export type StoreType = DataStore | EventLog | MessageStore | ResumableTaskStore;
 
 export function getDWNConfig(
   config  : DwnServerConfig,
@@ -55,18 +59,16 @@ export function getDWNConfig(
   const { tenantGate, eventStream } = options;
   const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
   const eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);
-  const messageStore: MessageStore = getStore(
-    config.messageStore,
-    EStoreType.MessageStore,
-  );
+  const messageStore: MessageStore = getStore(config.messageStore, EStoreType.MessageStore);
+  const resumableTaskStore: ResumableTaskStore = getStore(config.messageStore, EStoreType.ResumableTaskStore);
 
-  return { eventStream, eventLog, dataStore, messageStore, tenantGate };
+  return { eventStream, eventLog, dataStore, messageStore, resumableTaskStore, tenantGate };
 }
 
 function getLevelStore(
   storeURI: URL,
   storeType: EStoreType,
-): DataStore | MessageStore | EventLog {
+): DataStore | MessageStore | EventLog | ResumableTaskStore {
   switch (storeType) {
     case EStoreType.DataStore:
       return new DataStoreLevel({
@@ -81,6 +83,10 @@ function getLevelStore(
       return new EventLogLevel({
         location: storeURI.host + storeURI.pathname + '/EVENTLOG',
       });
+    case EStoreType.ResumableTaskStore:
+      return new ResumableTaskStoreLevel({
+        location: storeURI.host + storeURI.pathname + '/RESUMABLE-TASK-STORE',
+      });
     default:
       throw new Error('Unexpected level store type');
   }
@@ -89,7 +95,7 @@ function getLevelStore(
 function getDBStore(
   db: Dialect,
   storeType: EStoreType,
-): DataStore | MessageStore | EventLog {
+): DataStore | MessageStore | EventLog | ResumableTaskStore {
   switch (storeType) {
     case EStoreType.DataStore:
       return new DataStoreSql(db);
@@ -97,6 +103,8 @@ function getDBStore(
       return new MessageStoreSql(db);
     case EStoreType.EventLog:
       return new EventLogSql(db);
+    case EStoreType.ResumableTaskStore:
+      return new ResumableTaskStoreSql(db);
     default:
       throw new Error('Unexpected db store type');
   }
@@ -114,6 +122,10 @@ function getStore(
   storeString: string,
   storeType: EStoreType.MessageStore,
 ): MessageStore;
+function getStore(
+  storeString: string,
+  storeType: EStoreType.ResumableTaskStore,
+): ResumableTaskStore;
 function getStore(storeString: string, storeType: EStoreType): StoreType {
   const storeURI = new URL(storeString);
 
