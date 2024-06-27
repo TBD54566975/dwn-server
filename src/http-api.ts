@@ -12,14 +12,15 @@ import { v4 as uuidv4 } from 'uuid';
 
 import type { RequestContext } from './lib/json-rpc-router.js';
 import type { JsonRpcRequest } from './lib/json-rpc.js';
-import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
 
 import type { DwnServerConfig } from './config.js';
-import { config } from './config.js';
-import { type DwnServerError } from './dwn-error.js';
-import { jsonRpcRouter } from './json-rpc-api.js';
-import { requestCounter, responseHistogram } from './metrics.js';
+import type { DwnServerError } from './dwn-error.js';
 import type { RegistrationManager } from './registration/registration-manager.js';
+import { config } from './config.js';
+import { jsonRpcRouter } from './json-rpc-api.js';
+import { Web5ConnectServer } from './web5-connect/web5-connect-server.js';
+import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
+import { requestCounter, responseHistogram } from './metrics.js';
 
 
 export class HttpApi {
@@ -27,6 +28,7 @@ export class HttpApi {
   #packageInfo: { version?: string, sdkVersion?: string, server: string };
   #api: Express;
   #server: http.Server;
+  web5ConnectServer: Web5ConnectServer;
   registrationManager: RegistrationManager;
   dwn: Dwn;
 
@@ -54,6 +56,11 @@ export class HttpApi {
     if (registrationManager !== undefined) {
       this.registrationManager = registrationManager;
     }
+
+    // setup the Web5 Connect Server
+    this.web5ConnectServer = new Web5ConnectServer({
+      baseUrl: `${config.web5ConnectServerBaseUrl}:${config.port}`,
+    });
 
     this.#setupMiddleware();
     this.#setupRoutes();
@@ -321,6 +328,8 @@ export class HttpApi {
         webSocketSupport         : config.webSocketSupport,
       });
     });
+
+    this.#setupWeb5ConnectServerRoutes();
   }
 
   #listen(port: number, callback?: () => void): void {
@@ -359,6 +368,86 @@ export class HttpApi {
         }
       });
     }
+  }
+
+  #setupWeb5ConnectServerRoutes(): void {
+    /**
+     * Endpoint that the connecting App pushes the Pushed Authorization Request Object to start the Web5 Connect flow.
+     */
+    this.#api.post('/connect/par', async (req, res) => {
+      console.log('Storing Pushed Authorization Request (PAR) request...');
+
+      const result = await this.web5ConnectServer.setWeb5ConnectRequest(req.body.request);
+      res.status(201).json(result);
+    });
+
+    /**
+     * Endpoint that the Identity Provider (wallet) calls to retrieve the Pushed Authorization Request.
+     */
+    this.#api.get('/connect/:requestId.jwt', async (req, res) => {
+      console.log(`Retrieving Web5 Connect Request object of ID: ${req.params.requestId}...`);
+
+      // Look up the request object based on the requestId.
+      const requestObjectJwt = await this.web5ConnectServer.getWeb5ConnectRequest(req.params.requestId);
+
+      if (!requestObjectJwt) {
+        res.status(404).json({
+          ok     : false,
+          status : { code: 404, message: 'Not Found' }
+        });
+      } else {
+        res.set('Content-Type', 'application/jwt');
+        res.send(requestObjectJwt);
+      }
+    });
+
+    /**
+     * Endpoint that the Identity Provider (wallet) pushes the Authorization Response ID token to.
+     */
+    this.#api.post('/connect/sessions', async (req, res) => {
+      console.log('Storing Identity Provider (wallet) pushed response with ID token...');
+
+      // Store the ID token.
+      const idToken = req.body.id_token;
+      const state = req.body.state;
+
+      if (idToken !== undefined && state != undefined) {
+
+        await this.web5ConnectServer.setWeb5ConnectResponse(state, idToken);
+
+        res.status(201).json({
+          ok     : true,
+          status : { code: 201, message: 'Created' }
+        });
+
+      } else {
+        res.status(400).json({
+          ok     : false,
+          status : { code: 400, message: 'Bad Request' }
+        });
+      }
+    });
+
+    /**
+     * Endpoint that the connecting App polls to check if the Identity Provider (Wallet) has posted the Web5 Connect Response object.
+     * The Web5 Connect Response is also an ID token.
+     */
+    this.#api.get('/connect/sessions/:state.jwt', async (req, res) => {
+      console.log(`Retrieving ID token for state: ${req.params.state}...`);
+
+      // Look up the ID token.
+      const idToken = await this.web5ConnectServer.getWeb5ConnectResponse(req.params.state);
+
+      if (!idToken) {
+        res.status(404).json({
+          ok     : false,
+          status : { code: 404, message: 'Not Found' }
+        });
+      } else {
+        res.set('Content-Type', 'application/jwt');
+        res.send(idToken);
+      }
+    });
   }
 
   async start(port: number, callback?: () => void): Promise<http.Server> {

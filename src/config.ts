@@ -39,4 +39,10 @@ export const config = {
 
   // log level - trace/debug/info/warn/error
   logLevel: process.env.DWN_SERVER_LOG_LEVEL || 'INFO',
+
+  /**
+   * The base URL of the connect server excluding the port (port will be appended by using the `port` param in this config),
+   * this is used to construct the full Web5 Connect Request URI for the Identity Provider (wallet) to use to fetch the Web5 Connect Request object.
+   */
+  web5ConnectServerBaseUrl: process.env.WEB5_CONNECT_SERVER_BASE_URL || 'http://localhost',
 };
