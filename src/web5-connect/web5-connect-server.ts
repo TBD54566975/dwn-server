@@ -48,8 +48,6 @@ export class Web5ConnectServer {
    * This is the initial call to the connect server to start the Web5 Connect flow.
    */
   public async setWeb5ConnectRequest(request: Web5ConnectRequest): Promise<SetWeb5ConnectRequestResult> {
-    console.log('Received Pushed Authorization Request (PAR) request.');
-
     // Generate a request URI
     const requestId = randomUuid();
     const request_uri = `${this.baseUrl}/connect/${requestId}.jwt`;
@@ -79,8 +77,6 @@ export class Web5ConnectServer {
    * Sets the Web5 Connect Response object, which is also an OIDC ID token.
    */
   public async setWeb5ConnectResponse(state: string, response: Web5ConnectResponse): Promise<any> {
-    console.log('Identity Provider pushed response with ID token.');
-
     this.dataStore.set(`response:${state}`, response);
   }
 

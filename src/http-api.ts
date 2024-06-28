@@ -33,7 +33,7 @@ export class HttpApi {
   dwn: Dwn;
 
   constructor(config: DwnServerConfig, dwn: Dwn, registrationManager?: RegistrationManager) {
-    console.log(config);
+    log.info(config);
 
     this.#packageInfo = {
       server: config.serverName,
@@ -351,7 +351,7 @@ export class HttpApi {
     if (this.#config.registrationStoreUrl !== undefined) {
       this.#api.post('/registration', async (req: Request, res: Response) => {
         const requestBody = req.body;
-        console.log('Registration request:', requestBody);
+        log.info('Registration request:', requestBody);
 
         try {
           await this.registrationManager.handleRegistrationRequest(requestBody);
@@ -362,7 +362,7 @@ export class HttpApi {
           if (dwnServerError.code !== undefined) {
             res.status(400).json(dwnServerError);
           } else {
-            console.log('Error handling registration request:', error);
+            log.info('Error handling registration request:', error);
             res.status(500).json({ success: false });
           }
         }
@@ -375,7 +375,7 @@ export class HttpApi {
      * Endpoint that the connecting App pushes the Pushed Authorization Request Object to start the Web5 Connect flow.
      */
     this.#api.post('/connect/par', async (req, res) => {
-      console.log('Storing Pushed Authorization Request (PAR) request...');
+      log.info('Storing Pushed Authorization Request (PAR) request...');
 
       const result = await this.web5ConnectServer.setWeb5ConnectRequest(req.body.request);
       res.status(201).json(result);
@@ -385,7 +385,7 @@ export class HttpApi {
      * Endpoint that the Identity Provider (wallet) calls to retrieve the Pushed Authorization Request.
      */
     this.#api.get('/connect/:requestId.jwt', async (req, res) => {
-      console.log(`Retrieving Web5 Connect Request object of ID: ${req.params.requestId}...`);
+      log.info(`Retrieving Web5 Connect Request object of ID: ${req.params.requestId}...`);
 
       // Look up the request object based on the requestId.
       const requestObjectJwt = await this.web5ConnectServer.getWeb5ConnectRequest(req.params.requestId);
@@ -405,7 +405,7 @@ export class HttpApi {
      * Endpoint that the Identity Provider (wallet) pushes the Authorization Response ID token to.
      */
     this.#api.post('/connect/sessions', async (req, res) => {
-      console.log('Storing Identity Provider (wallet) pushed response with ID token...');
+      log.info('Storing Identity Provider (wallet) pushed response with ID token...');
 
       // Store the ID token.
       const idToken = req.body.id_token;
@@ -433,7 +433,7 @@ export class HttpApi {
      * The Web5 Connect Response is also an ID token.
      */
     this.#api.get('/connect/sessions/:state.jwt', async (req, res) => {
-      console.log(`Retrieving ID token for state: ${req.params.state}...`);
+      log.info(`Retrieving ID token for state: ${req.params.state}...`);
 
       // Look up the ID token.
       const idToken = await this.web5ConnectServer.getWeb5ConnectResponse(req.params.state);
