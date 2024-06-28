@@ -57,9 +57,9 @@ export class HttpApi {
       this.registrationManager = registrationManager;
     }
 
-    // setup the Web5 Connect Server
+    // create the Web5 Connect Server
     this.web5ConnectServer = new Web5ConnectServer({
-      baseUrl: `${config.web5ConnectServerBaseUrl}:${config.port}`,
+      baseUrl: `${config.baseUrl}:${config.port}`,
     });
 
     this.#setupMiddleware();
@@ -320,6 +320,7 @@ export class HttpApi {
       }
 
       res.json({
+        url                      : config.baseUrl,
         server                   : this.#packageInfo.server,
         maxFileSize              : config.maxRecordDataSize,
         registrationRequirements : registrationRequirements,

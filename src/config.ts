@@ -10,6 +10,13 @@ export const config = {
    * otherwise we fall back on the use defined `DWN_SERVER_PACKAGE_NAME` or `@web5/dwn-server`.
    */
   serverName: process.env.npm_package_name || process.env.DWN_SERVER_PACKAGE_NAME || '@web5/dwn-server',
+
+  /**
+   * The base external URL of this DWN.
+   * This is used to construct URL paths such as the `Request URI` in the Web5 Connect flow.
+   */
+  baseUrl: process.env.DWN_BASE_URL || 'http://localhost',
+
   /**
    * Used to populate the `version` and `sdkVersion` properties returned by the `/info` endpoint.
    *
@@ -39,10 +46,4 @@ export const config = {
 
   // log level - trace/debug/info/warn/error
   logLevel: process.env.DWN_SERVER_LOG_LEVEL || 'INFO',
-
-  /**
-   * The base URL of the connect server excluding the port (port will be appended by using the `port` param in this config),
-   * this is used to construct the full Web5 Connect Request URI for the Identity Provider (wallet) to use to fetch the Web5 Connect Request object.
-   */
-  web5ConnectServerBaseUrl: process.env.WEB5_CONNECT_SERVER_BASE_URL || 'http://localhost',
 };

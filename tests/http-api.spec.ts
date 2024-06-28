@@ -1042,6 +1042,7 @@ describe('http api', function () {
       expect(resp.status).to.equal(200);
 
       const info = await resp.json();
+      expect(info['url']).to.equal('http://localhost');
       expect(info['server']).to.equal('@web5/dwn-server');
       expect(info['registrationRequirements']).to.include('terms-of-service');
       expect(info['registrationRequirements']).to.include(
