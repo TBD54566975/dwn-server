@@ -10,6 +10,13 @@ export const config = {
    * otherwise we fall back on the use defined `DWN_SERVER_PACKAGE_NAME` or `@web5/dwn-server`.
    */
   serverName: process.env.npm_package_name || process.env.DWN_SERVER_PACKAGE_NAME || '@web5/dwn-server',
+
+  /**
+   * The base external URL of this DWN.
+   * This is used to construct URL paths such as the `Request URI` in the Web5 Connect flow.
+   */
+  baseUrl: process.env.DWN_BASE_URL || 'http://localhost',
+
   /**
    * Used to populate the `version` and `sdkVersion` properties returned by the `/info` endpoint.
    *
