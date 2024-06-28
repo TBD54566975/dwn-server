@@ -281,6 +281,7 @@ Configuration can be set using environment variables
 | `DS_PORT`                                         | Port that the server listens on                                                                                         | `3000`                 |
 | `DS_MAX_RECORD_DATA_SIZE`                         | Maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value                                               | `1gb`                  |
 | `DS_WEBSOCKET_SERVER`                             | Whether to enable listening over `ws:`. values: `on`,`off`                                                              | `on`                   |
+| `DWN_BASE_URL`                                    | Base external URL of this DWN. Used to construct URL paths such as the `Request URI` for the Web5 Connect flow.         | `http://localhost`     |
 | `DWN_REGISTRATION_STORE_URL`                      | URL to use for storage of registered DIDs. Leave unset to if DWN does not require registration (ie. open for all)       | unset                  |
 | `DWN_REGISTRATION_PROOF_OF_WORK_SEED`             | Seed to generate the challenge nonce from, this allows all DWN instances in a cluster to generate the same challenge.   | unset                  |
 | `DWN_REGISTRATION_PROOF_OF_WORK_ENABLED`          | Require new users to complete a proof-of-work challenge                                                                 | `false`                |
