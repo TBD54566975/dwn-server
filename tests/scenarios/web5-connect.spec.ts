@@ -1,7 +1,10 @@
 import fetch from 'node-fetch';
+import sinon from 'sinon';
 import { config } from '../../src/config.js';
 import { DwnServer } from '../../src/dwn-server.js';
 import { expect } from 'chai';
+import { useFakeTimers } from 'sinon';
+import { Web5ConnectServer } from '../../src/web5-connect/web5-connect-server.js';
 import { webcrypto } from 'node:crypto';
 
 // node.js 18 and earlier needs globalThis.crypto polyfill
@@ -13,6 +16,7 @@ if (!globalThis.crypto) {
 describe('Web5 Connect scenarios', function () {
   const web5ConnectBaseUrl = 'http://localhost:3000';
 
+  let clock: sinon.SinonFakeTimers;
   let dwnServer: DwnServer;
   const dwnServerConfig = { ...config } // not touching the original config
 
@@ -33,10 +37,15 @@ describe('Web5 Connect scenarios', function () {
   });
 
   beforeEach(function () {
+    sinon.restore(); // wipe all previous stubs/spies/mocks/fakes/clock
+
+    // IMPORTANT: MUST be called AFTER `sinon.restore()` because `sinon.restore()` resets fake timers
+    clock = useFakeTimers({ shouldAdvanceTime: true });
     dwnServer.start();
   });
 
   afterEach(function () {
+    clock.restore();
     dwnServer.stop(() => {});
   });
 
@@ -112,5 +121,31 @@ describe('Web5 Connect scenarios', function () {
       method: 'GET',
     });
     expect(getWeb5ConnectResponseResult2.status).to.equal(404);
+  });
+
+  it('should clean up objects that are expired', async () => {
+    // Scenario:
+    // 1. App sends the Web5 Connect Request object to the Web5 Connect server.
+    // 2. Time passes and the Web5 Connect Request object is expired.
+    // 3. Should receive 404 when fetching  Web5 Connect Request.
+
+    // 1. App sends the Web5 Connect Request object to the Web5 Connect server.
+    const requestBody = { request: { dummyProperty: 'dummyValue' } };
+    const postWeb5ConnectRequestResult = await fetch(`${web5ConnectBaseUrl}/connect/par`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    expect(postWeb5ConnectRequestResult.status).to.equal(201);
+
+    // 2. Time passes and the Web5 Connect Request object is expired.
+    await clock.tickAsync(Web5ConnectServer.ttlInSeconds * 1000);
+
+    // 3. Should receive 404 when fetching the expired Web5 Connect Request.
+    const requestUrl = (await postWeb5ConnectRequestResult.json() as any).request_uri;
+    const getWeb5ConnectRequestResult = await fetch(requestUrl, {
+      method: 'GET',
+    });
+    expect(getWeb5ConnectRequestResult.status).to.equal(404);
   });
 });

@@ -32,38 +32,45 @@ export class HttpApi {
   registrationManager: RegistrationManager;
   dwn: Dwn;
 
-  constructor(config: DwnServerConfig, dwn: Dwn, registrationManager?: RegistrationManager) {
+  private constructor() { }
+
+  public static async create(config: DwnServerConfig, dwn: Dwn, registrationManager?: RegistrationManager): Promise<HttpApi> {
+    const httpApi = new HttpApi();
+
     log.info(config);
 
-    this.#packageInfo = {
+    httpApi.#packageInfo = {
       server: config.serverName,
     };
     
     try {
       // We populate the `version` and `sdkVersion` properties from the `package.json` file.
       const packageJson = JSON.parse(readFileSync(config.packageJsonPath).toString());
-      this.#packageInfo.version = packageJson.version;
-      this.#packageInfo.sdkVersion = packageJson.dependencies ? packageJson.dependencies['@tbd54566975/dwn-sdk-js'] : undefined;
+      httpApi.#packageInfo.version = packageJson.version;
+      httpApi.#packageInfo.sdkVersion = packageJson.dependencies ? packageJson.dependencies['@tbd54566975/dwn-sdk-js'] : undefined;
     } catch (error: any) {
       log.error('could not read `package.json` for version info', error);
     }
 
-    this.#config = config;
-    this.#api = express();
-    this.#server = http.createServer(this.#api);
-    this.dwn = dwn;
+    httpApi.#config = config;
+    httpApi.#api = express();
+    httpApi.#server = http.createServer(httpApi.#api);
+    httpApi.dwn = dwn;
 
     if (registrationManager !== undefined) {
-      this.registrationManager = registrationManager;
+      httpApi.registrationManager = registrationManager;
     }
 
     // create the Web5 Connect Server
-    this.web5ConnectServer = new Web5ConnectServer({
+    httpApi.web5ConnectServer = await Web5ConnectServer.create({
       baseUrl: `${config.baseUrl}:${config.port}`,
+      sqlTtlCacheUrl: config.ttlCacheUrl,
     });
 
-    this.#setupMiddleware();
-    this.#setupRoutes();
+    httpApi.#setupMiddleware();
+    httpApi.#setupRoutes();
+
+    return httpApi;
   }
 
   get server(): http.Server {

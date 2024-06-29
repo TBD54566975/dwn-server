@@ -74,7 +74,7 @@ export class DwnServer {
       }));
     }
 
-    this.#httpApi = new HttpApi(this.config, this.dwn, registrationManager);
+    this.#httpApi = await HttpApi.create(this.config, this.dwn, registrationManager);
 
     await this.#httpApi.start(this.config.port, () => {
       log.info(`HttpServer listening on port ${this.config.port}`);
