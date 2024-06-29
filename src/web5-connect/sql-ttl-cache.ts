@@ -30,17 +30,10 @@ export class SqlTtlCache {
     await this.db.schema
       .createTable(SqlTtlCache.cacheTableName)
       .ifNotExists()
-      .addColumn('key', 'text', (column) => column.primaryKey())
-      .addColumn('value', 'text')
-      .addColumn('expiry', 'integer')
-      .execute();
-
-    // Add an index to the expiry column
-    await this.db.schema
-      .createIndex('index_expiry')
-      .ifNotExists()
-      .on(SqlTtlCache.cacheTableName)
-      .column('expiry')
+      // 512 chars to accommodate potentially large `state` in Web5 Connect flow
+      .addColumn('key', 'varchar(512)', (column) => column.primaryKey())
+      .addColumn('value', 'text', (column) => column.notNull())
+      .addColumn('expiry', 'integer', (column) => column.notNull())
       .execute();
 
     // Start the cleanup timer

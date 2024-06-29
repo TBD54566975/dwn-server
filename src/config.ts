@@ -23,8 +23,12 @@ export const config = {
   port: parseInt(process.env.DS_PORT || '3000'),
 
   /**
-   * The URL of the TTL cache used by the DWN. Currently only supports SQL databases.
+   * The URL of the TTL cache used by the DWN.
    * NOTE: Used for session/state keeping, thus requires the cache to be commonly addressable by nodes in a cloud cluster environment.
+   * 
+   * Currently only supports SQL databases, e.g.
+   * Postgres: 'postgres://root:dwn@localhost:5432/dwn'
+   * MySQL: 'mysql://root:dwn@localhost:3306/dwn'
    */
   ttlCacheUrl: process.env.DWN_TTL_CACHE_URL || 'sqlite://',
 
