@@ -293,7 +293,6 @@ Configuration can be set using environment variables
 | `DWN_TERMS_OF_SERVICE_FILE_PATH`                  | Required terms of service agreement if set. Value is path to the terms of service file.                                 | unset                  |
 | `DWN_TTL_CACHE_URL`                               | URL of the TTL cache used by the DWN. Currently only supports SQL databases.                                            | `sqlite://`            |
 
-
 ### Storage Options
 
 Several storage formats are supported, and may be configured with the `DWN_STORAGE_*` environment variables:
