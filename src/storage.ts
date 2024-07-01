@@ -143,15 +143,15 @@ function getStore(storeString: string, storeType: EStoreType): StoreType {
   }
 }
 
-export function getDialectFromURI(u: URL): Dialect {
-  switch (u.protocol.slice(0, -1)) {
+export function getDialectFromURI(connectionUrl: URL): Dialect {
+  switch (connectionUrl.protocol.slice(0, -1)) {
     case BackendTypes.SQLITE:
-      const path = u.host + u.pathname;
+      const path = connectionUrl.host + connectionUrl.pathname;
       console.log('SQL-lite relative path:', path ? path : undefined); // NOTE, using ? for lose equality comparison
 
-      if (u.host && !fs.existsSync(u.host)) {
-        console.log('SQL-lite directory does not exist, creating:', u.host);
-        fs.mkdirSync(u.host, { recursive: true });
+      if (connectionUrl.host && !fs.existsSync(connectionUrl.host)) {
+        console.log('SQL-lite directory does not exist, creating:', connectionUrl.host);
+        fs.mkdirSync(connectionUrl.host, { recursive: true });
       }
 
       return new SqliteDialect({
@@ -159,11 +159,11 @@ export function getDialectFromURI(u: URL): Dialect {
       });
     case BackendTypes.MYSQL:
       return new MysqlDialect({
-        pool: async () => MySQLCreatePool(u.toString()),
+        pool: async () => MySQLCreatePool(connectionUrl.toString()),
       });
     case BackendTypes.POSTGRES:
       return new PostgresDialect({
-        pool: async () => new pg.Pool({ u }),
+        pool: async () => new pg.Pool({ connectionString: connectionUrl.toString() }),
         cursor: Cursor,
       });
   }

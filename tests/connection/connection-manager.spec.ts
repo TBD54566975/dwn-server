@@ -23,7 +23,7 @@ describe('InMemoryConnectionManager', () => {
   beforeEach(async () => {
     dwn = await getTestDwn({ withEvents: true });
     connectionManager = new InMemoryConnectionManager(dwn);
-    const httpApi = new HttpApi(config, dwn);
+    const httpApi = await HttpApi.create(config, dwn);
     server = await httpApi.start(9002);
     wsApi = new WsApi(server, dwn, connectionManager);
     wsApi.start();

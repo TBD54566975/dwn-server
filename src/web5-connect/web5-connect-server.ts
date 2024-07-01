@@ -1,4 +1,6 @@
+import { getDialectFromURI } from "../storage.js";
 import { randomUuid } from '@web5/crypto/utils';
+import { SqlTtlCache } from "./sql-ttl-cache.js";
 
 /**
  * The Web5 Connect Request object.
@@ -29,16 +31,31 @@ export type SetWeb5ConnectRequestResult = {
  * The Web5 Connect Server is responsible for handling the Web5 Connect flow.
  */
 export class Web5ConnectServer {
+  public static readonly ttlInSeconds = 600;
 
   private baseUrl: string;
-  private dataStore = new Map(); // TODO: turn this into a TTL cache (https://github.com/TBD54566975/dwn-server/issues/138)
+  private cache: SqlTtlCache;
 
   /**
    * Creates a new instance of the Web5 Connect Server.
    * @param params.baseUrl The the base URL of the connect server including the port.
    *                       This is given to the Identity Provider (wallet) to fetch the Web5 Connect Request object.
+   * @param params.sqlTtlCacheUrl The URL of the SQL database to use as the TTL cache.
    */
-  public constructor({ baseUrl }: {
+  public static async create({ baseUrl, sqlTtlCacheUrl }: {
+    baseUrl: string;
+    sqlTtlCacheUrl: string;
+  }): Promise<Web5ConnectServer> {
+    const web5ConnectServer = new Web5ConnectServer({ baseUrl });
+
+    // Initialize TTL cache.
+    const sqlDialect = getDialectFromURI(new URL(sqlTtlCacheUrl));
+    web5ConnectServer.cache = await SqlTtlCache.create(sqlDialect);
+
+    return web5ConnectServer;
+  }
+
+  private constructor({ baseUrl }: {
     baseUrl: string;
   }) {
     this.baseUrl = baseUrl;
@@ -54,11 +71,11 @@ export class Web5ConnectServer {
     const request_uri = `${this.baseUrl}/connect/${requestId}.jwt`;
   
     // Store the Request Object.
-    this.dataStore.set(`request:${requestId}`, request);
+    this.cache.insert(`request:${requestId}`, request, Web5ConnectServer.ttlInSeconds);
   
     return {
       request_uri,
-      expires_in  : 600,
+      expires_in  : Web5ConnectServer.ttlInSeconds,
     };
   }
 
@@ -66,10 +83,10 @@ export class Web5ConnectServer {
    * Returns the Web5 Connect Request object. The request ID can only be used once.
    */
   public async getWeb5ConnectRequest(requestId: string): Promise<Web5ConnectRequest | undefined> {
-    const request = this.dataStore.get(`request:${requestId}`);
+    const request = this.cache.get(`request:${requestId}`);
 
     // Delete the Request Object from the data store now that it has been retrieved.
-    this.dataStore.delete(`request:${requestId}`);
+    this.cache.delete(`request:${requestId}`);
 
     return request;
   }
@@ -78,17 +95,17 @@ export class Web5ConnectServer {
    * Sets the Web5 Connect Response object, which is also an OIDC ID token.
    */
   public async setWeb5ConnectResponse(state: string, response: Web5ConnectResponse): Promise<any> {
-    this.dataStore.set(`response:${state}`, response);
+    this.cache.insert(`response:${state}`, response, Web5ConnectServer.ttlInSeconds);
   }
 
   /**
    * Gets the Web5 Connect Response object. The `state` string can only be used once.
    */
   public async getWeb5ConnectResponse(state: string): Promise<Web5ConnectResponse | undefined> {
-    const response = this. dataStore.get(`response:${state}`);
+    const response = this. cache.get(`response:${state}`);
 
     // Delete the Response object from the data store now that it has been retrieved.
-    this.dataStore.delete(`response:${state}`);
+    this.cache.delete(`response:${state}`);
 
     return response;
   }
