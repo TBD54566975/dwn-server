@@ -40,6 +40,7 @@ export class Web5ConnectServer {
    * Creates a new instance of the Web5 Connect Server.
    * @param params.baseUrl The the base URL of the connect server including the port.
    *                       This is given to the Identity Provider (wallet) to fetch the Web5 Connect Request object.
+   * @param params.sqlTtlCacheUrl The URL of the SQL database to use as the TTL cache.
    */
   public static async create({ baseUrl, sqlTtlCacheUrl }: {
     baseUrl: string;

@@ -68,9 +68,6 @@ export class SqlTtlCache {
    * Retrieves a cache entry if it is not expired and cleans up expired entries.
    */
   public async get(key: string): Promise<object | undefined> {
-    // clean up expired entries but no need to await for it to finish
-    this.cleanUpExpiredEntries();
-
     const result = await this.db
       .selectFrom(SqlTtlCache.cacheTableName)
       .select('key')
