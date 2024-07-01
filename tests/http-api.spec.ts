@@ -69,7 +69,7 @@ describe('http api', function () {
 
     dwn = await getTestDwn({ tenantGate: registrationManager });
 
-    httpApi = new HttpApi(config, dwn, registrationManager);
+    httpApi = await HttpApi.create(config, dwn, registrationManager);
 
   });
 
@@ -1064,7 +1064,7 @@ describe('http api', function () {
       server.closeAllConnections();
 
       config.webSocketSupport = false;
-      httpApi = new HttpApi(config, dwn, registrationManager);
+      httpApi = await HttpApi.create(config, dwn, registrationManager);
       server = await httpApi.start(3000);
 
       resp = await fetch(`http://localhost:3000/info`);
@@ -1088,7 +1088,7 @@ describe('http api', function () {
       // set the config to an invalid file path
       const packageJsonConfig = config.packageJsonPath;
       config.packageJsonPath = '/some/invalid/file.json';
-      httpApi = new HttpApi(config, dwn, registrationManager);
+      httpApi = await HttpApi.create(config, dwn, registrationManager);
       server = await httpApi.start(3000);
 
       const resp = await fetch(`http://localhost:3000/info`);
@@ -1117,7 +1117,7 @@ describe('http api', function () {
       // set a custom name for the `serverName`
       const serverName = config.serverName;
       config.serverName = '@web5/dwn-server-2'
-      httpApi = new HttpApi(config, dwn, registrationManager);
+      httpApi = await HttpApi.create(config, dwn, registrationManager);
       server = await httpApi.start(3000);
 
       const resp = await fetch(`http://localhost:3000/info`);

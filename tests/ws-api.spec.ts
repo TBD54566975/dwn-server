@@ -40,7 +40,7 @@ describe('websocket api', function () {
 
   beforeEach(async function () {
     dwn = await getTestDwn({ withEvents: true });
-    httpApi = new HttpApi(config, dwn);
+    httpApi =  await HttpApi.create(config, dwn);
     server = await httpApi.start(9002);
     wsApi = new WsApi(server, dwn);
     wsApi.start();
