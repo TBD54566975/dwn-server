@@ -79,12 +79,17 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
       subscriptionHandler: subscriptionRequest?.subscriptionHandler,
     });
 
-    const { record } = reply;
-    // RecordsRead messages return record data as a stream to for accommodate large amounts of data
+
+    const { record, entry } = reply;
+    // RecordsRead or MessagesRead messages optionally return data as a stream to accommodate large amounts of data
+    // we remove the data stream from the reply that will be serialized and return it as a separate property in the response payload.
     let recordDataStream: IsomorphicReadable;
     if (record !== undefined && record.data !== undefined) {
       recordDataStream = reply.record.data;
       delete reply.record.data; // not serializable via JSON
+    } else if (entry !== undefined && entry.data !== undefined) {
+      recordDataStream = entry.data;
+      delete reply.entry.data; // not serializable via JSON
     }
 
     if (subscriptionRequest && reply.subscription) {
@@ -107,15 +112,15 @@ export const handleDwnProcessMessage: JsonRpcHandler = async (
     }
 
     return responsePayload;
-  } catch (e) {
+  } catch (error) {
     const jsonRpcResponse = createJsonRpcErrorResponse(
       requestId,
       JsonRpcErrorCodes.InternalError,
-      e.message,
+      error.message,
     );
 
     // log the unhandled error response
-    log.error('handleDwnProcessMessage error', jsonRpcResponse, dwnRequest, e);
+    log.error('handleDwnProcessMessage error', jsonRpcResponse, dwnRequest, error);
     return { jsonRpcResponse } as HandlerResponse;
   }
 };
