@@ -8,11 +8,13 @@ export class SqlTtlCache {
   private static readonly cacheTableName = 'cacheEntries';
   private static readonly cleanupIntervalInSeconds = 60;
 
+  private sqlDialect: Dialect;
   private db: Kysely<CacheDatabase>;
   private cleanupTimer: NodeJS.Timeout;
 
   private constructor(sqlDialect: Dialect) {
     this.db = new Kysely<CacheDatabase>({ dialect: sqlDialect });
+    this.sqlDialect = sqlDialect;
   }
 
   /**
@@ -27,14 +29,26 @@ export class SqlTtlCache {
   }
 
   private async initialize(): Promise<void> {
-    await this.db.schema
-      .createTable(SqlTtlCache.cacheTableName)
-      .ifNotExists()
-      // 512 chars to accommodate potentially large `state` in Web5 Connect flow
-      .addColumn('key', 'varchar(512)', (column) => column.primaryKey())
-      .addColumn('value', 'text', (column) => column.notNull())
-      .addColumn('expiry', 'integer', (column) => column.notNull())
-      .execute();
+
+    // create table if it doesn't exist
+    const tableExists = await this.sqlDialect.hasTable(this.db, SqlTtlCache.cacheTableName);
+    if (!tableExists) {
+      await this.db.schema
+        .createTable(SqlTtlCache.cacheTableName)
+        .ifNotExists() // kept to show supported by all dialects in contrast to ifNotExists() below, though not needed due to tableExists check above
+        // 512 chars to accommodate potentially large `state` in Web5 Connect flow
+        .addColumn('key', 'varchar(512)', (column) => column.primaryKey())
+        .addColumn('value', 'text', (column) => column.notNull())
+        .addColumn('expiry', 'integer', (column) => column.notNull())
+        .execute();
+  
+      await this.db.schema
+        .createIndex('index_expiry')
+        // .ifNotExists() // intentionally kept commented out code to show that it is not supported by all dialects (ie. MySQL)
+        .on(SqlTtlCache.cacheTableName)
+        .column('expiry')
+        .execute();
+    }
 
     // Start the cleanup timer
     this.startCleanupTimer();
@@ -102,7 +116,7 @@ export class SqlTtlCache {
   }
 
   /**
-   * Periodically clean up expired cache entries.
+   * Cleans up expired cache entries.
    */
   public async cleanUpExpiredEntries(): Promise<void> {
     await this.db
