@@ -83,10 +83,15 @@ export class Web5ConnectServer {
    * Returns the Web5 Connect Request object. The request ID can only be used once.
    */
   public async getWeb5ConnectRequest(requestId: string): Promise<Web5ConnectRequest | undefined> {
-    const request = this.cache.get(`request:${requestId}`);
+    const request = await this.cache.get(`request:${requestId}`);
 
-    // Delete the Request Object from the data store now that it has been retrieved.
-    this.cache.delete(`request:${requestId}`);
+    // Delete the Request Object from cache once it has been retrieved.
+    // IMPORTANT: only delete if object is fetched, otherwise there could be a race condition
+    // where the object is not fetched in this call but become available immediately right,
+    // we would end up deleting it before a successful fetch.
+    if (request !== undefined) {
+      this.cache.delete(`request:${requestId}`);
+    }
 
     return request;
   }
@@ -102,10 +107,15 @@ export class Web5ConnectServer {
    * Gets the Web5 Connect Response object. The `state` string can only be used once.
    */
   public async getWeb5ConnectResponse(state: string): Promise<Web5ConnectResponse | undefined> {
-    const response = this. cache.get(`response:${state}`);
+    const response = await this.cache.get(`response:${state}`);
 
-    // Delete the Response object from the data store now that it has been retrieved.
-    this.cache.delete(`response:${state}`);
+    // Delete the Response object from the cache once it has been retrieved.
+    // IMPORTANT: only delete if object is fetched, otherwise there could be a race condition
+    // where the object is not fetched in this call but become available immediately right,
+    // we would end up deleting it before a successful fetch.
+    if (response !== undefined) {
+      this.cache.delete(`response:${state}`);
+    }
 
     return response;
   }
