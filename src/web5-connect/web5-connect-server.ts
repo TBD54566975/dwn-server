@@ -86,9 +86,9 @@ export class Web5ConnectServer {
     const request = await this.cache.get(`request:${requestId}`);
 
     // Delete the Request Object from cache once it has been retrieved.
-    // IMPORTANT: only delete if object is fetched, otherwise there could be a race condition
-    // where the object is not fetched in this call but become available immediately right,
-    // we would end up deleting it before a successful fetch.
+    // IMPORTANT: only delete if the object exists, otherwise there could be a race condition
+    // where the object does not exist in this call but becomes available immediately after,
+    // we would end up deleting it before it is successfully retrieved.
     if (request !== undefined) {
       this.cache.delete(`request:${requestId}`);
     }
