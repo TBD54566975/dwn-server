@@ -35,10 +35,6 @@ if (!globalThis.crypto) {
   globalThis.crypto = webcrypto;
 }
 
-console.log = (): void => {};
-console.error = (): void => {};
-console.info = (): void => {};
-
 describe('Registration scenarios', function () {
   const dwnMessageEndpoint = 'http://localhost:3000';
   const termsOfUseEndpoint = 'http://localhost:3000/registration/terms-of-service';

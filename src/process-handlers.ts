@@ -59,8 +59,8 @@ export const unsetProcessHandlers = (handlers: ProcessHandlers): void => {
     sigtermHandler 
   } = handlers;
 
-  process.off('unhandledRejection', unhandledRejectionHandler);
-  process.off('uncaughtException', uncaughtExceptionHandler);
-  process.off('SIGINT', sigintHandler);
-  process.off('SIGTERM', sigtermHandler);
+  process.removeListener('unhandledRejection', unhandledRejectionHandler);
+  process.removeListener('uncaughtException', uncaughtExceptionHandler);
+  process.removeListener('SIGINT', sigintHandler);
+  process.removeListener('SIGTERM', sigtermHandler);
 };
