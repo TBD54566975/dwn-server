@@ -6,6 +6,7 @@ import {
   MessageStoreLevel,
   ResumableTaskStoreLevel,
 } from '@tbd54566975/dwn-sdk-js';
+import type { DidResolver } from '@web5/dids';
 import type {
   DataStore,
   DwnConfig,
@@ -52,17 +53,18 @@ export type StoreType = DataStore | EventLog | MessageStore | ResumableTaskStore
 export function getDWNConfig(
   config  : DwnServerConfig,
   options : {
+    didResolver? : DidResolver,
     tenantGate?  : TenantGate,
     eventStream? : EventStream,
   }
 ): DwnConfig {
-  const { tenantGate, eventStream } = options;
+  const { tenantGate, eventStream, didResolver } = options;
   const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
   const eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);
   const messageStore: MessageStore = getStore(config.messageStore, EStoreType.MessageStore);
   const resumableTaskStore: ResumableTaskStore = getStore(config.messageStore, EStoreType.ResumableTaskStore);
 
-  return { eventStream, eventLog, dataStore, messageStore, resumableTaskStore, tenantGate };
+  return { didResolver, eventStream, eventLog, dataStore, messageStore, resumableTaskStore, tenantGate };
 }
 
 function getLevelStore(

@@ -1,22 +1,32 @@
+import type { DidResolver } from '@web5/dids';
 import type { EventStream } from '@tbd54566975/dwn-sdk-js';
-import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
-
 import type { ProcessHandlers } from './process-handlers.js';
 import type { Server } from 'http';
+import type { WebSocketServer } from 'ws';
+import type { DwnServerConfig } from './config.js';
+
 import log from 'loglevel';
 import prefix from 'loglevel-plugin-prefix';
-import { type WebSocketServer } from 'ws';
-
-import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
-
-import { type DwnServerConfig, config as defaultConfig } from './config.js';
-import { HttpApi } from './http-api.js';
-import { setProcessHandlers, unsetProcessHandlers } from './process-handlers.js';
+import { config as defaultConfig } from './config.js';
 import { getDWNConfig } from './storage.js';
-import { WsApi } from './ws-api.js';
+import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
+import { HttpApi } from './http-api.js';
 import { RegistrationManager } from './registration/registration-manager.js';
+import { WsApi } from './ws-api.js';
+import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
+import { setProcessHandlers, unsetProcessHandlers } from './process-handlers.js';
 
+/**
+ * Options for the DwnServer constructor.
+ * This is different to DwnServerConfig in that the DwnServerConfig defines configuration that come from environment variables so (more) user facing.
+ * Where as DwnServerOptions wraps DwnServerConfig with additional overrides that can be used for testing.
+ */
 export type DwnServerOptions = {
+  /**
+   * A custom DID resolver to use in the DWN.
+   * Mainly for testing purposes. Ignored if `dwn` is provided.
+   */
+  didResolver?: DidResolver;
   dwn?: Dwn;
   config?: DwnServerConfig;
 };
@@ -29,6 +39,12 @@ export enum DwnServerState {
 export class DwnServer {
   serverState = DwnServerState.Stopped;
   processHandlers: ProcessHandlers;
+  
+  /**
+   * A custom DID resolver to use in the DWN.
+   * Mainly for testing purposes. Ignored if `dwn` is provided.
+   */
+  didResolver?: DidResolver;
   dwn?: Dwn;
   config: DwnServerConfig;
   #httpServerShutdownHandler: HttpServerShutdownHandler;
@@ -40,6 +56,8 @@ export class DwnServer {
    */
   constructor(options: DwnServerOptions = {}) {
     this.config = options.config ?? defaultConfig;
+
+    this.didResolver = options.didResolver;
     this.dwn = options.dwn;
 
     log.setLevel(this.config.logLevel as log.LogLevelDesc);
@@ -84,10 +102,12 @@ export class DwnServer {
         eventStream = new EventEmitterStream();
       }
 
-      this.dwn = await Dwn.create(getDWNConfig(this.config, {
+      const dwnConfig = getDWNConfig(this.config, {
+        didResolver: this.didResolver,
         tenantGate: registrationManager,
         eventStream,
-      }));
+      })
+      this.dwn = await Dwn.create(dwnConfig);
     }
 
     this.#httpApi = await HttpApi.create(this.config, this.dwn, registrationManager);
@@ -112,11 +132,6 @@ export class DwnServer {
   async stop(): Promise<void> {
     if (this.serverState === DwnServerState.Stopped) {
       return;
-    }
-
-    // F YEAH!
-    if (this.dwn['didResolver']['cache']['cache']) {
-      await this.dwn['didResolver']['cache']['cache']['close']();
     }
 
     await this.dwn.close();

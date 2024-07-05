@@ -1,33 +1,26 @@
+import type { DwnServerConfig } from '../../src/config.js';
 import type { Persona } from '@tbd54566975/dwn-sdk-js';
-import fetch from 'node-fetch';
+import type { ProofOfWorkChallengeModel } from '../../src/registration/proof-of-work-types.js';
+import type { RegistrationManager } from '../../src/registration/registration-manager.js';
+import type { JsonRpcRequest, JsonRpcResponse } from '../../src/lib/json-rpc.js';
+import type { RegistrationData, RegistrationRequest } from '../../src/registration/registration-types.js';
 
+import fetch from 'node-fetch';
+import { config } from '../../src/config.js';
+import { createJsonRpcRequest} from '../../src/lib/json-rpc.js';
+import { createRecordsWriteMessage } from '../utils.js';
+import { DwnServer } from '../../src/dwn-server.js';
+import { DwnServerErrorCode } from '../../src/dwn-error.js';
 import { expect } from 'chai';
+import { ProofOfWork } from '../../src/registration/proof-of-work.js';
+import { ProofOfWorkManager } from '../../src/registration/proof-of-work-manager.js';
+import { randomBytes } from 'crypto';
 import { readFileSync } from 'fs';
-import { webcrypto } from 'node:crypto';
 import { useFakeTimers } from 'sinon';
 import { v4 as uuidv4 } from 'uuid';
+import { webcrypto } from 'node:crypto';
 import { DataStream, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
-
-import type { DwnServerConfig } from '../../src/config.js';
-import { config } from '../../src/config.js';
-import type {
-  JsonRpcRequest,
-  JsonRpcResponse,
-} from '../../src/lib/json-rpc.js';
-import {
-  createJsonRpcRequest,
-} from '../../src/lib/json-rpc.js';
-import { ProofOfWork } from '../../src/registration/proof-of-work.js';
-import {
-  createRecordsWriteMessage,
-} from '../utils.js';
-import type { ProofOfWorkChallengeModel } from '../../src/registration/proof-of-work-types.js';
-import type { RegistrationData, RegistrationRequest } from '../../src/registration/registration-types.js';
-import type { RegistrationManager } from '../../src/registration/registration-manager.js';
-import { DwnServerErrorCode } from '../../src/dwn-error.js';
-import { ProofOfWorkManager } from '../../src/registration/proof-of-work-manager.js';
-import { DwnServer } from '../../src/dwn-server.js';
-import { randomBytes } from 'crypto';
+import { DidDht, DidKey, UniversalResolver } from '@web5/dids';
 
 // node.js 18 and earlier,  needs globalThis.crypto polyfill
 if (!globalThis.crypto) {
@@ -65,29 +58,22 @@ describe('Registration scenarios', function () {
     dwnServerConfig.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
     dwnServerConfig.registrationProofOfWorkInitialMaxHash = '0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'; // 1 in 16 chance of solving
 
-    dwnServer = new DwnServer({ config: dwnServerConfig });
+    // CRITICAL: We need to create a custom DID resolver that does not use a LevelDB based cache (which is the default cache used in `DWN`)
+    // otherwise we will receive a `Database is not open` coming from LevelDB.
+    // This is likely due to the fact that LevelDB is the default cache used in `DWN`, and we have tests creating default DWN instances,
+    // so here we have to create a DWN that does not use the same LevelDB cache to avoid hitting LevelDB locked issues.
+    // Long term we should investigate and unify approach of DWN instantiation taken by tests to avoid this "workaround" entirely. 
+    const didResolver = new UniversalResolver({
+      didResolvers : [DidDht, DidKey],
+    });
+
+    dwnServer = new DwnServer({ config: dwnServerConfig, didResolver });
     await dwnServer.start();
     registrationManager = dwnServer.registrationManager;
   });
 
   after(async () => {
     clock.restore();
-  });
-
-  beforeEach(async () => {
-    // sinon.restore(); // wipe all previous stubs/spies/mocks/fakes/clock
-
-    // // IMPORTANT: MUST be called AFTER `sinon.restore()` because `sinon.restore()` resets fake timers
-    // clock = useFakeTimers({ shouldAdvanceTime: true });
-
-    // dwnServer =  new DwnServer({ config: dwnServerConfig });
-    // await dwnServer.start();
-    // registrationManager = dwnServer.registrationManager;
-  });
-
-  afterEach(async () =>{
-    // await dwnServer.registrationManager['registrationStore']['db'].destroy();
-    // await dwnServer.stop();
   });
 
   it('should facilitate tenant registration with terms-of-service and proof-or-work turned on', async () => {
@@ -540,11 +526,6 @@ describe('Registration scenarios', function () {
 
   });
 
-  /**
-   * NOTE: The tests below instantiate their own server configs and should should take care to stop the `dwnServer`
-   * This is done to avoid LevelDB locking for the default `DidResolver` cache.
-   */
-
   it('should initialize ProofOfWorkManager with challenge nonce seed if given.', async function () {
     await dwnServer.stop();
 
@@ -563,7 +544,15 @@ describe('Registration scenarios', function () {
 
   it('should allow tenant registration to be turned off to allow all DWN messages through.', async () => {
     await dwnServer.stop();
-    // await dwnServer.registrationManager['registrationStore']['db'].destroy();
+    
+    // CRITICAL: We need to create a custom DID resolver that does not use a LevelDB based cache (which is the default cache used in `DWN`)
+    // otherwise we will receive a `Database is not open` coming from LevelDB.
+    // This is likely due to the fact that LevelDB is the default cache used in `DWN`, and we have tests creating default DWN instances,
+    // so here we have to create a DWN that does not use the same LevelDB cache to avoid hitting LevelDB locked issues.
+    // Long term we should investigate and unify approach of DWN instantiation taken by tests to avoid this "workaround" entirely. 
+    const didResolver = new UniversalResolver({
+      didResolvers : [DidDht, DidKey],
+    });
 
     // Scenario:
     // 1. There is a DWN that does not require tenant registration.
@@ -575,7 +564,7 @@ describe('Registration scenarios', function () {
       registrationProofOfWorkEnabled: false,
       termsOfServiceFilePath: undefined,
     };
-    dwnServer = new DwnServer({ config: configClone });
+    dwnServer = new DwnServer({ config: configClone, didResolver });
     await dwnServer.start();
 
     const { jsonRpcRequest, dataBytes } = await generateRecordsWriteJsonRpcRequest(alice);

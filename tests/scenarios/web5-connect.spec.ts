@@ -23,7 +23,7 @@ describe('Web5 Connect scenarios', function () {
 
   before(async function () {
 
-    // NOTE: using SQL to workaround an issue where multiple instances of DwnServer can be started using LevelDB in the same test run,
+    // NOTE: using SQL to workaround an issue where multiple instances of DwnServer cannot be started using LevelDB in the same test run,
     // and dwn-server.spec.ts already uses LevelDB.
     dwnServerConfig.messageStore = 'sqlite://',
     dwnServerConfig.dataStore = 'sqlite://',
