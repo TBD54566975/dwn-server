@@ -30,9 +30,7 @@ export const config = {
    * Postgres: 'postgres://root:dwn@localhost:5432/dwn'
    * MySQL: 'mysql://root:dwn@localhost:3306/dwn'
    */
-  ttlCacheUrl: process.env.DWN_TTL_CACHE_URL || 'mysql://root:dwn@localhost:3306/dwn',
-  // ttlCacheUrl: process.env.DWN_TTL_CACHE_URL || 'sqlite://',
-  // ttlCacheUrl: process.env.DWN_TTL_CACHE_URL || 'postgres://root:dwn@localhost:5432/dwn',
+  ttlCacheUrl: process.env.DWN_TTL_CACHE_URL || 'sqlite://',
 
   /**
    * Used to populate the `version` and `sdkVersion` properties returned by the `/info` endpoint.

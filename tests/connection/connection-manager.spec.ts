@@ -13,7 +13,7 @@ import { JsonRpcSocket } from '../../src/json-rpc-socket.js';
 
 chai.use(chaiAsPromised);
 
-describe.only('InMemoryConnectionManager', () => {
+describe('InMemoryConnectionManager', () => {
   let dwn: Dwn;
   let connectionManager: InMemoryConnectionManager;
   let httpApi: HttpApi;  
