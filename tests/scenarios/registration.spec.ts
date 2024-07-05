@@ -1,13 +1,12 @@
-// node.js 18 and earlier,  needs globalThis.crypto polyfill
-import { DataStream, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
 import type { Persona } from '@tbd54566975/dwn-sdk-js';
+import fetch from 'node-fetch';
 
 import { expect } from 'chai';
 import { readFileSync } from 'fs';
-import fetch from 'node-fetch';
 import { webcrypto } from 'node:crypto';
 import { useFakeTimers } from 'sinon';
 import { v4 as uuidv4 } from 'uuid';
+import { DataStream, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
 
 import type { DwnServerConfig } from '../../src/config.js';
 import { config } from '../../src/config.js';
@@ -30,10 +29,15 @@ import { ProofOfWorkManager } from '../../src/registration/proof-of-work-manager
 import { DwnServer } from '../../src/dwn-server.js';
 import { randomBytes } from 'crypto';
 
+// node.js 18 and earlier,  needs globalThis.crypto polyfill
 if (!globalThis.crypto) {
   // @ts-ignore
   globalThis.crypto = webcrypto;
 }
+
+console.log = (): void => {};
+console.error = (): void => {};
+console.info = (): void => {};
 
 describe('Registration scenarios', function () {
   const dwnMessageEndpoint = 'http://localhost:3000';
@@ -41,6 +45,7 @@ describe('Registration scenarios', function () {
   const proofOfWorkEndpoint = 'http://localhost:3000/registration/proof-of-work';
   const registrationEndpoint = 'http://localhost:3000/registration';
 
+  // let didResolverCache = new DidResolverCacheLevel({ location: 'RESOLVERCACHE' });
   let alice: Persona;
   let registrationManager: RegistrationManager;
   let clock;
@@ -64,22 +69,29 @@ describe('Registration scenarios', function () {
     dwnServerConfig.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
     dwnServerConfig.registrationProofOfWorkInitialMaxHash = '0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'; // 1 in 16 chance of solving
 
-    dwnServer =  new DwnServer({ config: dwnServerConfig });
+    dwnServer = new DwnServer({ config: dwnServerConfig });
     await dwnServer.start();
     registrationManager = dwnServer.registrationManager;
   });
 
-  after(function () {
-    dwnServer.stop(() => { });
+  after(async () => {
     clock.restore();
   });
 
-  beforeEach(function () {
-    dwnServer.start();
+  beforeEach(async () => {
+    // sinon.restore(); // wipe all previous stubs/spies/mocks/fakes/clock
+
+    // // IMPORTANT: MUST be called AFTER `sinon.restore()` because `sinon.restore()` resets fake timers
+    // clock = useFakeTimers({ shouldAdvanceTime: true });
+
+    // dwnServer =  new DwnServer({ config: dwnServerConfig });
+    // await dwnServer.start();
+    // registrationManager = dwnServer.registrationManager;
   });
 
-  afterEach(function () {
-    dwnServer.stop(() => {});
+  afterEach(async () =>{
+    // await dwnServer.registrationManager['registrationStore']['db'].destroy();
+    // await dwnServer.stop();
   });
 
   it('should facilitate tenant registration with terms-of-service and proof-or-work turned on', async () => {
@@ -538,7 +550,7 @@ describe('Registration scenarios', function () {
    */
 
   it('should initialize ProofOfWorkManager with challenge nonce seed if given.', async function () {
-    dwnServer.stop(() => {});
+    await dwnServer.stop();
 
     const registrationProofOfWorkSeed = randomBytes(32).toString('hex');
     const configWithProofOfWorkSeed: DwnServerConfig = {
@@ -554,7 +566,8 @@ describe('Registration scenarios', function () {
   });
 
   it('should allow tenant registration to be turned off to allow all DWN messages through.', async () => {
-    dwnServer.stop(() => {});
+    await dwnServer.stop();
+    // await dwnServer.registrationManager['registrationStore']['db'].destroy();
 
     // Scenario:
     // 1. There is a DWN that does not require tenant registration.
@@ -570,13 +583,15 @@ describe('Registration scenarios', function () {
     await dwnServer.start();
 
     const { jsonRpcRequest, dataBytes } = await generateRecordsWriteJsonRpcRequest(alice);
-    const writeResponse = await fetch(dwnMessageEndpoint, {
+
+    const writeResponse = await fetch('http://localhost:3002', {
       method: 'POST',
       headers: {
         'dwn-request': JSON.stringify(jsonRpcRequest),
       },
       body: new Blob([dataBytes]),
     });
+
     const writeResponseBody = await writeResponse.json() as JsonRpcResponse;
     expect(writeResponse.status).to.equal(200);
     expect(writeResponseBody.result.reply.status.code).to.equal(202);

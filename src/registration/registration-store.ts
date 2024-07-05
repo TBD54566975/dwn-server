@@ -67,6 +67,10 @@ export class RegistrationStore {
 
     return result[0];
   }
+
+  public async close(): Promise<void> {
+    this.db.destroy();
+  }
 }
 
 interface RegisteredTenants {

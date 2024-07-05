@@ -5,7 +5,8 @@ import { DwnServer } from '../../src/dwn-server.js';
 import { expect } from 'chai';
 import { useFakeTimers } from 'sinon';
 import { Web5ConnectServer } from '../../src/web5-connect/web5-connect-server.js';
-import { webcrypto } from 'node:crypto';
+import { randomUUID, webcrypto } from 'node:crypto';
+import { Poller } from '../poller.js';
 
 // node.js 18 and earlier needs globalThis.crypto polyfill
 if (!globalThis.crypto) {
@@ -29,24 +30,23 @@ describe('Web5 Connect scenarios', function () {
     dwnServerConfig.eventLog = 'sqlite://',
 
     dwnServer =  new DwnServer({ config: dwnServerConfig });
-    await dwnServer.start();
   });
 
-  after(function () {
-    dwnServer.stop(() => { });
+  after(async () => {
+    await dwnServer.stop();
   });
 
-  beforeEach(function () {
+  beforeEach(async () => {
     sinon.restore(); // wipe all previous stubs/spies/mocks/fakes/clock
 
     // IMPORTANT: MUST be called AFTER `sinon.restore()` because `sinon.restore()` resets fake timers
     clock = useFakeTimers({ shouldAdvanceTime: true });
-    dwnServer.start();
+    await dwnServer.start();
   });
 
-  afterEach(function () {
+  afterEach(async () => {
     clock.restore();
-    dwnServer.stop(() => {});
+    await dwnServer.stop();
   });
 
   it('should be able to set and get Web5 Connect Request & Response objects', async () => {
@@ -70,18 +70,22 @@ describe('Web5 Connect scenarios', function () {
 
     // 2. Identity Provider (wallet) fetches the Web5 Connect Request object from the Web5 Connect server.
     const requestUrl = (await postWeb5ConnectRequestResult.json() as any).request_uri;
-    const getWeb5ConnectRequestResult = await fetch(requestUrl, {
-      method: 'GET',
+
+    let getWeb5ConnectRequestResult;
+    await Poller.pollUntilSuccessOrTimeout(async () => {
+      console.log('Polling for Web5 Connect Request object...')
+      getWeb5ConnectRequestResult = await fetch(requestUrl, { method: 'GET' });
+      expect(getWeb5ConnectRequestResult.status).to.equal(200);
     });
+
     const fetchedRequest = await getWeb5ConnectRequestResult.json();
-    expect(getWeb5ConnectRequestResult.status).to.equal(200);
     expect(fetchedRequest).to.deep.equal(requestBody.request);
 
     // 3. Should receive 404 if fetching the same Web5 Connect Request again
-    const getWeb5ConnectRequestResult2 = await fetch(requestUrl, {
-      method: 'GET',
+    await Poller.pollUntilSuccessOrTimeout(async () => {
+      const getWeb5ConnectRequestResult2 = await fetch(requestUrl, { method: 'GET' });
+      expect(getWeb5ConnectRequestResult2.status).to.equal(404);
     });
-    expect(getWeb5ConnectRequestResult2.status).to.equal(404);
 
     // 4. Identity Provider (wallet) should receive 400 if sending an incomplete response.
     const incompleteResponseBody = {
@@ -95,10 +99,11 @@ describe('Web5 Connect scenarios', function () {
     });
     expect(postIncompleteWeb5ConnectResponseResult.status).to.equal(400);
 
+    const state = `dummyState-${randomUUID()}`;
     // 5. Identity Provider (wallet) sends the Web5 Connect Response object to the Web5 Connect server.
     const web5ConnectResponseBody = {
       id_token : { dummyToken: 'dummyToken' },
-      state    : 'dummyState',
+      state
     };
     const postWeb5ConnectResponseResult = await fetch(`${web5ConnectBaseUrl}/connect/sessions`, {
       method: 'POST',
@@ -109,18 +114,21 @@ describe('Web5 Connect scenarios', function () {
 
     // 6. App fetches the Web5 Connect Response object from the Web5 Connect server.
     const web5ConnectResponseUrl = `${web5ConnectBaseUrl}/connect/sessions/${web5ConnectResponseBody.state}.jwt`;
-    const getWeb5ConnectResponseResult = await fetch(web5ConnectResponseUrl, {
-      method: 'GET',
+
+    let getWeb5ConnectResponseResult;
+    await Poller.pollUntilSuccessOrTimeout(async () => {
+      getWeb5ConnectResponseResult = await fetch(web5ConnectResponseUrl, { method: 'GET' });
+      expect(getWeb5ConnectResponseResult.status).to.equal(200);
     });
+  
     const fetchedResponse = await getWeb5ConnectResponseResult.json();
-    expect(getWeb5ConnectResponseResult.status).to.equal(200);
     expect(fetchedResponse).to.deep.equal(web5ConnectResponseBody.id_token);
 
     // 7. Should receive 404 if fetching the same Web5 Connect Response object again.
-    const getWeb5ConnectResponseResult2 = await fetch(web5ConnectResponseUrl, {
-      method: 'GET',
+    await Poller.pollUntilSuccessOrTimeout(async () => {
+      const getWeb5ConnectResponseResult2 = await fetch(web5ConnectResponseUrl, { method: 'GET' });
+      expect(getWeb5ConnectResponseResult2.status).to.equal(404);
     });
-    expect(getWeb5ConnectResponseResult2.status).to.equal(404);
   });
 
   it('should clean up objects that are expired', async () => {

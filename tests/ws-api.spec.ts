@@ -2,8 +2,6 @@
 import type { Dwn, MessageEvent } from '@tbd54566975/dwn-sdk-js';
 import { DataStream, Message, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
 
-import type { Server } from 'http';
-
 import { expect } from 'chai';
 import { base64url } from 'multiformats/bases/base64';
 import type { SinonFakeTimers } from 'sinon';
@@ -24,7 +22,6 @@ import { JsonRpcSocket } from '../src/json-rpc-socket.js';
 
 
 describe('websocket api', function () {
-  let server: Server;
   let httpApi: HttpApi;
   let wsApi: WsApi;
   let dwn: Dwn;
@@ -41,15 +38,14 @@ describe('websocket api', function () {
   beforeEach(async function () {
     dwn = await getTestDwn({ withEvents: true });
     httpApi =  await HttpApi.create(config, dwn);
-    server = await httpApi.start(9002);
-    wsApi = new WsApi(server, dwn);
+    await httpApi.start(9002);
+    wsApi = new WsApi(httpApi.server, dwn);
     wsApi.start();
   });
 
   afterEach(async function () {
     await wsApi.close();
-    server.close();
-    server.closeAllConnections();
+    await httpApi.stop();
     await dwn.close();
   });
 

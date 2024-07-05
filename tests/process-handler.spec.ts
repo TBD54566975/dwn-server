@@ -4,6 +4,7 @@ import sinon from 'sinon';
 import { config } from '../src/config.js';
 import { DwnServer } from '../src/dwn-server.js';
 import { getTestDwn } from './test-dwn.js';
+import { Poller } from './poller.js';
 
 describe('Process Handlers', function () {
   let dwnServer: DwnServer;
@@ -15,24 +16,33 @@ describe('Process Handlers', function () {
     await dwnServer.start();
     processExitStub = sinon.stub(process, 'exit');
   });
-  afterEach(async function () {
-    dwnServer.stop(() => console.log('server stop in Process Handlers tests'));
+
+  afterEach(async () => {
+    await dwnServer.stop();
+    console.log('server stop in Process Handlers tests');
 
     process.removeAllListeners('SIGINT');
     process.removeAllListeners('SIGTERM');
     process.removeAllListeners('uncaughtException');
     processExitStub.restore();
   });
+
   it('should stop when SIGINT is emitted', async function () {
     process.emit('SIGINT');
-    expect(dwnServer.httpServer.listening).to.be.false;
-    expect(processExitStub.called).to.be.false; // Ensure process.exit is not called
+
+    Poller.pollUntilSuccessOrTimeout(async () => {
+      expect(dwnServer.httpServer.listening).to.be.false;
+      expect(processExitStub.called).to.be.false; // Ensure process.exit is not called
+    });
   });
 
   it('should stop when SIGTERM is emitted', async function () {
     process.emit('SIGTERM');
-    expect(dwnServer.httpServer.listening).to.be.false;
-    expect(processExitStub.called).to.be.false; // Ensure process.exit is not called
+
+    Poller.pollUntilSuccessOrTimeout(async () => {
+      expect(dwnServer.httpServer.listening).to.be.false;
+      expect(processExitStub.called).to.be.false; // Ensure process.exit is not called
+    });
   });
 
   it('should log an error for an uncaught exception', function () {
@@ -40,6 +50,7 @@ describe('Process Handlers', function () {
     const errorMessage = 'Test uncaught exception';
     const error = new Error(errorMessage);
     process.emit('uncaughtException', error);
+
     // Ensure console.error was called with the expected error message
     expect(consoleErrorStub.calledOnce).to.be.true;
 

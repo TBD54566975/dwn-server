@@ -8,7 +8,6 @@ import { getTestDwn } from '../test-dwn.js';
 import { InMemoryConnectionManager } from '../../src/connection/connection-manager.js';
 import { config } from '../../src/config.js';
 import { WsApi } from '../../src/ws-api.js';
-import type { Server } from 'http';
 import { HttpApi } from '../../src/http-api.js';
 import { JsonRpcSocket } from '../../src/json-rpc-socket.js';
 
@@ -17,24 +16,23 @@ chai.use(chaiAsPromised);
 describe('InMemoryConnectionManager', () => {
   let dwn: Dwn;
   let connectionManager: InMemoryConnectionManager;
-  let server: Server
+  let httpApi: HttpApi;  
   let wsApi: WsApi;
 
   beforeEach(async () => {
     dwn = await getTestDwn({ withEvents: true });
     connectionManager = new InMemoryConnectionManager(dwn);
-    const httpApi = await HttpApi.create(config, dwn);
-    server = await httpApi.start(9002);
-    wsApi = new WsApi(server, dwn, connectionManager);
+    httpApi = await HttpApi.create(config, dwn);
+    await httpApi.start(9002);
+    wsApi = new WsApi(httpApi.server, dwn, connectionManager);
     wsApi.start();
   });
 
   afterEach(async () => {
     await connectionManager.closeAll();
     await dwn.close();
+    await httpApi.stop();
     await wsApi.close();
-    server.close();
-    server.closeAllConnections();
     sinon.restore();
   });
 
@@ -48,6 +46,7 @@ describe('InMemoryConnectionManager', () => {
   });
 
   it('closes all connections on `closeAll`', async () => {
+
     await JsonRpcSocket.connect('ws://127.0.0.1:9002');
     expect((connectionManager as any).connections.size).to.equal(1);
 
@@ -56,5 +55,5 @@ describe('InMemoryConnectionManager', () => {
 
     await connectionManager.closeAll();
     expect((connectionManager as any).connections.size).to.equal(0);
-  });
+  })
 });

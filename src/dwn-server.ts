@@ -1,6 +1,7 @@
 import type { EventStream } from '@tbd54566975/dwn-sdk-js';
 import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
 
+import type { ProcessHandlers } from './process-handlers.js';
 import type { Server } from 'http';
 import log from 'loglevel';
 import prefix from 'loglevel-plugin-prefix';
@@ -10,7 +11,7 @@ import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js
 
 import { type DwnServerConfig, config as defaultConfig } from './config.js';
 import { HttpApi } from './http-api.js';
-import { setProcessHandlers } from './process-handlers.js';
+import { setProcessHandlers, unsetProcessHandlers } from './process-handlers.js';
 import { getDWNConfig } from './storage.js';
 import { WsApi } from './ws-api.js';
 import { RegistrationManager } from './registration/registration-manager.js';
@@ -20,7 +21,14 @@ export type DwnServerOptions = {
   config?: DwnServerConfig;
 };
 
+export enum DwnServerState {
+  Stopped,
+  Started
+}
+
 export class DwnServer {
+  serverState = DwnServerState.Stopped;
+  processHandlers: ProcessHandlers;
   dwn?: Dwn;
   config: DwnServerConfig;
   #httpServerShutdownHandler: HttpServerShutdownHandler;
@@ -40,9 +48,17 @@ export class DwnServer {
     prefix.apply(log);
   }
 
+  /**
+   * Starts the DWN server.
+   */
   async start(): Promise<void> {
+    if (this.serverState === DwnServerState.Started) {
+      return;
+    }
+
     await this.#setupServer();
-    setProcessHandlers(this);
+    this.processHandlers = setProcessHandlers(this);
+    this.serverState = DwnServerState.Started;
   }
 
   /**
@@ -76,9 +92,8 @@ export class DwnServer {
 
     this.#httpApi = await HttpApi.create(this.config, this.dwn, registrationManager);
 
-    await this.#httpApi.start(this.config.port, () => {
-      log.info(`HttpServer listening on port ${this.config.port}`);
-    });
+    await this.#httpApi.start(this.config.port);
+    log.info(`HttpServer listening on port ${this.config.port}`);
 
     this.#httpServerShutdownHandler = new HttpServerShutdownHandler(
       this.#httpApi.server,
@@ -91,8 +106,36 @@ export class DwnServer {
     }
   }
 
-  stop(callback: () => void): void {
-    this.#httpServerShutdownHandler.stop(callback);
+  /**
+   * Stops the DWN server.
+   */
+  async stop(): Promise<void> {
+    if (this.serverState === DwnServerState.Stopped) {
+      return;
+    }
+
+    // F YEAH!
+    if (this.dwn['didResolver']['cache']['cache']) {
+      await this.dwn['didResolver']['cache']['cache']['close']();
+    }
+
+    await this.dwn.close();
+    await this.#httpApi.stop();
+
+    // close WebSocket server if it was initialized
+    if (this.#wsApi !== undefined) {
+      await this.#wsApi.close();
+    }
+
+    await new Promise<void>((resolve) => {
+      this.#httpServerShutdownHandler.stop(() => {
+        resolve();
+      });
+    });
+
+    unsetProcessHandlers(this.processHandlers);
+
+    this.serverState = DwnServerState.Stopped;
   }
 
   get httpServer(): Server {

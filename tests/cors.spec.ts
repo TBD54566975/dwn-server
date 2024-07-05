@@ -72,10 +72,9 @@ class CorsProxySetup {
         resolve(null);
       });
     });
+
     // shutdown dwn
-    await new Promise((resolve) => {
-      dwnServer.stop(resolve);
-    });
+    await dwnServer.stop();
   }
 }
 
