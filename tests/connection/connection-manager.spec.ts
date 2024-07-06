@@ -31,7 +31,7 @@ describe('InMemoryConnectionManager', () => {
   afterEach(async () => {
     await connectionManager.closeAll();
     await dwn.close();
-    await httpApi.stop();
+    await httpApi.close();
     await wsApi.close();
     sinon.restore();
   });

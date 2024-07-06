@@ -81,7 +81,7 @@ describe('http api', function () {
   });
 
   afterEach(async function () {
-    await httpApi.stop();
+    await httpApi.close();
   });
 
   after(function () {
@@ -1057,7 +1057,7 @@ describe('http api', function () {
 
 
       // start server without websocket support enabled
-      await httpApi.stop();
+      await httpApi.close();
 
       config.webSocketSupport = false;
       httpApi = await HttpApi.create(config, dwn, registrationManager);
@@ -1075,7 +1075,7 @@ describe('http api', function () {
     });
 
     it('verify /info still returns when package.json file does not exist', async function () {
-      await httpApi.stop();
+      await httpApi.close();
 
       // set up spy to check for an error log by the server
       const logSpy = sinon.spy(log, 'error');
@@ -1106,7 +1106,7 @@ describe('http api', function () {
     });
 
     it('verify /info returns server name from config', async function () {
-      await httpApi.stop();
+      await httpApi.close();
 
       // set a custom name for the `serverName`
       const serverName = config.serverName;

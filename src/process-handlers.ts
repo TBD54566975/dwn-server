@@ -13,7 +13,6 @@ export type ProcessHandlers = {
   sigtermHandler: () => Promise<void>
 };
 
-
 export const setProcessHandlers = (dwnServer: DwnServer): ProcessHandlers => {
   const unhandledRejectionHandler = (reason: any, promise: Promise<any>): void => {
     console.error(
@@ -51,7 +50,7 @@ export const setProcessHandlers = (dwnServer: DwnServer): ProcessHandlers => {
   };
 };
 
-export const unsetProcessHandlers = (handlers: ProcessHandlers): void => {
+export const removeProcessHandlers = (handlers: ProcessHandlers): void => {
   const { 
     unhandledRejectionHandler, 
     uncaughtExceptionHandler, 

@@ -14,7 +14,7 @@ import { HttpApi } from './http-api.js';
 import { RegistrationManager } from './registration/registration-manager.js';
 import { WsApi } from './ws-api.js';
 import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
-import { setProcessHandlers, unsetProcessHandlers } from './process-handlers.js';
+import { removeProcessHandlers, setProcessHandlers } from './process-handlers.js';
 
 /**
  * Options for the DwnServer constructor.
@@ -31,7 +31,10 @@ export type DwnServerOptions = {
   config?: DwnServerConfig;
 };
 
-export enum DwnServerState {
+/**
+ * State of the DwnServer, either Stopped or Started, to help short-circuit start and stop logic.
+ */
+enum DwnServerState {
   Stopped,
   Started
 }
@@ -135,7 +138,7 @@ export class DwnServer {
     }
 
     await this.dwn.close();
-    await this.#httpApi.stop();
+    await this.#httpApi.close();
 
     // close WebSocket server if it was initialized
     if (this.#wsApi !== undefined) {
@@ -148,7 +151,7 @@ export class DwnServer {
       });
     });
 
-    unsetProcessHandlers(this.processHandlers);
+    removeProcessHandlers(this.processHandlers);
 
     this.serverState = DwnServerState.Stopped;
   }

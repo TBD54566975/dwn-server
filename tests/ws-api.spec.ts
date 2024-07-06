@@ -45,7 +45,7 @@ describe('websocket api', function () {
 
   afterEach(async function () {
     await wsApi.close();
-    await httpApi.stop();
+    await httpApi.close();
     await dwn.close();
   });
 

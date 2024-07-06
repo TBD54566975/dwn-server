@@ -470,7 +470,7 @@ export class HttpApi {
   /**
    * Stops the HTTP API endpoint.
    */
-  async stop(): Promise<void> {
+  async close(): Promise<void> {
     // promisify http.Server.close() and await on it
     await new Promise<void>((resolve, reject) => {
       this.#server.close((err?: Error) => {
