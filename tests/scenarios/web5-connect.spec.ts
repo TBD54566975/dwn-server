@@ -3,10 +3,10 @@ import sinon from 'sinon';
 import { config } from '../../src/config.js';
 import { DwnServer } from '../../src/dwn-server.js';
 import { expect } from 'chai';
+import { Poller } from '@tbd54566975/dwn-sdk-js';
 import { useFakeTimers } from 'sinon';
 import { Web5ConnectServer } from '../../src/web5-connect/web5-connect-server.js';
 import { randomUUID, webcrypto } from 'node:crypto';
-import { Poller } from '../poller.js';
 
 // node.js 18 and earlier needs globalThis.crypto polyfill
 if (!globalThis.crypto) {
