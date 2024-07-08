@@ -16,7 +16,7 @@ describe('DwnServer', function () {
     const dwnServer = new DwnServer({ config: dwnServerConfig, dwn });
     await dwnServer.start();
 
-    dwnServer.stop(() => console.log('server Stop'));
+    await dwnServer.stop();
     expect(dwnServer.httpServer.listening).to.be.false;
   });
 
@@ -34,7 +34,9 @@ describe('DwnServer', function () {
       await withoutSocketServer.start();
       expect(withoutSocketServer.httpServer.listening).to.be.true;
       expect(withoutSocketServer.wsServer).to.be.undefined;
-      withoutSocketServer.stop(() => console.log('server Stop'));
+
+      await withoutSocketServer.stop();
+      console.log('server Stop');
       expect(withoutSocketServer.httpServer.listening).to.be.false;
     });
 
@@ -50,7 +52,9 @@ describe('DwnServer', function () {
 
       await withSocketServer.start();
       expect(withSocketServer.wsServer).to.not.be.undefined;
-      withSocketServer.stop(() => console.log('server Stop'));
+
+      await withSocketServer.stop();
+      console.log('server Stop');
       expect(withSocketServer.httpServer.listening).to.be.false;
     });
   });
