@@ -340,10 +340,6 @@ export class HttpApi {
     this.#setupWeb5ConnectServerRoutes();
   }
 
-  #listen(port: number, callback?: () => void): void {
-    this.#server.listen(port, callback);
-  }
-
   #setupRegistrationRoutes(): void {
     if (this.#config.registrationProofOfWorkEnabled) {
       this.#api.get('/registration/proof-of-work', async (_req: Request, res: Response) => {
@@ -458,8 +454,34 @@ export class HttpApi {
     });
   }
 
-  async start(port: number, callback?: () => void): Promise<http.Server> {
-    this.#listen(port, callback);
-    return this.#server;
+  /**
+   * Starts the HTTP API endpoint on the given port.
+   * @returns The HTTP server instance.
+   */
+  async start(port: number): Promise<void> {
+    // promisify http.Server.listen() and await on it
+    await new Promise<void>((resolve) => {
+      this.#server.listen(port, () => {
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * Stops the HTTP API endpoint.
+   */
+  async close(): Promise<void> {
+    // promisify http.Server.close() and await on it
+    await new Promise<void>((resolve, reject) => {
+      this.#server.close((err?: Error) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    this.server.closeAllConnections();
   }
 }
