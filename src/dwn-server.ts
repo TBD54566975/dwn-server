@@ -8,7 +8,7 @@ import type { DwnServerConfig } from './config.js';
 import log from 'loglevel';
 import prefix from 'loglevel-plugin-prefix';
 import { config as defaultConfig } from './config.js';
-import { getDWNConfig } from './storage.js';
+import { getDwnConfig } from './storage.js';
 import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
 import { HttpApi } from './http-api.js';
 import { RegistrationManager } from './registration/registration-manager.js';
@@ -105,7 +105,7 @@ export class DwnServer {
         eventStream = new EventEmitterStream();
       }
 
-      const dwnConfig = getDWNConfig(this.config, {
+      const dwnConfig = await getDwnConfig(this.config, {
         didResolver: this.didResolver,
         tenantGate: registrationManager,
         eventStream,

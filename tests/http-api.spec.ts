@@ -53,7 +53,6 @@ describe('http api', function () {
 
   before(async function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
-
     config.registrationStoreUrl = 'sqlite://';
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';

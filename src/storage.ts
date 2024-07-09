@@ -33,8 +33,9 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 
 import type { DwnServerConfig } from './config.js';
+import { loadPlugin } from './pluginLoader.js';
 
-export enum EStoreType {
+export enum StoreType {
   DataStore,
   MessageStore,
   EventLog,
@@ -48,44 +49,44 @@ export enum BackendTypes {
   POSTGRES = 'postgres',
 }
 
-export type StoreType = DataStore | EventLog | MessageStore | ResumableTaskStore;
+export type DwnStore = DataStore | EventLog | MessageStore | ResumableTaskStore;
 
-export function getDWNConfig(
+export async function getDwnConfig(
   config  : DwnServerConfig,
   options : {
     didResolver? : DidResolver,
     tenantGate?  : TenantGate,
     eventStream? : EventStream,
   }
-): DwnConfig {
+): Promise<DwnConfig> {
   const { tenantGate, eventStream, didResolver } = options;
-  const dataStore: DataStore = getStore(config.dataStore, EStoreType.DataStore);
-  const eventLog: EventLog = getStore(config.eventLog, EStoreType.EventLog);
-  const messageStore: MessageStore = getStore(config.messageStore, EStoreType.MessageStore);
-  const resumableTaskStore: ResumableTaskStore = getStore(config.messageStore, EStoreType.ResumableTaskStore);
+  const dataStore: DataStore = await getStore(config.dataStore, StoreType.DataStore);
+  const eventLog: EventLog = await getStore(config.eventLog, StoreType.EventLog);
+  const messageStore: MessageStore = await getStore(config.messageStore, StoreType.MessageStore);
+  const resumableTaskStore: ResumableTaskStore = await getStore(config.messageStore, StoreType.ResumableTaskStore);
 
   return { didResolver, eventStream, eventLog, dataStore, messageStore, resumableTaskStore, tenantGate };
 }
 
 function getLevelStore(
   storeURI: URL,
-  storeType: EStoreType,
-): DataStore | MessageStore | EventLog | ResumableTaskStore {
+  storeType: StoreType,
+): DwnStore {
   switch (storeType) {
-    case EStoreType.DataStore:
+    case StoreType.DataStore:
       return new DataStoreLevel({
         blockstoreLocation: storeURI.host + storeURI.pathname + '/DATASTORE',
       });
-    case EStoreType.MessageStore:
+    case StoreType.MessageStore:
       return new MessageStoreLevel({
         blockstoreLocation: storeURI.host + storeURI.pathname + '/MESSAGESTORE',
         indexLocation: storeURI.host + storeURI.pathname + '/INDEX',
       });
-    case EStoreType.EventLog:
+    case StoreType.EventLog:
       return new EventLogLevel({
         location: storeURI.host + storeURI.pathname + '/EVENTLOG',
       });
-    case EStoreType.ResumableTaskStore:
+    case StoreType.ResumableTaskStore:
       return new ResumableTaskStoreLevel({
         location: storeURI.host + storeURI.pathname + '/RESUMABLE-TASK-STORE',
       });
@@ -94,42 +95,45 @@ function getLevelStore(
   }
 }
 
-function getDBStore(
-  db: Dialect,
-  storeType: EStoreType,
-): DataStore | MessageStore | EventLog | ResumableTaskStore {
+function getSqlStore(
+  connectionUrl: URL,
+  storeType: StoreType,
+): DwnStore {
+  const dialect = getDialectFromUrl(connectionUrl);
+
   switch (storeType) {
-    case EStoreType.DataStore:
-      return new DataStoreSql(db);
-    case EStoreType.MessageStore:
-      return new MessageStoreSql(db);
-    case EStoreType.EventLog:
-      return new EventLogSql(db);
-    case EStoreType.ResumableTaskStore:
-      return new ResumableTaskStoreSql(db);
+    case StoreType.DataStore:
+      return new DataStoreSql(dialect);
+    case StoreType.MessageStore:
+      return new MessageStoreSql(dialect);
+    case StoreType.EventLog:
+      return new EventLogSql(dialect);
+    case StoreType.ResumableTaskStore:
+      return new ResumableTaskStoreSql(dialect);
     default:
-      throw new Error('Unexpected db store type');
+      throw new Error(`Unsupported store type ${storeType} for SQL store.`);
   }
 }
 
-function getStore(
-  storeString: string,
-  storeType: EStoreType.DataStore,
-): DataStore;
-function getStore(
-  storeString: string,
-  storeType: EStoreType.EventLog,
-): EventLog;
-function getStore(
-  storeString: string,
-  storeType: EStoreType.MessageStore,
-): MessageStore;
-function getStore(
-  storeString: string,
-  storeType: EStoreType.ResumableTaskStore,
-): ResumableTaskStore;
-function getStore(storeString: string, storeType: EStoreType): StoreType {
-  const storeURI = new URL(storeString);
+/**
+ * Check if the given string is a file path.
+ */
+function isFilePath(configString: string): boolean {
+  const filePathPrefixes = ['/', './', '../'];
+  return filePathPrefixes.some(prefix => configString.startsWith(prefix));
+}
+
+async function getStore(storeString: string, storeType: StoreType.DataStore): Promise<DataStore>;
+async function getStore(storeString: string, storeType: StoreType.EventLog): Promise<EventLog>;
+async function getStore(storeString: string, storeType: StoreType.MessageStore): Promise<MessageStore>;
+async function getStore(storeString: string, storeType: StoreType.ResumableTaskStore): Promise<ResumableTaskStore>;
+async function getStore(storeConfigString: string, storeType: StoreType): Promise<DwnStore> {
+  if (isFilePath(storeConfigString)) {
+    return await loadStoreFromFilePath(storeConfigString, storeType);
+  }
+  // else treat the `storeConfigString` as a connection string
+  
+  const storeURI = new URL(storeConfigString);
 
   switch (storeURI.protocol.slice(0, -1)) {
     case BackendTypes.LEVEL:
@@ -138,14 +142,35 @@ function getStore(storeString: string, storeType: EStoreType): StoreType {
     case BackendTypes.SQLITE:
     case BackendTypes.MYSQL:
     case BackendTypes.POSTGRES:
-      return getDBStore(getDialectFromURI(storeURI), storeType);
+      return getSqlStore(storeURI, storeType);
 
     default:
       throw invalidStorageSchemeMessage(storeURI.protocol);
   }
 }
 
-export function getDialectFromURI(connectionUrl: URL): Dialect {
+/**
+ * Loads a DWN store plugin of the given type from the given file path.
+ */
+async function loadStoreFromFilePath(
+  filePath: string,
+  storeType: StoreType,
+): Promise<DwnStore> {
+  switch (storeType) {
+    case StoreType.DataStore:
+      return await loadPlugin<DataStore>(filePath);
+    case StoreType.EventLog:
+      return await loadPlugin<EventLog>(filePath);
+    case StoreType.MessageStore:
+      return await loadPlugin<MessageStore>(filePath);
+    case StoreType.ResumableTaskStore:
+      return await loadPlugin<ResumableTaskStore>(filePath);
+    default:
+      throw new Error(`Loading store for unsupported store type ${storeType} from path ${filePath}`);
+  }
+}
+
+export function getDialectFromUrl(connectionUrl: URL): Dialect {
   switch (connectionUrl.protocol.slice(0, -1)) {
     case BackendTypes.SQLITE:
       const path = connectionUrl.host + connectionUrl.pathname;
