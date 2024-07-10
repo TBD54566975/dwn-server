@@ -9,9 +9,9 @@ import fetch from 'node-fetch';
 import { createJsonRpcRequest } from '../src/lib/json-rpc.js';
 import { getFileAsReadStream } from './utils.js';
 import { v4 as uuidv4 } from 'uuid';
+import { webcrypto } from 'node:crypto';
 
 import { Cid, DwnConstant, Jws, ProtocolsConfigure, RecordsRead, RecordsWrite, TestDataGenerator } from '@tbd54566975/dwn-sdk-js';
-
 
 // node.js 18 and earlier needs globalThis.crypto polyfill
 if (!globalThis.crypto) {
