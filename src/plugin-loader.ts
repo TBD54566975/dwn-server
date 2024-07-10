@@ -8,14 +8,8 @@ export class PluginLoader {
   public static async loadPlugin<T>(filePath: string): Promise<T> {
     try {
       const module = await import(filePath);
-
-      // Check if the default export is a class
-      if (typeof module.default === 'function') {
-        const instance: T = new module.default() as T;
-        return instance;
-      } else {
-        throw new Error(`Default export at ${filePath} is not a class.`);
-      }
+      const instance: T = new module.default() as T;
+      return instance;
     } catch (error) {
       throw new Error(`Failed to load component at ${filePath}: ${error.message}`);
     }
