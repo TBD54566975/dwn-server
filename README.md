@@ -307,6 +307,7 @@ Several built storage options are supported, and may be configured with the `DWN
 | PostgreSQL | `postgres:///dwn`                                     | any options other than the URL scheme (`postgres://`) may also be specified via [standard environment variables](https://node-postgres.com/features/connecting#environment-variables) |
 
 ### Plugins
+
 In some scenarios, you may want to provide a custom implementation of a pluggable module for the DWN Server. The following interfaces defined in `dwn-sdk-js` package are supported:
 
 - `DataStore`
