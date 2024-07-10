@@ -1,6 +1,5 @@
-import type { DataStore } from "@tbd54566975/dwn-sdk-js";
-import { DataStoreSql } from "@tbd54566975/dwn-sql-store";
-import { getDialectFromUrl } from "../../src/storage.js";
+import type { EventStream } from "@tbd54566975/dwn-sdk-js";
+import { EventEmitterStream } from "@tbd54566975/dwn-sdk-js";
 
 /**
  * An example of a plugin that is used for testing.
@@ -8,13 +7,12 @@ import { getDialectFromUrl } from "../../src/storage.js";
  * - The class must be a default export.
  * - The constructor must not take any arguments.
  */
-export default class DataStoreSqlite extends DataStoreSql implements DataStore {
+export default class EventStreamInMemory extends EventEmitterStream implements EventStream {
   constructor() {
-    const sqliteDialect = getDialectFromUrl(new URL('sqlite://'));
-    super(sqliteDialect);
+    super();
 
     // NOTE: the following line is added purely to test the constructor invocation.
-    DataStoreSqlite.spyingTheConstructor();
+    EventStreamInMemory.spyingTheConstructor();
   }
 
   /**

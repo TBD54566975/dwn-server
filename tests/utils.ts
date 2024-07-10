@@ -2,9 +2,7 @@ import type { GenericMessage, Persona, UnionMessageReply } from '@tbd54566975/dw
 import type { Response } from 'node-fetch';
 import { Cid, DataStream, RecordsWrite } from '@tbd54566975/dwn-sdk-js';
 
-import type { ReadStream } from 'node:fs';
 import fs from 'node:fs';
-import http from 'node:http';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
@@ -105,52 +103,6 @@ export async function getFileAsReadStream(
 
 export function getDwnResponse(response: Response): UnionMessageReply {
   return JSON.parse(response.headers.get('dwn-response') as string) as UnionMessageReply;
-}
-
-type HttpResponse = {
-  status: number;
-  headers: http.IncomingHttpHeaders;
-  body?: any;
-};
-
-export function streamHttpRequest(
-  url: string,
-  opts: http.RequestOptions,
-  bodyStream: ReadStream,
-): Promise<HttpResponse> {
-  return new Promise((resolve, reject) => {
-    const request = http.request(url, opts, (rawResponse) => {
-      rawResponse.setEncoding('utf8');
-
-      const response: HttpResponse = {
-        status: rawResponse.statusCode,
-        headers: rawResponse.headers,
-      };
-
-      let body = '';
-      rawResponse.on('data', (chunk) => {
-        body += chunk;
-      });
-
-      rawResponse.on('end', () => {
-        if (body) {
-          response.body = body;
-        }
-
-        return resolve(response);
-      });
-    });
-
-    request.on('error', (e) => {
-      return reject(e);
-    });
-
-    bodyStream.on('end', () => {
-      request.end();
-    });
-
-    bodyStream.pipe(request);
-  });
 }
 
 export async function sendHttpMessage(options: {

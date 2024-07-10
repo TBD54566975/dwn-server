@@ -11,6 +11,7 @@ import { config as defaultConfig } from './config.js';
 import { getDwnConfig } from './storage.js';
 import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
 import { HttpApi } from './http-api.js';
+import { PluginLoader } from './plugin-loader.js';
 import { RegistrationManager } from './registration/registration-manager.js';
 import { WsApi } from './ws-api.js';
 import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
@@ -100,9 +101,13 @@ export class DwnServer {
 
       let eventStream: EventStream | undefined;
       if (this.config.webSocketSupport) {
-        // setting `EventEmitterStream` as default the default `EventStream
-        // if an alternate implementation is needed, instantiate a `Dwn` with a custom `EventStream` and add it to server options. 
-        eventStream = new EventEmitterStream();
+        // If Even Stream plugin is not specified, use `EventEmitterStream` implementation as default.
+        if (this.config.eventStreamPluginPath === undefined || this.config.eventStreamPluginPath === '') {
+          eventStream = new EventEmitterStream();
+        } else {
+          eventStream = await PluginLoader.loadPlugin<EventStream>(this.config.eventStreamPluginPath);
+        }
+
       }
 
       const dwnConfig = await getDwnConfig(this.config, {

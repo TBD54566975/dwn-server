@@ -1,11 +1,3 @@
-import * as fs from 'fs';
-
-import {
-  DataStoreLevel,
-  EventLogLevel,
-  MessageStoreLevel,
-  ResumableTaskStoreLevel,
-} from '@tbd54566975/dwn-sdk-js';
 import type { DidResolver } from '@web5/dids';
 import type {
   DataStore,
@@ -17,6 +9,21 @@ import type {
   TenantGate,
 } from '@tbd54566975/dwn-sdk-js';
 import type { Dialect } from '@tbd54566975/dwn-sql-store';
+import type { DwnServerConfig } from './config.js';
+
+import * as fs from 'fs';
+import Cursor from 'pg-cursor';
+import Database from 'better-sqlite3';
+import pg from 'pg';
+import { createPool as MySQLCreatePool } from 'mysql2';
+import { PluginLoader } from './plugin-loader.js';
+
+import {
+  DataStoreLevel,
+  EventLogLevel,
+  MessageStoreLevel,
+  ResumableTaskStoreLevel,
+} from '@tbd54566975/dwn-sdk-js';
 import {
   DataStoreSql,
   EventLogSql,
@@ -26,14 +33,6 @@ import {
   ResumableTaskStoreSql,
   SqliteDialect,
 } from '@tbd54566975/dwn-sql-store';
-
-import Database from 'better-sqlite3';
-import { createPool as MySQLCreatePool } from 'mysql2';
-import pg from 'pg';
-import Cursor from 'pg-cursor';
-
-import type { DwnServerConfig } from './config.js';
-import { loadPlugin } from './pluginLoader.js';
 
 export enum StoreType {
   DataStore,
@@ -158,13 +157,13 @@ async function loadStoreFromFilePath(
 ): Promise<DwnStore> {
   switch (storeType) {
     case StoreType.DataStore:
-      return await loadPlugin<DataStore>(filePath);
+      return await PluginLoader.loadPlugin<DataStore>(filePath);
     case StoreType.EventLog:
-      return await loadPlugin<EventLog>(filePath);
+      return await PluginLoader.loadPlugin<EventLog>(filePath);
     case StoreType.MessageStore:
-      return await loadPlugin<MessageStore>(filePath);
+      return await PluginLoader.loadPlugin<MessageStore>(filePath);
     case StoreType.ResumableTaskStore:
-      return await loadPlugin<ResumableTaskStore>(filePath);
+      return await PluginLoader.loadPlugin<ResumableTaskStore>(filePath);
     default:
       throw new Error(`Loading store for unsupported store type ${storeType} from path ${filePath}`);
   }

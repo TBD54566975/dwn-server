@@ -46,6 +46,12 @@ export const config = {
 
   // whether to enable 'ws:'
   webSocketSupport: { on: true, off: false }[process.env.DS_WEBSOCKET_SERVER] ?? true,
+
+  /**
+   * Path to DWN Event Stream plugin to use. Default single-node implementation will be used if left empty.
+   */
+  eventStreamPluginPath: process.env.DWN_EVENT_STREAM_PLUGIN_PATH,
+
   // where to store persistent data
   messageStore: process.env.DWN_STORAGE_MESSAGES || process.env.DWN_STORAGE || 'level://data',
   dataStore: process.env.DWN_STORAGE_DATA || process.env.DWN_STORAGE || 'level://data',
