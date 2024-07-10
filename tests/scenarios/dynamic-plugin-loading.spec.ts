@@ -10,6 +10,8 @@ import { DwnServer } from '../../src/dwn-server.js';
 
 import { DidDht, DidKey, UniversalResolver } from '@web5/dids';
 import CommonScenarioValidator from '../common-scenario-validator.js';
+import MessageStoreSqlite from '../plugins/message-store-sqlite.js';
+import ResumableTaskStoreSqlite from '../plugins/resumable-task-store-sqlite.js';
 
 // node.js 18 and earlier needs globalThis.crypto polyfill
 if (!globalThis.crypto) {
@@ -23,7 +25,6 @@ describe('Dynamic DWN plugin loading', function () {
   let dwnServer: DwnServer;
 
   afterEach(async () => {
-    // clock.restore();
     if (dwnServer !== undefined) {
       await dwnServer.stop();
     }
@@ -44,7 +45,9 @@ describe('Dynamic DWN plugin loading', function () {
     // 3. Validate that the DWN instance is using the custom data store plugin.
 
     // NOTE: was not able to spy on constructor directly, so spying on a method that is called in the constructor
+    const customMessageStoreConstructorSpy = sinon.spy(MessageStoreSqlite, 'spyingTheConstructor');
     const customDataStoreConstructorSpy = sinon.spy(DataStoreSqlite, 'spyingTheConstructor');
+    const customResumableTaskStoreConstructorSpy = sinon.spy(ResumableTaskStoreSqlite, 'spyingTheConstructor');
     const customEventLogConstructorSpy = sinon.spy(EventLogSqlite, 'spyingTheConstructor');
     const customEventStreamConstructorSpy = sinon.spy(EventStreamInMemory, 'spyingTheConstructor');
 
@@ -55,9 +58,9 @@ describe('Dynamic DWN plugin loading', function () {
     // The default config is not reliable because other tests modify it.
     dwnServerConfigCopy.registrationStoreUrl = undefined; // allow all traffic
 
-    // dwnServerConfigCopy.messageStore = '../tests/plugins/message-store-sqlite.js'; // not working
-    dwnServerConfigCopy.messageStore = 'sqlite://';
+    dwnServerConfigCopy.messageStore = '../tests/plugins/message-store-sqlite.js';
     dwnServerConfigCopy.dataStore = '../tests/plugins/data-store-sqlite.js';
+    dwnServerConfigCopy.resumableTaskStore = '../tests/plugins/resumable-task-store-sqlite.js';
     dwnServerConfigCopy.eventLog = '../tests/plugins/event-log-sqlite.js';
     dwnServerConfigCopy.eventStreamPluginPath = '../tests/plugins/event-stream-in-memory.js';
 
@@ -72,7 +75,9 @@ describe('Dynamic DWN plugin loading', function () {
     });
     dwnServer = new DwnServer({ config: dwnServerConfigCopy, didResolver });
     await dwnServer.start();
+    expect(customMessageStoreConstructorSpy.calledOnce).to.be.true;
     expect(customDataStoreConstructorSpy.calledOnce).to.be.true;
+    expect(customResumableTaskStoreConstructorSpy.calledOnce).to.be.true;
     expect(customEventLogConstructorSpy.calledOnce).to.be.true;
     expect(customEventStreamConstructorSpy.calledOnce).to.be.true;
 

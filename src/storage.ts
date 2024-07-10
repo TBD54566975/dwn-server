@@ -62,7 +62,7 @@ export async function getDwnConfig(
   const dataStore: DataStore = await getStore(config.dataStore, StoreType.DataStore);
   const eventLog: EventLog = await getStore(config.eventLog, StoreType.EventLog);
   const messageStore: MessageStore = await getStore(config.messageStore, StoreType.MessageStore);
-  const resumableTaskStore: ResumableTaskStore = await getStore(config.messageStore, StoreType.ResumableTaskStore);
+  const resumableTaskStore: ResumableTaskStore = await getStore(config.resumableTaskStore, StoreType.ResumableTaskStore);
 
   return { didResolver, eventStream, eventLog, dataStore, messageStore, resumableTaskStore, tenantGate };
 }

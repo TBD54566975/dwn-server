@@ -56,6 +56,7 @@ export const config = {
   messageStore: process.env.DWN_STORAGE_MESSAGES || process.env.DWN_STORAGE || 'level://data',
   dataStore: process.env.DWN_STORAGE_DATA || process.env.DWN_STORAGE || 'level://data',
   eventLog: process.env.DWN_STORAGE_EVENTS || process.env.DWN_STORAGE || 'level://data',
+  resumableTaskStore: process.env.DWN_STORAGE_RESUMABLE_TASKS || process.env.DWN_STORAGE || 'level://data',
 
   // tenant registration feature configuration
   registrationStoreUrl: process.env.DWN_REGISTRATION_STORE_URL || process.env.DWN_STORAGE,

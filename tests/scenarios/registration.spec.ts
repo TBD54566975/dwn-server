@@ -50,6 +50,7 @@ describe('Registration scenarios', function () {
     // and dwn-server.spec.ts already uses LevelDB.
     dwnServerConfig.messageStore = 'sqlite://',
     dwnServerConfig.dataStore = 'sqlite://',
+    dwnServerConfig.resumableTaskStore = 'sqlite://',
     dwnServerConfig.eventLog = 'sqlite://',
 
     // registration config
