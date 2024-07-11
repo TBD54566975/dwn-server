@@ -1,4 +1,4 @@
-import { getDialectFromURI } from "../storage.js";
+import { getDialectFromUrl } from "../storage.js";
 import { randomUuid } from '@web5/crypto/utils';
 import { SqlTtlCache } from "./sql-ttl-cache.js";
 
@@ -49,7 +49,7 @@ export class Web5ConnectServer {
     const web5ConnectServer = new Web5ConnectServer({ baseUrl });
 
     // Initialize TTL cache.
-    const sqlDialect = getDialectFromURI(new URL(sqlTtlCacheUrl));
+    const sqlDialect = getDialectFromUrl(new URL(sqlTtlCacheUrl));
     web5ConnectServer.cache = await SqlTtlCache.create(sqlDialect);
 
     return web5ConnectServer;

@@ -5,7 +5,7 @@ import type { RegistrationData, RegistrationRequest } from "./registration-types
 import type { ProofOfWorkChallengeModel } from "./proof-of-work-types.js";
 import { DwnServerError, DwnServerErrorCode } from "../dwn-error.js";
 import type { ActiveTenantCheckResult, TenantGate } from "@tbd54566975/dwn-sdk-js";
-import { getDialectFromURI } from "../storage.js";
+import { getDialectFromUrl } from "../storage.js";
 import { readFileSync } from "fs";
 
 /**
@@ -77,7 +77,7 @@ export class RegistrationManager implements TenantGate {
     });
 
     // Initialize RegistrationStore.
-    const sqlDialect = getDialectFromURI(new URL(registrationStoreUrl));
+    const sqlDialect = getDialectFromUrl(new URL(registrationStoreUrl));
     const registrationStore = await RegistrationStore.create(sqlDialect);
     registrationManager.registrationStore = registrationStore;
     

@@ -1,12 +1,10 @@
 // node.js 18 and earlier,  needs globalThis.crypto polyfill
 import sinon from 'sinon';
 import {
-  Cid,
   DataStream,
   DwnErrorCode,
   ProtocolsConfigure,
   RecordsQuery,
-  RecordsRead,
   TestDataGenerator,
   Time,
 } from '@tbd54566975/dwn-sdk-js';
@@ -35,9 +33,9 @@ import {
   createRecordsWriteMessage,
   getDwnResponse,
   getFileAsReadStream,
-  streamHttpRequest,
 } from './utils.js';
 import { RegistrationManager } from '../src/registration/registration-manager.js';
+import CommonScenarioValidator from './common-scenario-validator.js';
 
 if (!globalThis.crypto) {
   // @ts-ignore
@@ -53,7 +51,7 @@ describe('http api', function () {
 
   before(async function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
-
+    // TODO: Remove direct use of default config to avoid changes bleed/pollute between tests - https://github.com/TBD54566975/dwn-server/issues/144
     config.registrationStoreUrl = 'sqlite://';
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
@@ -199,44 +197,14 @@ describe('http api', function () {
     });
   });
 
-  describe('RecordsWrite', function () {
-    it('handles RecordsWrite with request body', async function () {
-      const filePath = './fixtures/test.jpeg';
-      const { cid, size, stream } = await getFileAsReadStream(filePath);
-
-      const { recordsWrite } = await createRecordsWriteMessage(alice, {
-        dataCid: cid,
-        dataSize: size,
-      });
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsWrite.toJSON(),
-        target: alice.did,
-      });
-
-      const resp = await streamHttpRequest(
-        'http://localhost:3000',
-        {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/octet-stream',
-            'dwn-request': JSON.stringify(dwnRequest),
-          },
-        },
-        stream,
-      );
-
-      expect(resp.status).to.equal(200);
-
-      const body = JSON.parse(resp.body) as JsonRpcResponse;
-      expect(body.id).to.equal(requestId);
-      expect(body.error).to.not.exist;
-
-      const { reply } = body.result;
-      expect(reply.status.code).to.equal(202);
+  describe('P0 Scenarios', function () {
+    it('should be able to read and write a protocol record', async function () {
+      const dwnUrl = `${config.baseUrl}:${config.port}`;
+      await CommonScenarioValidator.sanityTestDwnReadWrite(dwnUrl, alice)
     });
+  });
 
+  describe('RecordsWrite', function () {
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
       // First RecordsWrite that creates the record.
       const { recordsWrite: initialWrite, dataStream } =
@@ -329,89 +297,6 @@ describe('http api', function () {
         method: 'GET',
       });
       expect(response.status).to.equal(200);
-    });
-  });
-
-  describe('RecordsRead', function () {
-    it('returns message in response header and data in body', async function () {
-      const filePath = './fixtures/test.jpeg';
-      const {
-        cid: expectedCid,
-        size,
-        stream,
-      } = await getFileAsReadStream(filePath);
-
-      const { recordsWrite } = await createRecordsWriteMessage(alice, {
-        dataCid: expectedCid,
-        dataSize: size,
-      });
-
-      let requestId = uuidv4();
-      let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsWrite.toJSON(),
-        target: alice.did,
-      });
-
-      let response = await fetch('http://localhost:3000', {
-        method: 'POST',
-        headers: {
-          'dwn-request': JSON.stringify(dwnRequest),
-        },
-        body: stream,
-      });
-
-      expect(response.status).to.equal(200);
-
-      const body = (await response.json()) as JsonRpcResponse;
-      expect(body.id).to.equal(requestId);
-      expect(body.error).to.not.exist;
-
-      const { reply } = body.result;
-      expect(reply.status.code).to.equal(202);
-
-      const recordsRead = await RecordsRead.create({
-        signer: alice.signer,
-        filter: {
-          recordId: recordsWrite.message.recordId,
-        },
-      });
-
-      requestId = uuidv4();
-      dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        target: alice.did,
-        message: recordsRead.toJSON(),
-      });
-
-      response = await fetch('http://localhost:3000', {
-        method: 'POST',
-        headers: {
-          'dwn-request': JSON.stringify(dwnRequest),
-        },
-      });
-
-      expect(response.status).to.equal(200);
-
-      const { headers } = response;
-
-      const contentType = headers.get('content-type');
-      expect(contentType).to.not.be.undefined;
-      expect(contentType).to.equal('application/octet-stream');
-
-      const dwnResponse = headers.get('dwn-response');
-      expect(dwnResponse).to.not.be.undefined;
-
-      const jsonRpcResponse = JSON.parse(dwnResponse) as JsonRpcResponse;
-
-      expect(jsonRpcResponse.id).to.equal(requestId);
-      expect(jsonRpcResponse.error).to.not.exist;
-
-      const { reply: recordsReadReply } = jsonRpcResponse.result;
-      expect(recordsReadReply.status.code).to.equal(200);
-      expect(recordsReadReply.record).to.exist;
-
-      // can't get response as stream from supertest :(
-      const cid = await Cid.computeDagPbCidFromStream(response.body as any);
-      expect(cid).to.equal(expectedCid);
     });
   });
 
