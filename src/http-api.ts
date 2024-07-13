@@ -376,10 +376,10 @@ export class HttpApi {
 
   #setupWeb5ConnectServerRoutes(): void {
     /**
-    * Endpoint allows a Client app (RP) to submit an authorization request.
-    * The request is stored on the server, and a unique `request_uri` is returned to the Client app.
+    * Endpoint allows a Client app (RP) to submit an Authorization Request.
+    * The Authorization Request is stored on the server, and a unique `request_uri` is returned to the Client app.
     * The Client app can then provide this `request_uri` to the Provider app (wallet).
-    * The Provider app uses the `request_uri` to retrieve the stored authorization request.
+    * The Provider app uses the `request_uri` to retrieve the stored Authorization Request.
     */
     this.#api.post('/connect/par', async (req, res) => {
       log.info('Storing Pushed Authorization Request (PAR) request...');
@@ -413,7 +413,7 @@ export class HttpApi {
     });
 
     /**
-    * Endpoint for the Provider to retrieve the auth request from the request_uri
+    * Endpoint for the Provider to retrieve the Authorization Request from the request_uri
     */
     this.#api.get('/connect/authorize/:requestId.jwt', async (req, res) => {
       log.info(`Retrieving Web5 Connect Request object of ID: ${req.params.requestId}...`);
