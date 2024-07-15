@@ -93,7 +93,7 @@ describe('Web5 Connect scenarios', function () {
       id_token : { dummyToken: 'dummyToken' },
       // state    : 'dummyState', // intentionally missing
     };
-    const postIncompleteWeb5ConnectResponseResult = await fetch(`${web5ConnectBaseUrl}/connect/sessions`, {
+    const postIncompleteWeb5ConnectResponseResult = await fetch(`${web5ConnectBaseUrl}/connect/callback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(incompleteResponseBody),
@@ -106,7 +106,7 @@ describe('Web5 Connect scenarios', function () {
       id_token : { dummyToken: 'dummyToken' },
       state
     };
-    const postWeb5ConnectResponseResult = await fetch(`${web5ConnectBaseUrl}/connect/sessions`, {
+    const postWeb5ConnectResponseResult = await fetch(`${web5ConnectBaseUrl}/connect/callback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(web5ConnectResponseBody),
@@ -114,7 +114,7 @@ describe('Web5 Connect scenarios', function () {
     expect(postWeb5ConnectResponseResult.status).to.equal(201);
 
     // 6. App fetches the Web5 Connect Response object from the Web5 Connect server.
-    const web5ConnectResponseUrl = `${web5ConnectBaseUrl}/connect/sessions/${web5ConnectResponseBody.state}.jwt`;
+    const web5ConnectResponseUrl = `${web5ConnectBaseUrl}/connect/token/${web5ConnectResponseBody.state}.jwt`;
 
     let getWeb5ConnectResponseResult;
     await Poller.pollUntilSuccessOrTimeout(async () => {
