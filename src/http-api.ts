@@ -376,19 +376,46 @@ export class HttpApi {
 
   #setupWeb5ConnectServerRoutes(): void {
     /**
-     * Endpoint that the connecting App pushes the Pushed Authorization Request Object to start the Web5 Connect flow.
-     */
+    * Endpoint allows a Client app (RP) to submit an Authorization Request.
+    * The Authorization Request is stored on the server, and a unique `request_uri` is returned to the Client app.
+    * The Client app can then provide this `request_uri` to the Provider app (wallet).
+    * The Provider app uses the `request_uri` to retrieve the stored Authorization Request.
+    */
     this.#api.post('/connect/par', async (req, res) => {
       log.info('Storing Pushed Authorization Request (PAR) request...');
+
+    // TODO: Add validation for request too large HTTP 413: https://github.com/TBD54566975/dwn-server/issues/146
+    // TODO: Add validation for too many requests HTTP 429: https://github.com/TBD54566975/dwn-server/issues/147
+
+      if (!req.body.request) {
+        return res.status(400).json({
+          ok: false,
+          status: {
+            code: 400,
+            message: "Bad Request: Missing 'request' parameter",
+          },
+        });
+      }
+
+      // Validate that `request_uri` was NOT provided
+      if (req.body?.request?.request_uri) {
+        return res.status(400).json({
+          ok: false,
+          status: {
+            code: 400,
+            message: "Bad Request: 'request_uri' parameter is not allowed in PAR",
+          },
+        });
+      }
 
       const result = await this.web5ConnectServer.setWeb5ConnectRequest(req.body.request);
       res.status(201).json(result);
     });
 
     /**
-     * Endpoint that the Identity Provider (wallet) calls to retrieve the Pushed Authorization Request.
-     */
-    this.#api.get('/connect/:requestId.jwt', async (req, res) => {
+    * Endpoint for the Provider to retrieve the Authorization Request from the request_uri
+    */
+    this.#api.get('/connect/authorize/:requestId.jwt', async (req, res) => {
       log.info(`Retrieving Web5 Connect Request object of ID: ${req.params.requestId}...`);
 
       // Look up the request object based on the requestId.
@@ -406,9 +433,9 @@ export class HttpApi {
     });
 
     /**
-     * Endpoint that the Identity Provider (wallet) pushes the Authorization Response ID token to.
-     */
-    this.#api.post('/connect/sessions', async (req, res) => {
+    * Endpoint that the Provider sends the Authorization Response to
+    */
+    this.#api.post('/connect/callback', async (req, res) => {
       log.info('Storing Identity Provider (wallet) pushed response with ID token...');
 
       // Store the ID token.
@@ -433,10 +460,9 @@ export class HttpApi {
     });
 
     /**
-     * Endpoint that the connecting App polls to check if the Identity Provider (Wallet) has posted the Web5 Connect Response object.
-     * The Web5 Connect Response is also an ID token.
-     */
-    this.#api.get('/connect/sessions/:state.jwt', async (req, res) => {
+    * Endpoint for the connecting Client to retrieve the Authorization Response
+    */
+    this.#api.get('/connect/token/:state.jwt', async (req, res) => {
       log.info(`Retrieving ID token for state: ${req.params.state}...`);
 
       // Look up the ID token.
