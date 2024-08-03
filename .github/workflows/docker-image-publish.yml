@@ -42,10 +42,24 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Retrieve DWN SDK version
+      - name: Create DWN Server docker image tag names
+        id: create_docker_image_tag_names
         run: |
-          echo "dwn_sdk_image_tag=${{ env.REGISTRY }}/${IMAGE_NAME,,}:dwn-sdk-$(jq -r '.dependencies."@tbd54566975/dwn-sdk-js"' package.json)" >> $GITHUB_OUTPUT
-        id: dwn_sdk_version
+          # extract the DWN Server version from the package.json
+          dwn_server_version=$(jq -r '.version' package.json)
+
+          # extract the DWN SDK version from the package.json
+          dwn_sdk_version=$(jq -r '.dependencies."@tbd54566975/dwn-sdk-js"' package.json)
+
+          # construct a image tag names using DWN server & DWN SDK versions
+          # (e.g. ghcr.io/tbd54566975/dwn-server:0.4.3)
+          # (e.g. ghcr.io/tbd54566975/dwn-server:dwn-sdk-0.4.4)
+          dwn_server_version_tag_name=${{ env.REGISTRY }}/${IMAGE_NAME,,}:$dwn_server_version
+          dwn_sdk_version_tag_name=${{ env.REGISTRY }}/${IMAGE_NAME,,}:dwn-sdk-$dwn_sdk_version
+
+          # write the image tag names to the step output for use later/below
+          echo "dwn_server_version_tag_name=$dwn_server_version_tag_name" >> $GITHUB_OUTPUT
+          echo "dwn_sdk_version_tag_name=$dwn_sdk_version_tag_name" >> $GITHUB_OUTPUT
         env:
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
 
@@ -57,5 +71,6 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
-            ${{ steps.dwn_sdk_version.outputs.dwn_sdk_image_tag }}
+            ${{ steps.create_docker_image_tag_names.outputs.dwn_server_version_tag_name }}
+            ${{ steps.create_docker_image_tag_names.outputs.dwn_sdk_version_tag_name }}
           labels: ${{ steps.meta.outputs.labels }}
