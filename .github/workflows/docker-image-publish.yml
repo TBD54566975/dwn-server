@@ -58,6 +58,7 @@ jobs:
           dwn_sdk_version_tag_name=${{ env.REGISTRY }}/${IMAGE_NAME,,}:dwn-sdk-$dwn_sdk_version
 
           # write the image tag names to the step output for use later/below
+          echo "dwn_server_version_tag_name=$dwn_server_version_tag_name" >> $GITHUB_OUTPUT
           echo "dwn_sdk_version_tag_name=$dwn_sdk_version_tag_name" >> $GITHUB_OUTPUT
         env:
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
