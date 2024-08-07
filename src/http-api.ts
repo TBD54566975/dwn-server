@@ -84,7 +84,7 @@ export class HttpApi {
   #setupMiddleware(): void {
     this.#api.use(cors({ exposedHeaders: 'dwn-response' }));
     this.#api.use(express.json());
-
+    this.#api.use(express.urlencoded({ extended: true }));
     this.#api.use(
       responseTime((req: Request, res: Response, time) => {
         const url = req.url === '/' ? '/jsonrpc' : req.url;
