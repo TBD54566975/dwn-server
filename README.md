@@ -3,9 +3,14 @@
 Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API over `http:` and `ws:`
 
 - [Supported DBs](#supported-dbs)
+- [Running online environment](#running-online-environment)
 - [Installation](#installation)
 - [Package usage](#package-usage)
-- [Running The Server](#running-the-server)
+- [Running the server](#running-the-server)
+  - [Running via docker](#running-via-docker)
+  - [Running a specific version](#running-a-specific-version)
+  - [Running Locally for Development](#running-locally-for-development)
+  - [Building a docker image locally](#building-a-docker-image-locally)
 - [JSON-RPC API](#json-rpc-api)
   - [Available Methods](#available-methods)
     - [`dwn.processMessage`](#dwnprocessmessage)
@@ -15,9 +20,17 @@ Exposes a multi-tenanted DWN (aka Decentralized Web Node) through a JSON-RPC API
       - [Example Error Response](#example-error-response)
       - [Transporting large amounts of data](#transporting-large-amounts-of-data)
       - [Receiving large amounts of data](#receiving-large-amounts-of-data)
-- [npm scripts](#npm-scripts)
+- [Hosting your own DWN-server](#hosting-your-own-dwn-server)
+  - [Running on render.com](#running-on-rendercom)
+  - [Running with ngrok](#running-with-ngrok)
+  - [Running with cloudflared](#running-with-cloudflared)
+  - [Running on GCP](#running-on-gcp)
+- [`npm` scripts](#npm-scripts)
 - [Configuration](#configuration)
   - [Storage Options](#storage-options)
+  - [Plugins](#plugins)
+- [Registration Requirements](#registration-requirements)
+- [Server info](#server-info)
 
 ## Supported DBs
 
@@ -276,24 +289,28 @@ cloudflared tunnel --url http://localhost:3000
 
 Configuration can be set using environment variables
 
-| Env Var                                           | Description                                                                                                             | Default                |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `DS_PORT`                                         | Port that the server listens on                                                                                         | `3000`                 |
-| `DS_MAX_RECORD_DATA_SIZE`                         | Maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value                                               | `1gb`                  |
-| `DS_WEBSOCKET_SERVER`                             | Whether to enable listening over `ws:`. values: `on`,`off`                                                              | `on`                   |
-| `DWN_REGISTRATION_STORE_URL`                      | URL to use for storage of registered DIDs. Leave unset to if DWN does not require registration (ie. open for all)       | unset                  |
-| `DWN_REGISTRATION_PROOF_OF_WORK_SEED`             | Seed to generate the challenge nonce from, this allows all DWN instances in a cluster to generate the same challenge.   | unset                  |
-| `DWN_REGISTRATION_PROOF_OF_WORK_ENABLED`          | Require new users to complete a proof-of-work challenge                                                                 | `false`                |
-| `DWN_REGISTRATION_PROOF_OF_WORK_INITIAL_MAX_HASH` | Initial maximum allowed hash in 64 char HEX string. The more leading zeros (smaller number) the higher the difficulty.  | `false`                |
-| `DWN_TERMS_OF_SERVICE_FILE_PATH`                  | Required terms of service agreement if set. Value is path to the terms of service file.                                 | unset                  |
-| `DWN_STORAGE`                                     | URL to use for storage by default. See [Storage Options](#storage-options) for details                                  | `level://data`         |
-| `DWN_STORAGE_MESSAGES`                            | URL to use for storage of messages.                                                                                     | value of `DWN_STORAGE` |
-| `DWN_STORAGE_DATA`                                | URL to use for data storage                                                                                             | value of `DWN_STORAGE` |
-| `DWN_STORAGE_EVENTS`                              | URL to use for event storage                                                                                            | value of `DWN_STORAGE` |
+| Env Var                                           | Description                                                                                                                    | Default                |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| `DS_PORT`                                         | Port that the server listens on                                                                                                | `3000`                 |
+| `DS_MAX_RECORD_DATA_SIZE`                         | Maximum size for `RecordsWrite` data. use `b`, `kb`, `mb`, `gb` for value                                                      | `1gb`                  |
+| `DS_WEBSOCKET_SERVER`                             | Whether to enable listening over `ws:`. values: `on`,`off`                                                                     | `on`                   |
+| `DWN_BASE_URL`                                    | Base external URL of this DWN. Used to construct URL paths such as the `Request URI` for the Web5 Connect flow.                | `http://localhost`     |
+| `DWN_EVENT_STREAM_PLUGIN_PATH`                    | Path to DWN Event Stream plugin to use. Default single-node implementation will be used if left empty.                         | unset                  |
+| `DWN_REGISTRATION_STORE_URL`                      | URL to use for storage of registered DIDs. Leave unset to if DWN does not require registration (ie. open for all)              | unset                  |
+| `DWN_REGISTRATION_PROOF_OF_WORK_SEED`             | Optional seed to generate the challenge nonce from, this allows all DWN instances in a cluster to generate the same challenge. | unset                  |
+| `DWN_REGISTRATION_PROOF_OF_WORK_ENABLED`          | Require new users to complete a proof-of-work challenge                                                                        | `false`                |
+| `DWN_REGISTRATION_PROOF_OF_WORK_INITIAL_MAX_HASH` | Initial maximum allowed hash in 64 char HEX string. The more leading zeros (smaller number) the higher the difficulty.         | `000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF` |
+| `DWN_STORAGE`                                     | URL to use for storage by default. See [Storage Options](#storage-options) for details                                         | `level://data`         |
+| `DWN_STORAGE_MESSAGES`                            | Connection URL or file path to custom plugin to use for the message store.                                                     | value of `DWN_STORAGE` |
+| `DWN_STORAGE_DATA`                                | Connection URL or file path to custom plugin to use for the data store.                                                        | value of `DWN_STORAGE` |
+| `DWN_STORAGE_RESUMABLE_TASKS`                     | Connection URL or file path to custom plugin to use for the resumable task store.                                              | value of `DWN_STORAGE` |
+| `DWN_STORAGE_EVENTS`                              | Connection URL or file path to custom plugin to use for the event store.                                                       | value of `DWN_STORAGE` |
+| `DWN_TERMS_OF_SERVICE_FILE_PATH`                  | Required terms of service agreement if set. Value is path to the terms of service file.                                        | unset                  |
+| `DWN_TTL_CACHE_URL`                               | URL of the TTL cache used by the DWN. Currently only supports SQL databases.                                                   | `sqlite://`            |
 
 ### Storage Options
 
-Several storage formats are supported, and may be configured with the `DWN_STORAGE_*` environment variables:
+Several built storage options are supported, and may be configured with the `DWN_STORAGE_*` environment variables:
 
 | Database   | Example                                               | Notes                                                                                                                                                                                 |
 | ---------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -301,6 +318,25 @@ Several storage formats are supported, and may be configured with the `DWN_STORA
 | Sqlite     | `sqlite://dwn.db`                                     | use three slashes for absolute paths, two for relative. Example shown creates a file `dwn.db` in the current working directory                                                        |
 | MySQL      | `mysql://user:pass@host/db?debug=true&timezone=-0700` | [all URL options documented here](https://github.com/mysqljs/mysql#connection-options)                                                                                                |
 | PostgreSQL | `postgres:///dwn`                                     | any options other than the URL scheme (`postgres://`) may also be specified via [standard environment variables](https://node-postgres.com/features/connecting#environment-variables) |
+
+### Plugins
+
+In some scenarios, you may want to provide a custom implementation of a pluggable module for the DWN Server. The following interfaces defined in `dwn-sdk-js` package are supported:
+
+- `DataStore`
+- `MessageStore`
+- `ResumableDataStore`
+- `EventLog`
+- `EventStream`
+
+To load your custom plugin, specify the absolute path to the `.js` file of your custom implementation using the corresponding environment variable. For instance, use `DWN_STORAGE_DATA` for a custom DWN Data Store.
+
+Refer to the `tests/plugins/*.ts` files for examples of plugin implementations. In summary, you need to:
+
+- Implement the corresponding interface from the `dwn-sdk-js` package. For example, implement the `DataStore` interface for a DWN Data Store.
+- Ensure that the built `.js` file that will be referenced by the DWN Server config environment variable contains a class that:
+  1. Is a default export. This is how DWN Server locates the correct class for instantiation.
+  1. Has a public constructor that does not take any arguments. This is how DWN Server instantiates the plugin.
 
 ## Registration Requirements
 

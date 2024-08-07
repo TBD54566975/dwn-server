@@ -34,9 +34,8 @@ export class WsApi {
     this.#wsServer.on('close', () => this.#connectionManager.closeAll());
   }
 
-  start(): WebSocketServer {
+  start(): void {
     this.#setupWebSocket();
-    return this.#wsServer;
   }
 
   async close(): Promise<void> {

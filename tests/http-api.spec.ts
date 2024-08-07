@@ -1,18 +1,16 @@
 // node.js 18 and earlier,  needs globalThis.crypto polyfill
 import sinon from 'sinon';
 import {
-  Cid,
   DataStream,
   DwnErrorCode,
+  ProtocolsConfigure,
   RecordsQuery,
-  RecordsRead,
   TestDataGenerator,
   Time,
 } from '@tbd54566975/dwn-sdk-js';
-import type { Dwn, DwnError, Persona, RecordsQueryReply } from '@tbd54566975/dwn-sdk-js';
+import type { Dwn, DwnError, Persona, ProtocolsConfigureMessage, RecordsQueryReply } from '@tbd54566975/dwn-sdk-js';
 
 import { expect } from 'chai';
-import type { Server } from 'http';
 import fetch from 'node-fetch';
 import { webcrypto } from 'node:crypto';
 import { useFakeTimers } from 'sinon';
@@ -33,10 +31,11 @@ import {
 import { getTestDwn } from './test-dwn.js';
 import {
   createRecordsWriteMessage,
+  getDwnResponse,
   getFileAsReadStream,
-  streamHttpRequest,
 } from './utils.js';
 import { RegistrationManager } from '../src/registration/registration-manager.js';
+import CommonScenarioValidator from './common-scenario-validator.js';
 
 if (!globalThis.crypto) {
   // @ts-ignore
@@ -45,7 +44,6 @@ if (!globalThis.crypto) {
 
 describe('http api', function () {
   let httpApi: HttpApi;
-  let server: Server;
   let alice: Persona;
   let registrationManager: RegistrationManager;
   let dwn: Dwn;
@@ -53,7 +51,7 @@ describe('http api', function () {
 
   before(async function () {
     clock = useFakeTimers({ shouldAdvanceTime: true });
-
+    // TODO: Remove direct use of default config to avoid changes bleed/pollute between tests - https://github.com/TBD54566975/dwn-server/issues/144
     config.registrationStoreUrl = 'sqlite://';
     config.registrationProofOfWorkEnabled = true;
     config.termsOfServiceFilePath = './tests/fixtures/terms-of-service.txt';
@@ -67,20 +65,21 @@ describe('http api', function () {
 
     dwn = await getTestDwn({ tenantGate: registrationManager });
 
-    httpApi = new HttpApi(config, dwn, registrationManager);
+    httpApi = await HttpApi.create(config, dwn, registrationManager);
 
-    alice = await TestDataGenerator.generateDidKeyPersona();
-    await registrationManager.recordTenantRegistration({ did: alice.did, termsOfServiceHash: registrationManager.getTermsOfServiceHash()});
   });
 
   beforeEach(async function () {
     sinon.restore();
-    server = await httpApi.start(3000);
+    await httpApi.start(3000);
+
+    // generate a new persona for each test to avoid state pollution
+    alice = await TestDataGenerator.generateDidKeyPersona();
+    await registrationManager.recordTenantRegistration({ did: alice.did, termsOfServiceHash: registrationManager.getTermsOfServiceHash()});
   });
 
   afterEach(async function () {
-    server.close();
-    server.closeAllConnections();
+    await httpApi.close();
   });
 
   after(function () {
@@ -198,44 +197,14 @@ describe('http api', function () {
     });
   });
 
-  describe('RecordsWrite', function () {
-    it('handles RecordsWrite with request body', async function () {
-      const filePath = './fixtures/test.jpeg';
-      const { cid, size, stream } = await getFileAsReadStream(filePath);
-
-      const { recordsWrite } = await createRecordsWriteMessage(alice, {
-        dataCid: cid,
-        dataSize: size,
-      });
-
-      const requestId = uuidv4();
-      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsWrite.toJSON(),
-        target: alice.did,
-      });
-
-      const resp = await streamHttpRequest(
-        'http://localhost:3000',
-        {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/octet-stream',
-            'dwn-request': JSON.stringify(dwnRequest),
-          },
-        },
-        stream,
-      );
-
-      expect(resp.status).to.equal(200);
-
-      const body = JSON.parse(resp.body) as JsonRpcResponse;
-      expect(body.id).to.equal(requestId);
-      expect(body.error).to.not.exist;
-
-      const { reply } = body.result;
-      expect(reply.status.code).to.equal(202);
+  describe('P0 Scenarios', function () {
+    it('should be able to read and write a protocol record', async function () {
+      const dwnUrl = `${config.baseUrl}:${config.port}`;
+      await CommonScenarioValidator.sanityTestDwnReadWrite(dwnUrl, alice)
     });
+  });
 
+  describe('RecordsWrite', function () {
     it('handles RecordsWrite overwrite that does not mutate data', async function () {
       // First RecordsWrite that creates the record.
       const { recordsWrite: initialWrite, dataStream } =
@@ -328,89 +297,6 @@ describe('http api', function () {
         method: 'GET',
       });
       expect(response.status).to.equal(200);
-    });
-  });
-
-  describe('RecordsRead', function () {
-    it('returns message in response header and data in body', async function () {
-      const filePath = './fixtures/test.jpeg';
-      const {
-        cid: expectedCid,
-        size,
-        stream,
-      } = await getFileAsReadStream(filePath);
-
-      const { recordsWrite } = await createRecordsWriteMessage(alice, {
-        dataCid: expectedCid,
-        dataSize: size,
-      });
-
-      let requestId = uuidv4();
-      let dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        message: recordsWrite.toJSON(),
-        target: alice.did,
-      });
-
-      let response = await fetch('http://localhost:3000', {
-        method: 'POST',
-        headers: {
-          'dwn-request': JSON.stringify(dwnRequest),
-        },
-        body: stream,
-      });
-
-      expect(response.status).to.equal(200);
-
-      const body = (await response.json()) as JsonRpcResponse;
-      expect(body.id).to.equal(requestId);
-      expect(body.error).to.not.exist;
-
-      const { reply } = body.result;
-      expect(reply.status.code).to.equal(202);
-
-      const recordsRead = await RecordsRead.create({
-        signer: alice.signer,
-        filter: {
-          recordId: recordsWrite.message.recordId,
-        },
-      });
-
-      requestId = uuidv4();
-      dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
-        target: alice.did,
-        message: recordsRead.toJSON(),
-      });
-
-      response = await fetch('http://localhost:3000', {
-        method: 'POST',
-        headers: {
-          'dwn-request': JSON.stringify(dwnRequest),
-        },
-      });
-
-      expect(response.status).to.equal(200);
-
-      const { headers } = response;
-
-      const contentType = headers.get('content-type');
-      expect(contentType).to.not.be.undefined;
-      expect(contentType).to.equal('application/octet-stream');
-
-      const dwnResponse = headers.get('dwn-response');
-      expect(dwnResponse).to.not.be.undefined;
-
-      const jsonRpcResponse = JSON.parse(dwnResponse) as JsonRpcResponse;
-
-      expect(jsonRpcResponse.id).to.equal(requestId);
-      expect(jsonRpcResponse.error).to.not.exist;
-
-      const { reply: recordsReadReply } = jsonRpcResponse.result;
-      expect(recordsReadReply.status.code).to.equal(200);
-      expect(recordsReadReply.record).to.exist;
-
-      // can't get response as stream from supertest :(
-      const cid = await Cid.computeDagPbCidFromStream(response.body as any);
-      expect(cid).to.equal(expectedCid);
     });
   });
 
@@ -530,6 +416,452 @@ describe('http api', function () {
     });
   });
 
+  describe('/:did/read/records/:id', function () {
+    it('returns record data if record is published', async function () {
+      const filePath = './fixtures/test.jpeg';
+      const {
+        cid: expectedCid,
+        size,
+        stream,
+      } = await getFileAsReadStream(filePath);
+
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
+        dataCid: expectedCid,
+        dataSize: size,
+        published: true,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: recordsWrite.toJSON(),
+        target: alice.did,
+      });
+
+      let response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+        body: stream,
+      });
+
+      expect(response.status).to.equal(200);
+
+      const body = (await response.json()) as JsonRpcResponse;
+      expect(body.id).to.equal(requestId);
+      expect(body.error).to.not.exist;
+
+      const { reply } = body.result;
+      expect(reply.status.code).to.equal(202);
+
+      response = await fetch(
+        `http://localhost:3000/${alice.did}/read/records/${recordsWrite.message.recordId}`,
+      );
+      const blob = await response.blob();
+
+      expect(blob.size).to.equal(size);
+    });
+
+    it('returns a 404 if an unpublished record is requested', async function () {
+      const filePath = './fixtures/test.jpeg';
+      const {
+        cid: expectedCid,
+        size,
+        stream,
+      } = await getFileAsReadStream(filePath);
+
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
+        dataCid: expectedCid,
+        dataSize: size,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: recordsWrite.toJSON(),
+        target: alice.did,
+      });
+
+      let response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+        body: stream,
+      });
+
+      expect(response.status).to.equal(200);
+
+      const body = (await response.json()) as JsonRpcResponse;
+      expect(body.id).to.equal(requestId);
+      expect(body.error).to.not.exist;
+
+      const { reply } = body.result;
+      expect(reply.status.code).to.equal(202);
+
+      response = await fetch(
+        `http://localhost:3000/${alice.did}/read/records/${recordsWrite.message.recordId}`,
+      );
+
+      expect(response.status).to.equal(404);
+    });
+
+    it('returns a 404 if record does not exist', async function () {
+      const { recordsWrite } = await createRecordsWriteMessage(alice);
+
+      const response = await fetch(
+        `http://localhost:3000/${alice.did}/read/records/${recordsWrite.message.recordId}`,
+      );
+      expect(response.status).to.equal(404);
+    });
+
+    it('returns a 404 for invalid or unauthorized did', async function () {
+      const unauthorized = await TestDataGenerator.generateDidKeyPersona();
+      const { recordsWrite } = await createRecordsWriteMessage(unauthorized);
+
+      const response = await fetch(
+        `http://localhost:3000/${unauthorized.did}/read/records/${recordsWrite.message.recordId}`,
+      );
+      expect(response.status).to.equal(404);
+    });
+
+    it('returns a 404 for invalid record id', async function () {
+      const response = await fetch(
+        `http://localhost:3000/${alice.did}/read/records/kaka`,
+      );
+      expect(response.status).to.equal(404);
+    });
+  });
+
+  describe('/:did/read/protocols/:protocol', function () {
+    it('returns protocol definition if protocol is published', async function () {
+      // Create and publish a protocol
+      const protocolConfigure = await ProtocolsConfigure.create({
+        definition : {
+          protocol  : 'http://example.com/protocol',
+          published : true,
+          types     : {
+            foo: {},
+          },
+          structure: {
+            foo: {}
+          }
+        },
+        signer     : alice.signer,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: protocolConfigure.toJSON(),
+        target: alice.did,
+      });
+
+      const response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+      });
+      expect(response.status).to.equal(200);
+
+
+      // Fetch the protocol definition using the HTTP API
+      const urlEncodedProtocol = encodeURIComponent(protocolConfigure.message.descriptor.definition.protocol);
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}`;
+      const protocolQueryResponse = await fetch(protocolUrl);
+      expect(protocolQueryResponse.status).to.equal(200);
+
+      // get the JSON response
+      const protocolConfigureReply = await protocolQueryResponse.json() as ProtocolsConfigureMessage;
+      expect(protocolConfigureReply.descriptor).to.deep.equal(protocolConfigure.message.descriptor);
+    });
+
+    it('returns a 404 if protocol is not published', async function () {
+      // Create a not-published protocol
+      const protocolConfigure = await ProtocolsConfigure.create({
+        definition : {
+          protocol  : 'http://example.com/protocol',
+          published : false,
+          types     : {
+            foo: {},
+          },
+          structure: {
+            foo: {}
+          }
+        },
+        signer     : alice.signer,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: protocolConfigure.toJSON(),
+        target: alice.did,
+      });
+
+      const response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+      });
+      expect(response.status).to.equal(200);
+
+
+      // Fetch the protocol definition using the HTTP API
+      const urlEncodedProtocol = encodeURIComponent(protocolConfigure.message.descriptor.definition.protocol);
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}`;
+      const protocolQueryResponse = await fetch(protocolUrl);
+      expect(protocolQueryResponse.status).to.equal(404);
+    });
+  });
+
+  describe('/:did/query/protocols', function () {
+    it('returns protocol definition if protocol is published', async function () {
+      // create two protocol definitions, one published and one not
+      const protocolConfigurePublished = await ProtocolsConfigure.create({
+        definition : {
+          protocol  : 'http://example.com/protocol',
+          published : true,
+          types     : {
+            foo: {},
+          },
+          structure: {
+            foo: {}
+          }
+        },
+        signer     : alice.signer,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: protocolConfigurePublished.toJSON(),
+        target: alice.did,
+      });
+
+      const response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+      });
+      expect(response.status).to.equal(200);
+
+      const protocolConfigureNotPublished = await ProtocolsConfigure.create({
+        definition : {
+          protocol  : 'http://example.com/protocol2',
+          published : false,
+          types     : {
+            foo: {},
+          },
+          structure: {
+            foo: {}
+          }
+        },
+        signer     : alice.signer,
+      });
+
+      const requestId2 = uuidv4();
+      const dwnRequest2 = createJsonRpcRequest(requestId2, 'dwn.processMessage', {
+        message: protocolConfigureNotPublished.toJSON(),
+        target: alice.did,
+      });
+
+      const response2 = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest2),
+        },
+      });
+
+      expect(response2.status).to.equal(200);
+
+      // now query for a list of protocols
+      const protocolQueryUrl = `http://localhost:3000/${alice.did}/query/protocols`;
+      const protocolQueryResponse = await fetch(protocolQueryUrl);
+      expect(protocolQueryResponse.status).to.equal(200);
+
+      // get the JSON response
+      const protocolQueryReply = await protocolQueryResponse.json() as ProtocolsConfigureMessage[];
+      expect(protocolQueryReply).to.have.lengthOf(1);
+
+      // check that the published protocol is returned
+      expect(protocolQueryReply[0].descriptor).to.deep.equal(protocolConfigurePublished.message.descriptor);
+    });
+  });
+
+  describe('/:did/read/protocols/:protocol/*', function () {
+    it('returns record for a given protocol and protocolPath that is published', async function () {
+      // Create and publish a protocol
+      const protocolConfigure = await ProtocolsConfigure.create({
+        definition : {
+          protocol  : 'http://example.com/protocol',
+          published : true,
+          types     : {
+            foo: {},
+          },
+          structure: {
+            foo: {}
+          }
+        },
+        signer     : alice.signer,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: protocolConfigure.toJSON(),
+        target: alice.did,
+      });
+
+      const response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+      });
+      expect(response.status).to.equal(200);
+
+      // Create a foo record
+      const filePath = './fixtures/test.jpeg';
+      const {
+        cid: expectedCid,
+        size,
+        stream,
+      } = await getFileAsReadStream(filePath);
+
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
+        dataCid      : expectedCid,
+        dataSize     : size,
+        published    : true,
+        protocol     : protocolConfigure.message.descriptor.definition.protocol,
+        protocolPath : 'foo',
+      });
+
+      const recordsWriteRequestId = uuidv4();
+      const recordsWriteDwnRequest = createJsonRpcRequest(recordsWriteRequestId, 'dwn.processMessage', {
+        message: recordsWrite.toJSON(),
+        target: alice.did,
+      });
+
+      const recordsWriteResponse = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(recordsWriteDwnRequest),
+        },
+        body: stream,
+      });
+      expect(recordsWriteResponse.status).to.equal(200);
+      const responseJson = await recordsWriteResponse.json() as JsonRpcResponse;
+      expect(responseJson.result.reply.status.code).to.equal(202);
+
+      // Fetch the record using the HTTP API
+      const urlEncodedProtocol = encodeURIComponent(protocolConfigure.message.descriptor.definition.protocol);
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/foo`;
+      const recordReadResponse = await fetch(protocolUrl);
+      expect(recordReadResponse.status).to.equal(200);
+
+      // get the data response
+      const blob = await recordReadResponse.blob();
+      expect(blob.size).to.equal(size);
+
+      // get dwn message response
+      const { status, record } = getDwnResponse(recordReadResponse);
+      expect(status.code).to.equal(200);
+      expect(record).to.exist;
+      expect(record.recordId).to.equal(recordsWrite.message.recordId);
+    });
+
+    it('removes the trailing slash from the protocol path', async function () {
+      const recordsQueryCreateSpy = sinon.spy(RecordsQuery, 'create');
+
+      const urlEncodedProtocol = encodeURIComponent('http://example.com/protocol');
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/foo/`; // trailing slash
+      const recordReadResponse = await fetch(protocolUrl);
+      expect(recordReadResponse.status).to.equal(404);
+
+      expect(recordsQueryCreateSpy.calledOnce).to.be.true;
+      const recordsQueryFilter = recordsQueryCreateSpy.getCall(0).args[0].filter;
+      expect(recordsQueryFilter.protocolPath).to.equal('foo');
+    });
+
+    it('returns a 404 if record for a given protocol and protocolPath is not published', async function () {
+      // Create and publish a protocol
+      const protocolConfigure = await ProtocolsConfigure.create({
+        definition : {
+          protocol  : 'http://example.com/protocol',
+          published : true,
+          types     : {
+            foo: {},
+          },
+          structure: {
+            foo: {}
+          }
+        },
+        signer     : alice.signer,
+      });
+
+      const requestId = uuidv4();
+      const dwnRequest = createJsonRpcRequest(requestId, 'dwn.processMessage', {
+        message: protocolConfigure.toJSON(),
+        target: alice.did,
+      });
+
+      const response = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(dwnRequest),
+        },
+      });
+      expect(response.status).to.equal(200);
+
+      // Create a foo record
+      const filePath = './fixtures/test.jpeg';
+      const {
+        cid: expectedCid,
+        size,
+        stream,
+      } = await getFileAsReadStream(filePath);
+
+      const { recordsWrite } = await createRecordsWriteMessage(alice, {
+        dataCid      : expectedCid,
+        dataSize     : size,
+        published    : false, // not published
+        protocol     : protocolConfigure.message.descriptor.definition.protocol,
+        protocolPath : 'foo',
+      });
+
+      const recordsWriteRequestId = uuidv4();
+      const recordsWriteDwnRequest = createJsonRpcRequest(recordsWriteRequestId, 'dwn.processMessage', {
+        message: recordsWrite.toJSON(),
+        target: alice.did,
+      });
+
+      const recordsWriteResponse = await fetch('http://localhost:3000', {
+        method: 'POST',
+        headers: {
+          'dwn-request': JSON.stringify(recordsWriteDwnRequest),
+        },
+        body: stream,
+      });
+      expect(recordsWriteResponse.status).to.equal(200);
+      const responseJson = await recordsWriteResponse.json() as JsonRpcResponse;
+      expect(responseJson.result.reply.status.code).to.equal(202);
+
+      // Fetch the record using the HTTP API
+      const urlEncodedProtocol = encodeURIComponent(protocolConfigure.message.descriptor.definition.protocol);
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/foo`;
+      const recordReadResponse = await fetch(protocolUrl);
+      expect(recordReadResponse.status).to.equal(404);
+    });
+
+    it('returns a 400 if protocol path is not provided', async function () {
+      // Fetch a protocol record without providing a protocol path 
+      const urlEncodedProtocol = encodeURIComponent('http://example.com/protocol');
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/`; // missing protocol path
+      const recordReadResponse = await fetch(protocolUrl);
+      expect(recordReadResponse.status).to.equal(400);
+      expect(await recordReadResponse.text()).to.equal('protocol path is required');
+    });
+  });
+
   describe('/:did/query', function () {
     it('returns record data if record is published', async function () {
       const filePath = './fixtures/test.jpeg';
@@ -592,6 +924,7 @@ describe('http api', function () {
       expect(resp.status).to.equal(200);
 
       const info = await resp.json();
+      expect(info['url']).to.equal('http://localhost');
       expect(info['server']).to.equal('@web5/dwn-server');
       expect(info['registrationRequirements']).to.include('terms-of-service');
       expect(info['registrationRequirements']).to.include(
@@ -609,12 +942,11 @@ describe('http api', function () {
 
 
       // start server without websocket support enabled
-      server.close();
-      server.closeAllConnections();
+      await httpApi.close();
 
       config.webSocketSupport = false;
-      httpApi = new HttpApi(config, dwn, registrationManager);
-      server = await httpApi.start(3000);
+      httpApi = await HttpApi.create(config, dwn, registrationManager);
+      await httpApi.start(3000);
 
       resp = await fetch(`http://localhost:3000/info`);
       expect(resp.status).to.equal(200);
@@ -628,8 +960,7 @@ describe('http api', function () {
     });
 
     it('verify /info still returns when package.json file does not exist', async function () {
-      server.close();
-      server.closeAllConnections();
+      await httpApi.close();
 
       // set up spy to check for an error log by the server
       const logSpy = sinon.spy(log, 'error');
@@ -637,8 +968,8 @@ describe('http api', function () {
       // set the config to an invalid file path
       const packageJsonConfig = config.packageJsonPath;
       config.packageJsonPath = '/some/invalid/file.json';
-      httpApi = new HttpApi(config, dwn, registrationManager);
-      server = await httpApi.start(3000);
+      httpApi = await HttpApi.create(config, dwn, registrationManager);
+      await httpApi.start(3000);
 
       const resp = await fetch(`http://localhost:3000/info`);
       const info = await resp.json();
@@ -660,14 +991,13 @@ describe('http api', function () {
     });
 
     it('verify /info returns server name from config', async function () {
-      server.close();
-      server.closeAllConnections();
+      await httpApi.close();
 
       // set a custom name for the `serverName`
       const serverName = config.serverName;
       config.serverName = '@web5/dwn-server-2'
-      httpApi = new HttpApi(config, dwn, registrationManager);
-      server = await httpApi.start(3000);
+      httpApi = await HttpApi.create(config, dwn, registrationManager);
+      await httpApi.start(3000);
 
       const resp = await fetch(`http://localhost:3000/info`);
       const info = await resp.json();

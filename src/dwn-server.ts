@@ -1,26 +1,54 @@
+import type { DidResolver } from '@web5/dids';
 import type { EventStream } from '@tbd54566975/dwn-sdk-js';
-import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
-
+import type { ProcessHandlers } from './process-handlers.js';
 import type { Server } from 'http';
+import type { WebSocketServer } from 'ws';
+import type { DwnServerConfig } from './config.js';
+
 import log from 'loglevel';
 import prefix from 'loglevel-plugin-prefix';
-import { type WebSocketServer } from 'ws';
-
+import { config as defaultConfig } from './config.js';
+import { getDwnConfig } from './storage.js';
 import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
-
-import { type DwnServerConfig, config as defaultConfig } from './config.js';
 import { HttpApi } from './http-api.js';
-import { setProcessHandlers } from './process-handlers.js';
-import { getDWNConfig } from './storage.js';
-import { WsApi } from './ws-api.js';
+import { PluginLoader } from './plugin-loader.js';
 import { RegistrationManager } from './registration/registration-manager.js';
+import { WsApi } from './ws-api.js';
+import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
+import { removeProcessHandlers, setProcessHandlers } from './process-handlers.js';
 
+/**
+ * Options for the DwnServer constructor.
+ * This is different to DwnServerConfig in that the DwnServerConfig defines configuration that come from environment variables so (more) user facing.
+ * Where as DwnServerOptions wraps DwnServerConfig with additional overrides that can be used for testing.
+ */
 export type DwnServerOptions = {
+  /**
+   * A custom DID resolver to use in the DWN.
+   * Mainly for testing purposes. Ignored if `dwn` is provided.
+   */
+  didResolver?: DidResolver;
   dwn?: Dwn;
   config?: DwnServerConfig;
 };
 
+/**
+ * State of the DwnServer, either Stopped or Started, to help short-circuit start and stop logic.
+ */
+enum DwnServerState {
+  Stopped,
+  Started
+}
+
 export class DwnServer {
+  serverState = DwnServerState.Stopped;
+  processHandlers: ProcessHandlers;
+  
+  /**
+   * A custom DID resolver to use in the DWN.
+   * Mainly for testing purposes. Ignored if `dwn` is provided.
+   */
+  didResolver?: DidResolver;
   dwn?: Dwn;
   config: DwnServerConfig;
   #httpServerShutdownHandler: HttpServerShutdownHandler;
@@ -32,6 +60,8 @@ export class DwnServer {
    */
   constructor(options: DwnServerOptions = {}) {
     this.config = options.config ?? defaultConfig;
+
+    this.didResolver = options.didResolver;
     this.dwn = options.dwn;
 
     log.setLevel(this.config.logLevel as log.LogLevelDesc);
@@ -40,9 +70,17 @@ export class DwnServer {
     prefix.apply(log);
   }
 
+  /**
+   * Starts the DWN server.
+   */
   async start(): Promise<void> {
+    if (this.serverState === DwnServerState.Started) {
+      return;
+    }
+
     await this.#setupServer();
-    setProcessHandlers(this);
+    this.processHandlers = setProcessHandlers(this);
+    this.serverState = DwnServerState.Started;
   }
 
   /**
@@ -63,22 +101,27 @@ export class DwnServer {
 
       let eventStream: EventStream | undefined;
       if (this.config.webSocketSupport) {
-        // setting `EventEmitterStream` as default the default `EventStream
-        // if an alternate implementation is needed, instantiate a `Dwn` with a custom `EventStream` and add it to server options. 
-        eventStream = new EventEmitterStream();
+        // If Even Stream plugin is not specified, use `EventEmitterStream` implementation as default.
+        if (this.config.eventStreamPluginPath === undefined || this.config.eventStreamPluginPath === '') {
+          eventStream = new EventEmitterStream();
+        } else {
+          eventStream = await PluginLoader.loadPlugin<EventStream>(this.config.eventStreamPluginPath);
+        }
+
       }
 
-      this.dwn = await Dwn.create(getDWNConfig(this.config, {
+      const dwnConfig = await getDwnConfig(this.config, {
+        didResolver: this.didResolver,
         tenantGate: registrationManager,
         eventStream,
-      }));
+      })
+      this.dwn = await Dwn.create(dwnConfig);
     }
 
-    this.#httpApi = new HttpApi(this.config, this.dwn, registrationManager);
+    this.#httpApi = await HttpApi.create(this.config, this.dwn, registrationManager);
 
-    await this.#httpApi.start(this.config.port, () => {
-      log.info(`HttpServer listening on port ${this.config.port}`);
-    });
+    await this.#httpApi.start(this.config.port);
+    log.info(`HttpServer listening on port ${this.config.port}`);
 
     this.#httpServerShutdownHandler = new HttpServerShutdownHandler(
       this.#httpApi.server,
@@ -91,8 +134,31 @@ export class DwnServer {
     }
   }
 
-  stop(callback: () => void): void {
-    this.#httpServerShutdownHandler.stop(callback);
+  /**
+   * Stops the DWN server.
+   */
+  async stop(): Promise<void> {
+    if (this.serverState === DwnServerState.Stopped) {
+      return;
+    }
+
+    await this.dwn.close();
+    await this.#httpApi.close();
+
+    // close WebSocket server if it was initialized
+    if (this.#wsApi !== undefined) {
+      await this.#wsApi.close();
+    }
+
+    await new Promise<void>((resolve) => {
+      this.#httpServerShutdownHandler.stop(() => {
+        resolve();
+      });
+    });
+
+    removeProcessHandlers(this.processHandlers);
+
+    this.serverState = DwnServerState.Stopped;
   }
 
   get httpServer(): Server {
