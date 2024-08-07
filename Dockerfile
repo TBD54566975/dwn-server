@@ -1,4 +1,6 @@
-FROM node:18-buster
+# NOTE: `bookworm` is 2024-06-29 v12.6 release of Debian OS
+#       `slim` is a leaner image, optimized for production.
+FROM node:20-bookworm-slim
 
 ARG DS_PORT
 ENV DS_PORT=${DS_PORT:-3000}
