@@ -84,7 +84,10 @@ export class HttpApi {
   #setupMiddleware(): void {
     this.#api.use(cors({ exposedHeaders: 'dwn-response' }));
     this.#api.use(express.json());
-    this.#api.use(express.urlencoded({ extended: true })); // formdata middleware
+
+    // We enable the formData middleware to handle multipart/form-data requests.
+    // This is necessary for the endpoints used by the Web5 Connect Server/OIDC flow.
+    this.#api.use(express.urlencoded({ extended: true }));
     this.#api.use(
       responseTime((req: Request, res: Response, time) => {
         const url = req.url === '/' ? '/jsonrpc' : req.url;
