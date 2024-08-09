@@ -1,21 +1,21 @@
-import type { DidResolver } from '@web5/dids';
 import type { EventStream } from '@tbd54566975/dwn-sdk-js';
-import type { ProcessHandlers } from './process-handlers.js';
+import type { DidResolver } from '@web5/dids';
 import type { Server } from 'http';
 import type { WebSocketServer } from 'ws';
 import type { DwnServerConfig } from './config.js';
+import type { ProcessHandlers } from './process-handlers.js';
 
+import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
 import log from 'loglevel';
 import prefix from 'loglevel-plugin-prefix';
 import { config as defaultConfig } from './config.js';
-import { getDwnConfig } from './storage.js';
-import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
+import { FormFreeGate } from './formfree-gate.js';
 import { HttpApi } from './http-api.js';
+import { HttpServerShutdownHandler } from './lib/http-server-shutdown-handler.js';
 import { PluginLoader } from './plugin-loader.js';
-import { RegistrationManager } from './registration/registration-manager.js';
-import { WsApi } from './ws-api.js';
-import { Dwn, EventEmitterStream } from '@tbd54566975/dwn-sdk-js';
 import { removeProcessHandlers, setProcessHandlers } from './process-handlers.js';
+import { getDwnConfig } from './storage.js';
+import { WsApi } from './ws-api.js';
 
 /**
  * Options for the DwnServer constructor.
@@ -89,15 +89,10 @@ export class DwnServer {
    */
   async #setupServer(): Promise<void> {
 
-    let registrationManager: RegistrationManager;
+    let registrationManager: FormFreeGate;
     if (!this.dwn) {
       // undefined registrationStoreUrl is used as a signal that there is no need for tenant registration, DWN is open for all.
-      registrationManager = await RegistrationManager.create({
-        registrationStoreUrl: this.config.registrationStoreUrl,
-        termsOfServiceFilePath: this.config.termsOfServiceFilePath,
-        proofOfWorkChallengeNonceSeed: this.config.registrationProofOfWorkSeed,
-        proofOfWorkInitialMaximumAllowedHash: this.config.registrationProofOfWorkInitialMaxHash,
-      });
+      registrationManager = new FormFreeGate();
 
       let eventStream: EventStream | undefined;
       if (this.config.webSocketSupport) {
@@ -172,7 +167,7 @@ export class DwnServer {
   /**
    * Gets the RegistrationManager for testing purposes.
    */
-  get registrationManager(): RegistrationManager {
+  get registrationManager(): FormFreeGate {
     return this.#httpApi.registrationManager;
   }
 }

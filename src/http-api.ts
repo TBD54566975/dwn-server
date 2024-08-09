@@ -1,4 +1,4 @@
-import { type Dwn, DateSort, RecordsRead, RecordsQuery, ProtocolsQuery } from '@tbd54566975/dwn-sdk-js';
+import { type Dwn, DateSort, ProtocolsQuery, RecordsQuery, RecordsRead } from '@tbd54566975/dwn-sdk-js';
 
 import cors from 'cors';
 import type { Express, Request, Response } from 'express';
@@ -14,13 +14,12 @@ import type { RequestContext } from './lib/json-rpc-router.js';
 import type { JsonRpcRequest } from './lib/json-rpc.js';
 
 import type { DwnServerConfig } from './config.js';
-import type { DwnServerError } from './dwn-error.js';
-import type { RegistrationManager } from './registration/registration-manager.js';
 import { config } from './config.js';
+import type { FormFreeGate } from './formfree-gate.js';
 import { jsonRpcRouter } from './json-rpc-api.js';
-import { Web5ConnectServer } from './web5-connect/web5-connect-server.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
 import { requestCounter, responseHistogram } from './metrics.js';
+import { Web5ConnectServer } from './web5-connect/web5-connect-server.js';
 
 
 export class HttpApi {
@@ -29,12 +28,12 @@ export class HttpApi {
   #api: Express;
   #server: http.Server;
   web5ConnectServer: Web5ConnectServer;
-  registrationManager: RegistrationManager;
+  registrationManager: FormFreeGate;
   dwn: Dwn;
 
   private constructor() { }
 
-  public static async create(config: DwnServerConfig, dwn: Dwn, registrationManager?: RegistrationManager): Promise<HttpApi> {
+  public static async create(config: DwnServerConfig, dwn: Dwn, registrationManager?: FormFreeGate): Promise<HttpApi> {
     const httpApi = new HttpApi();
 
     log.info(config);
@@ -317,7 +316,7 @@ export class HttpApi {
       }
     });
 
-    this.#setupRegistrationRoutes();
+    // this.#setupRegistrationRoutes();
 
     this.#api.get('/info', (req, res) => {
       res.setHeader('content-type', 'application/json');
@@ -341,40 +340,6 @@ export class HttpApi {
     });
 
     this.#setupWeb5ConnectServerRoutes();
-  }
-
-  #setupRegistrationRoutes(): void {
-    if (this.#config.registrationProofOfWorkEnabled) {
-      this.#api.get('/registration/proof-of-work', async (_req: Request, res: Response) => {
-        const proofOfWorkChallenge = this.registrationManager.getProofOfWorkChallenge();
-        res.json(proofOfWorkChallenge);
-      });
-    }
-
-    if (this.#config.termsOfServiceFilePath !== undefined) {
-      this.#api.get('/registration/terms-of-service', (_req: Request, res: Response) => res.send(this.registrationManager.getTermsOfService()));
-    }
-
-    if (this.#config.registrationStoreUrl !== undefined) {
-      this.#api.post('/registration', async (req: Request, res: Response) => {
-        const requestBody = req.body;
-        log.info('Registration request:', requestBody);
-
-        try {
-          await this.registrationManager.handleRegistrationRequest(requestBody);
-          res.status(200).json({ success: true });
-        } catch (error) {
-          const dwnServerError = error as DwnServerError;
-
-          if (dwnServerError.code !== undefined) {
-            res.status(400).json(dwnServerError);
-          } else {
-            log.info('Error handling registration request:', error);
-            res.status(500).json({ success: false });
-          }
-        }
-      });
-    }
   }
 
   #setupWeb5ConnectServerRoutes(): void {
