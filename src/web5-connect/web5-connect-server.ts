@@ -1,5 +1,5 @@
 import { getDialectFromUrl } from "../storage.js";
-import { randomUuid } from '@web5/crypto/utils';
+import { CryptoUtils } from '@web5/crypto';
 import { SqlTtlCache } from "./sql-ttl-cache.js";
 
 /**
@@ -67,7 +67,7 @@ export class Web5ConnectServer {
    */
   public async setWeb5ConnectRequest(request: Web5ConnectRequest): Promise<SetWeb5ConnectRequestResult> {
     // Generate a request URI
-    const requestId = randomUuid();
+    const requestId = CryptoUtils.randomUuid();
     const request_uri = `${this.baseUrl}/connect/authorize/${requestId}.jwt`;
   
     // Store the Request Object.
