@@ -71,6 +71,8 @@ describe('Web5 Connect scenarios', function () {
 
     // 2. Identity Provider (wallet) fetches the Web5 Connect Request object from the Web5 Connect server.
     const requestUrl = (await postWeb5ConnectRequestResult.json() as any).request_uri;
+    const regex = /^http:\/\/localhost:3000\/connect\/authorize\/[a-zA-Z0-9\-]{21,}\.jwt$/;
+    expect(requestUrl).to.match(regex);
 
     let getWeb5ConnectRequestResult;
     await Poller.pollUntilSuccessOrTimeout(async () => {
