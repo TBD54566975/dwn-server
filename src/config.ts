@@ -15,7 +15,7 @@ export const config = {
    * The base external URL of this DWN.
    * This is used to construct URL paths such as the `Request URI` in the Web5 Connect flow.
    */
-  baseUrl: process.env.DWN_BASE_URL || 'http://localhost',
+  baseUrl: process.env.DWN_BASE_URL || 'http://localhost:3000',
 
   /**
    * Port that server listens on.

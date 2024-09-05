@@ -82,7 +82,6 @@ describe('Dynamic DWN plugin loading', function () {
     expect(customEventStreamConstructorSpy.calledOnce).to.be.true;
 
     // 3. Validate that the DWN instance is using the custom data store plugin.
-    const dwnUrl = `${dwnServerConfigCopy.baseUrl}:${dwnServerConfigCopy.port}`;
-    await CommonScenarioValidator.sanityTestDwnReadWrite(dwnUrl);
+    await CommonScenarioValidator.sanityTestDwnReadWrite(dwnServerConfigCopy.baseUrl);
   });
 });
