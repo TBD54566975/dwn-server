@@ -63,7 +63,7 @@ export class HttpApi {
 
     // create the Web5 Connect Server
     httpApi.web5ConnectServer = await Web5ConnectServer.create({
-      baseUrl: `${config.baseUrl}:${config.port}`,
+      baseUrl: config.baseUrl,
       sqlTtlCacheUrl: config.ttlCacheUrl,
     });
 
