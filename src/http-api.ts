@@ -150,14 +150,19 @@ export class HttpApi {
         return res.status(400).send('protocol path is required');
       }
 
-      const protocolPath = req.params[0].replace(leadTailSlashRegex, '');
-      const protocol = req.params.protocol;
+      const queryOptions = { filter: {} } as any;
+      for (const param in req.query) {
+        const keys = param.split('.');
+        const lastKey = keys.pop();
+        const lastLevelObject = keys.reduce((obj, key) => obj[key] = obj[key] || {}, queryOptions)
+        lastLevelObject[lastKey] = req.query[param];
+      }
+
+      queryOptions.filter.protocol = req.params.protocol;
+      queryOptions.filter.protocolPath = req.params[0].replace(leadTailSlashRegex, '');
 
       const query = await RecordsQuery.create({
-        filter: {
-          protocol,
-          protocolPath,
-        },
+        filter: queryOptions.filter,
         pagination: { limit: 1 },
         dateSort: DateSort.PublishedDescending
       });
