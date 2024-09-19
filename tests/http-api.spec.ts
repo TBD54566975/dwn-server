@@ -36,6 +36,7 @@ import {
 } from './utils.js';
 import { RegistrationManager } from '../src/registration/registration-manager.js';
 import CommonScenarioValidator from './common-scenario-validator.js';
+import { Convert } from '@web5/common';
 
 if (!globalThis.crypto) {
   // @ts-ignore
@@ -564,8 +565,8 @@ describe('http api', function () {
 
 
       // Fetch the protocol definition using the HTTP API
-      const urlEncodedProtocol = encodeURIComponent(protocolConfigure.message.descriptor.definition.protocol);
-      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}`;
+      const base64urlEncodedProtocol = Convert.string(protocolConfigure.message.descriptor.definition.protocol).toBase64Url();
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${base64urlEncodedProtocol}`;
       const protocolQueryResponse = await fetch(protocolUrl);
       expect(protocolQueryResponse.status).to.equal(200);
 
@@ -606,10 +607,17 @@ describe('http api', function () {
 
 
       // Fetch the protocol definition using the HTTP API
-      const urlEncodedProtocol = encodeURIComponent(protocolConfigure.message.descriptor.definition.protocol);
-      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}`;
+      const base64urlEncodedProtocol = Convert.string(protocolConfigure.message.descriptor.definition.protocol).toBase64Url();
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${base64urlEncodedProtocol}`;
       const protocolQueryResponse = await fetch(protocolUrl);
       expect(protocolQueryResponse.status).to.equal(404);
+    });
+
+    it('returns a 400 if protocol is not base64url encoded', async function () {
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/invalid-protocol`;
+      const protocolQueryResponse = await fetch(protocolUrl);
+      expect(protocolQueryResponse.status).to.equal(400);
+      expect(await protocolQueryResponse.text()).to.equal('Bad Request');
     });
   });
 
@@ -752,8 +760,8 @@ describe('http api', function () {
       expect(responseJson.result.reply.status.code).to.equal(202);
 
       // Fetch the record using the HTTP API
-      const urlEncodedProtocol = encodeURIComponent(protocolConfigure.message.descriptor.definition.protocol);
-      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/foo`;
+      const base64urlEncodedProtocol = Convert.string(protocolConfigure.message.descriptor.definition.protocol).toBase64Url();
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${base64urlEncodedProtocol}/foo`;
       const recordReadResponse = await fetch(protocolUrl);
       expect(recordReadResponse.status).to.equal(200);
 
@@ -771,8 +779,8 @@ describe('http api', function () {
     it('removes the trailing slash from the protocol path', async function () {
       const recordsQueryCreateSpy = sinon.spy(RecordsQuery, 'create');
 
-      const urlEncodedProtocol = encodeURIComponent('http://example.com/protocol');
-      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/foo/`; // trailing slash
+      const base64urlEncodedProtocol = Convert.string('http://example.com/protocol').toBase64Url();
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${base64urlEncodedProtocol}/foo/`; // trailing slash
       const recordReadResponse = await fetch(protocolUrl);
       expect(recordReadResponse.status).to.equal(404);
 
@@ -845,20 +853,27 @@ describe('http api', function () {
       expect(responseJson.result.reply.status.code).to.equal(202);
 
       // Fetch the record using the HTTP API
-      const urlEncodedProtocol = encodeURIComponent(protocolConfigure.message.descriptor.definition.protocol);
-      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/foo`;
+      const base64urlEncodedProtocol = Convert.string(protocolConfigure.message.descriptor.definition.protocol).toBase64Url();
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${base64urlEncodedProtocol}/foo`;
       const recordReadResponse = await fetch(protocolUrl);
       expect(recordReadResponse.status).to.equal(404);
     });
 
     it('returns a 400 if protocol path is not provided', async function () {
       // Fetch a protocol record without providing a protocol path 
-      const urlEncodedProtocol = encodeURIComponent('http://example.com/protocol');
-      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${urlEncodedProtocol}/`; // missing protocol path
+      const base64urlEncodedProtocol = Convert.string('http://example.com/protocol').toBase64Url();
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/${base64urlEncodedProtocol}/`; // missing protocol path
       const recordReadResponse = await fetch(protocolUrl);
       expect(recordReadResponse.status).to.equal(400);
       expect(await recordReadResponse.text()).to.equal('protocol path is required');
     });
+
+    it('returns a 400 error if protocol cannot be base64url encoded', async function () {
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/invalid-protocol/foo`;
+      const recordReadResponse = await fetch(protocolUrl);
+      expect(recordReadResponse.status).to.equal(400);
+      expect(await recordReadResponse.text()).to.equal('Bad Request');
+    })
   });
 
   describe('/:did/query', function () {
@@ -961,8 +976,8 @@ describe('http api', function () {
     it('verify /info still returns when package.json file does not exist', async function () {
       await httpApi.close();
 
-      // set up spy to check for an error log by the server
-      const logSpy = sinon.spy(log, 'error');
+      // set up spy to check for an info log by the server
+      const logSpy = sinon.spy(log, 'info');
 
       // set the config to an invalid file path
       const packageJsonConfig = config.packageJsonPath;
@@ -982,8 +997,8 @@ describe('http api', function () {
       expect(info['version']).to.be.undefined;
 
       // check the logSpy was called
-      expect(logSpy.callCount).to.equal(1);
-      expect(logSpy.args[0][0]).to.contain('could not read `package.json` for version info');
+      expect(logSpy.callCount).to.be.gt(0);
+      expect(logSpy.calledWith(sinon.match('could not read `package.json` for version info'))).to.be.true;
 
       // restore old config path
       config.packageJsonPath = packageJsonConfig;

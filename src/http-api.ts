@@ -21,6 +21,7 @@ import { jsonRpcRouter } from './json-rpc-api.js';
 import { Web5ConnectServer } from './web5-connect/web5-connect-server.js';
 import { createJsonRpcErrorResponse, JsonRpcErrorCodes } from './lib/json-rpc.js';
 import { requestCounter, responseHistogram } from './metrics.js';
+import { Convert } from '@web5/common';
 
 
 export class HttpApi {
@@ -49,7 +50,7 @@ export class HttpApi {
       httpApi.#packageInfo.version = packageJson.version;
       httpApi.#packageInfo.sdkVersion = packageJson.dependencies ? packageJson.dependencies['@tbd54566975/dwn-sdk-js'] : undefined;
     } catch (error: any) {
-      log.error('could not read `package.json` for version info', error);
+      log.info('could not read `package.json` for version info', error);
     }
 
     httpApi.#config = config;
@@ -150,58 +151,77 @@ export class HttpApi {
         return res.status(400).send('protocol path is required');
       }
 
-      const queryOptions = { filter: {} } as any;
-      for (const param in req.query) {
-        const keys = param.split('.');
-        const lastKey = keys.pop();
-        const lastLevelObject = keys.reduce((obj, key) => obj[key] = obj[key] || {}, queryOptions)
-        lastLevelObject[lastKey] = req.query[param];
-      }
-
-      queryOptions.filter.protocol = req.params.protocol;
-      queryOptions.filter.protocolPath = req.params[0].replace(leadTailSlashRegex, '');
-
-      const query = await RecordsQuery.create({
-        filter: queryOptions.filter,
-        pagination: { limit: 1 },
-        dateSort: DateSort.PublishedDescending
-      });
-
-      const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
-
-      if (status.code === 200) {
-        if (entries[0]) {
-          const record = await RecordsRead.create({
-            filter: { recordId: entries[0].recordId },
-          });
-          const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
-          return readReplyHandler(res, reply);
-        } else {
-          return res.sendStatus(404);
+      // wrap request in a try-catch block to handle any unexpected errors
+      try {
+        const queryOptions = { filter: {} } as any;
+        for (const param in req.query) {
+          const keys = param.split('.');
+          const lastKey = keys.pop();
+          const lastLevelObject = keys.reduce((obj, key) => obj[key] = obj[key] || {}, queryOptions)
+          lastLevelObject[lastKey] = req.query[param];
         }
-      } else if (status.code === 401) {
-        return res.sendStatus(404);
-      } else {
-        return res.sendStatus(status.code);
+
+        // the protocol path segment is base64url encoded, as the actual protocol is a URL
+        // we decode it here in order to filter for the correct protocol
+        const protocol = Convert.base64Url(req.params.protocol).toString()
+        queryOptions.filter.protocol = protocol;
+        queryOptions.filter.protocolPath = req.params[0].replace(leadTailSlashRegex, '');
+
+        const query = await RecordsQuery.create({
+          filter: queryOptions.filter,
+          pagination: { limit: 1 },
+          dateSort: DateSort.PublishedDescending
+        });
+
+        const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
+
+        if (status.code === 200) {
+          if (entries[0]) {
+            const record = await RecordsRead.create({
+              filter: { recordId: entries[0].recordId },
+            });
+            const reply = await this.dwn.processMessage(req.params.did, record.toJSON());
+            return readReplyHandler(res, reply);
+          } else {
+            return res.sendStatus(404);
+          }
+        } else if (status.code === 401) {
+          return res.sendStatus(404);
+        } else {
+          return res.sendStatus(status.code);
+        }
+      } catch(error) {
+        log.error(`Error processing request: ${decodeURI(req.url)}`, error);
+        return res.sendStatus(400);
       }
     })
 
     this.#api.get('/:did/read/protocols/:protocol', async (req, res) => {
-      const query = await ProtocolsQuery.create({
-        filter: { protocol: req.params.protocol }
-      });
-      const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
-      if (status.code === 200) {
-        if (entries.length) {
-          res.status(status.code);
-          res.json(entries[0]);
-        } else {
+      // wrap request in a try-catch block to handle any unexpected errors
+      try {
+
+        // the protocol segment is base64url encoded, as the actual protocol is a URL
+        // we decode it here in order to filter for the correct protocol
+        const protocol = Convert.base64Url(req.params.protocol).toString()
+        const query = await ProtocolsQuery.create({
+          filter: { protocol }
+        });
+        const { entries, status } = await this.dwn.processMessage(req.params.did, query.message);
+        if (status.code === 200) {
+          if (entries.length) {
+            res.status(status.code);
+            res.json(entries[0]);
+          } else {
+            return res.sendStatus(404);
+          }
+        } else if (status.code === 401) {
           return res.sendStatus(404);
+        } else {
+          return res.sendStatus(status.code);
         }
-      } else if (status.code === 401) {
-        return res.sendStatus(404);
-      } else {
-        return res.sendStatus(status.code);
+      } catch(error) {
+        log.error(`Error processing request: ${decodeURI(req.url)}`, error);
+        return res.sendStatus(400);
       }
     })
 
