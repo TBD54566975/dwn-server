@@ -612,6 +612,13 @@ describe('http api', function () {
       const protocolQueryResponse = await fetch(protocolUrl);
       expect(protocolQueryResponse.status).to.equal(404);
     });
+
+    it('returns a 400 if protocol is not base64url encoded', async function () {
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/invalid-protocol`;
+      const protocolQueryResponse = await fetch(protocolUrl);
+      expect(protocolQueryResponse.status).to.equal(400);
+      expect(await protocolQueryResponse.text()).to.equal('Bad Request');
+    });
   });
 
   describe('/:did/query/protocols', function () {
@@ -860,6 +867,13 @@ describe('http api', function () {
       expect(recordReadResponse.status).to.equal(400);
       expect(await recordReadResponse.text()).to.equal('protocol path is required');
     });
+
+    it('returns a 400 error if protocol cannot be base64url encoded', async function () {
+      const protocolUrl = `http://localhost:3000/${alice.did}/read/protocols/invalid-protocol/foo`;
+      const recordReadResponse = await fetch(protocolUrl);
+      expect(recordReadResponse.status).to.equal(400);
+      expect(await recordReadResponse.text()).to.equal('Bad Request');
+    })
   });
 
   describe('/:did/query', function () {
