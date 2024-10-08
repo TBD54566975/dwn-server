@@ -770,10 +770,10 @@ describe('http api', function () {
       expect(blob.size).to.equal(size);
 
       // get dwn message response
-      const { status, record } = getDwnResponse(recordReadResponse);
+      const { status, entry } = getDwnResponse(recordReadResponse);
       expect(status.code).to.equal(200);
-      expect(record).to.exist;
-      expect(record.recordId).to.equal(recordsWrite.message.recordId);
+      expect(entry).to.exist;
+      expect(entry.recordsWrite.recordId).to.equal(recordsWrite.message.recordId);
     });
 
     it('removes the trailing slash from the protocol path', async function () {
