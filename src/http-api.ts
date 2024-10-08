@@ -114,10 +114,9 @@ export class HttpApi {
 
     function readReplyHandler(res, reply: RecordsReadReply): any {
       if (reply.status.code === 200) {
-        if (reply?.entry.data) {
+        if (reply?.entry?.data) {
           const stream = reply.entry.data;
 
-          console.log(reply.entry.recordsWrite.descriptor.dataFormat);
           res.setHeader('content-type', reply.entry.recordsWrite.descriptor.dataFormat);
           res.setHeader('dwn-response', JSON.stringify(reply));
 
