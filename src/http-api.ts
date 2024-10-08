@@ -1,3 +1,4 @@
+import type { RecordsReadReply } from '@tbd54566975/dwn-sdk-js';
 import { type Dwn, DateSort, RecordsRead, RecordsQuery, ProtocolsQuery } from '@tbd54566975/dwn-sdk-js';
 
 import cors from 'cors';
@@ -111,13 +112,12 @@ export class HttpApi {
 
     const leadTailSlashRegex = /^\/|\/$/;
 
-    function readReplyHandler(res, reply): any {
+    function readReplyHandler(res, reply: RecordsReadReply): any {
       if (reply.status.code === 200) {
-        if (reply?.record?.data) {
-          const stream = reply.record.data;
-          delete reply.record.data;
+        if (reply?.entry?.data) {
+          const stream = reply.entry.data;
 
-          res.setHeader('content-type', reply.record.descriptor.dataFormat);
+          res.setHeader('content-type', reply.entry.recordsWrite.descriptor.dataFormat);
           res.setHeader('dwn-response', JSON.stringify(reply));
 
           return stream.pipe(res);
@@ -292,9 +292,9 @@ export class HttpApi {
     });
 
     this.#api.post('/', async (req: Request, res) => {
-      const dwnRequest = req.headers['dwn-request'] as any;
+      const dwnRpcRequestString = req.headers['dwn-request'] as string;
 
-      if (!dwnRequest) {
+      if (!dwnRpcRequestString) {
         const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, 'request payload required.');
 
         return res.status(400).json(reply);
@@ -302,7 +302,7 @@ export class HttpApi {
 
       let dwnRpcRequest: JsonRpcRequest;
       try {
-        dwnRpcRequest = JSON.parse(dwnRequest);
+        dwnRpcRequest = JSON.parse(dwnRpcRequestString);
       } catch (e) {
         const reply = createJsonRpcErrorResponse(uuidv4(), JsonRpcErrorCodes.BadRequest, e.message);
 

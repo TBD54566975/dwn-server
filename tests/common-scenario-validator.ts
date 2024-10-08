@@ -133,7 +133,7 @@ export default class CommonScenarioValidator {
     expect(recordsReadJsonRpcResponse.id).to.equal(recordsReadRequestId);
     expect(recordsReadJsonRpcResponse.error).to.not.exist;
     expect(recordsReadJsonRpcResponse.result.reply.status.code).to.equal(200);
-    expect(recordsReadJsonRpcResponse.result.reply.record).to.exist;
+    expect(recordsReadJsonRpcResponse.result.reply.entry.recordsWrite).to.exist;
 
     // can't get response as stream from supertest :(
     const cid = await Cid.computeDagPbCidFromStream(recordsReadResponse.body as Readable);
